@@ -1,0 +1,6 @@
+RewriteEngine On
+
+# Nếu file/thư mục không tồn tại thật thì đưa hết vào index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
