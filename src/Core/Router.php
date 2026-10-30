@@ -9,12 +9,15 @@ namespace App\Core;
  */
 class Router
 {
-    // Mỗi route là: [method, path, handler]
+    // Mỗi route là: [method, path, handler, middleware]
     private array $routes = [];
 
-    public function add(string $method, string $path, callable $handler): void
+    /**
+     * @param callable[] $middleware Các hàm chạy TRƯỚC handler (chặn 401/403...)
+     */
+    public function add(string $method, string $path, callable $handler, array $middleware = []): void
     {
-        $this->routes[] = [$method, $path, $handler];
+        $this->routes[] = [$method, $path, $handler, $middleware];
     }
 
     public function dispatch(string $method, string $uri): void
@@ -26,22 +29,39 @@ class Router
         if ($base !== '' && strncmp($path, $base, strlen($base)) === 0) {
             $path = substr($path, strlen($base));
         }
+        if (strncmp($path, '/index.php', 10) === 0) {
+            $path = substr($path, 10);
+        }
         if ($path === '') {
             $path = '/';
         }
 
-        foreach ($this->routes as [$m, $p, $handler]) {
+        foreach ($this->routes as [$m, $p, $handler, $middleware]) {
             if ($m !== $method) {
                 continue;
             }
             $params = $this->match($p, $path);
             if ($params !== null) {
+                foreach ($middleware as $mw) {
+                    $mw();                           // middleware tự dừng request nếu chặn
+                }
                 call_user_func($handler, ...$params);   // truyền tham số {id} vào hàm
                 return;
             }
         }
 
         http_response_code(404);
+
+        // API luôn trả JSON, kể cả khi không tìm thấy route
+        if (strncmp($path, '/api/', 5) === 0 || $path === '/api') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Không tìm thấy endpoint.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
         header('Content-Type: text/html; charset=utf-8');
         echo '<h1>404 - Không tìm thấy</h1>';
         echo '<p>' . htmlspecialchars($method . ' ' . $path) . '</p>';

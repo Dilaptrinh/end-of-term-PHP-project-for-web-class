@@ -5,7 +5,7 @@ namespace App\Core;
  * View
  * ------------------------------------------------------------------
  * Nạp file HTML trong src/Views/ và truyền dữ liệu vào.
- * View::render('UserView', ['users' => $mang]);
+ * View::render('ten-view', ['du_lieu' => $mang]);
  */
 class View
 {
