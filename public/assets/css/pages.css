@@ -460,21 +460,6 @@
 .day-block .day-head .date { color: var(--brand-900); }
 .day-block .day-body { padding: .6rem .9rem; display: grid; gap: .45rem; }
 
-/* ---------------- Attendance ---------------- */
-.attendance-row {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  padding: .6rem .85rem;
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  background: #fff;
-}
-.attendance-row + .attendance-row { margin-top: .45rem; }
-.attendance-row .att-name { min-width: 0; flex: 1; }
-.attendance-row .att-name strong { display: block; font-size: .82rem; }
-.attendance-row .att-name span { font-size: .7rem; color: var(--muted); }
-
 /* ---------------- Progress / charts ---------------- */
 .chart-bars {
   display: flex;

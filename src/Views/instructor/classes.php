@@ -2,7 +2,11 @@
 require_once __DIR__ . '/../data/data.php';
 
 $classes = array_values(array_filter(data_classes(), static fn ($c) => $c['instructor'] === data_current_instructor_name()));
-$students = data_students_for_class(1);
+
+$classStudents = [];
+foreach ($classes as $class) {
+    $classStudents[(int) $class['id']] = data_students_for_class((int) $class['id']);
+}
 ?>
 <div class="page-head">
     <div>
@@ -50,6 +54,7 @@ $students = data_students_for_class(1);
                         Còn <?= e((string) ($class['capacity'] - $class['enrolled'])) ?> chỗ
                     </span>
                     <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#classStudentsModal"
+                            data-class-id="<?= (int) $class['id'] ?>"
                             data-class-name="<?= e($class['name']) ?>">
                         <?= icon('people') ?> Học viên
                     </button>
@@ -120,29 +125,19 @@ $students = data_students_for_class(1);
                                 <th>Điện thoại</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php foreach (array_slice($students, 0, 8) as $student): ?>
-                                <tr>
-                                    <td>
-                                        <div class="user-inline">
-                                            <?= avatar($student['name'], 'avatar-sm') ?>
-                                            <span>
-                                                <span class="d-block user-name"><?= e($student['name']) ?></span>
-                                                <span class="d-block user-sub">HV-<?= str_pad((string) $student['member_id'], 4, '0', STR_PAD_LEFT) ?></span>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="text-muted-2"><?= e($student['phone']) ?></td>
-                                </tr>
-                            <?php endforeach; ?>
+                        <tbody id="class-students-list">
+                            <tr><td colspan="2" class="text-muted-2">Đang tải học viên…</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
             <div class="modal-footer">
-                <span class="text-tiny text-muted-2 me-auto">Hiển thị 8 / <?= count($students) ?> học viên</span>
                 <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    window.INSTRUCTOR_CLASS_STUDENTS = <?= json_encode($classStudents, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+</script>

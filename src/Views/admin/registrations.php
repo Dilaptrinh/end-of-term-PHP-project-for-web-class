@@ -108,8 +108,16 @@ $cancelledClasses = count(array_filter($classRegs, static fn ($r) => $r['status'
                                 <td class="text-muted-2 text-tiny"><?= e($reg['staff']) ?><?php if ($reg['paid_at'] !== '—'): ?><br><?= e($reg['paid_at']) ?><?php endif; ?></td>
                                 <td class="cell-actions">
                                     <?php if ($reg['payment'] === 'chua_thanh_toan'): ?>
-                                        <button class="btn btn-primary btn-sm" type="button" data-confirm-action="Xác nhận thanh toán <?= e(money($reg['price'])) ?> cho <?= e($reg['member']) ?>?" data-confirm-title="Đã xác nhận thanh toán"><?= icon('check-lg') ?> Xác nhận</button>
-                                        <button class="btn btn-danger-soft btn-sm" type="button" data-confirm-action="Hủy đăng ký của <?= e($reg['member']) ?>?" data-confirm-title="Đã hủy đăng ký">Hủy</button>
+                                        <button class="btn btn-primary btn-sm" type="button"
+                                                data-api-url="/api/registrations/packages/<?= (int) $reg['id'] ?>/confirm"
+                                                data-api-method="POST"
+                                                data-api-confirm="Xác nhận thanh toán <?= e(money($reg['price'])) ?> cho <?= e($reg['member']) ?>?"
+                                                data-api-success-title="Đã xác nhận thanh toán"><?= icon('check-lg') ?> Xác nhận</button>
+                                        <button class="btn btn-danger-soft btn-sm" type="button"
+                                                data-api-url="/api/registrations/packages/<?= (int) $reg['id'] ?>/cancel"
+                                                data-api-method="POST"
+                                                data-api-confirm="Hủy đăng ký của <?= e($reg['member']) ?>?"
+                                                data-api-success-title="Đã hủy đăng ký">Hủy</button>
                                     <?php else: ?>
                                         <button class="btn btn-ghost btn-sm" type="button" data-toast="Chi tiết giao dịch sẽ được nối API."><?= icon('eye') ?> Xem</button>
                                     <?php endif; ?>
@@ -146,7 +154,11 @@ $cancelledClasses = count(array_filter($classRegs, static fn ($r) => $r['status'
                                 <td><?= status_badge($reg['status']) ?></td>
                                 <td class="cell-actions">
                                     <?php if ($reg['status'] === 'dang_ky'): ?>
-                                        <button class="btn btn-danger-soft btn-sm" type="button" data-confirm-action="Hủy đăng ký lớp <?= e($reg['class']) ?> của <?= e($reg['member']) ?>?" data-confirm-title="Đã hủy đăng ký lớp">Hủy</button>
+                                        <button class="btn btn-danger-soft btn-sm" type="button"
+                                                data-api-url="/api/registrations/classes/<?= (int) $reg['id'] ?>/cancel"
+                                                data-api-method="POST"
+                                                data-api-confirm="Hủy đăng ký lớp <?= e($reg['class']) ?> của <?= e($reg['member']) ?>?"
+                                                data-api-success-title="Đã hủy đăng ký lớp">Hủy</button>
                                     <?php else: ?>
                                         <button class="btn btn-ghost btn-sm" type="button" disabled>—</button>
                                     <?php endif; ?>
@@ -164,7 +176,7 @@ $cancelledClasses = count(array_filter($classRegs, static fn ($r) => $r['status'
 <div class="modal fade" id="registrationFormModal" tabindex="-1" aria-labelledby="registrationFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form >
+            <form data-api-url="/api/registrations/packages" data-api-method="POST" data-api-success-title="Đã tạo đăng ký">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="registrationFormTitle">Tạo đăng ký gói</h2>

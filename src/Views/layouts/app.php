@@ -46,10 +46,10 @@ $notifications = app_notifications($appRole);
 <script>
     window.APP_BASE = <?= json_encode(base_url(), JSON_UNESCAPED_SLASHES) ?>;
 </script>
-<script src="<?= e(url('/assets/js/api.js')) ?>?v=4"></script>
-<script src="<?= e(url('/assets/js/ui.js')) ?>"></script>
+<script src="<?= e(url('/assets/js/api.js')) ?>?v=5"></script>
+<script src="<?= e(url('/assets/js/ui.js')) ?>?v=6"></script>
 <?php foreach ($pageScripts as $script): ?>
-    <script src="<?= e(url('/assets/js/pages/' . $script . '?v=3')) ?>"></script>
+    <script src="<?= e(url('/assets/js/pages/' . $script . '?v=6')) ?>"></script>
 <?php endforeach; ?>
 </body>
 </html>

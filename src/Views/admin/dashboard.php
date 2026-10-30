@@ -22,6 +22,11 @@ foreach ($revenue as $row) {
     }
 }
 $revenueDelta = $prevRevenue > 0 ? round(100 * ($currentRevenue - $prevRevenue) / $prevRevenue, 1) : 0;
+$totalEnrolled = (int) array_sum(array_column($classes, 'enrolled'));
+$totalCapacity = (int) array_sum(array_column($classes, 'capacity'));
+$occupancy = $totalCapacity > 0 ? (int) round(100 * $totalEnrolled / $totalCapacity) : 0;
+$fullClasses = count(array_filter($classes, static fn ($c) => (int) $c['capacity'] > 0 && (int) $c['enrolled'] >= (int) $c['capacity']));
+$pendingSlotsList = array_values(array_filter($availability, static fn ($r) => $r['status'] === 'cho_duyet'));
 ?>
 <div class="page-head">
     <div>
@@ -143,7 +148,11 @@ $revenueDelta = $prevRevenue > 0 ? round(100 * ($currentRevenue - $prevRevenue) 
                                 <td class="cell-strong"><?= e(money($row['price'])) ?></td>
                                 <td><?= status_badge($row['payment']) ?></td>
                                 <td class="cell-actions">
-                                    <button class="btn btn-primary btn-sm" type="button" data-confirm-action="Xác nhận đã thanh toán cho <?= e($row['member']) ?>?" data-confirm-title="Đã xác nhận thanh toán">Xác nhận</button>
+                                    <button class="btn btn-primary btn-sm" type="button"
+                                            data-api-url="/api/registrations/packages/<?= (int) $row['id'] ?>/confirm"
+                                            data-api-method="POST"
+                                            data-api-confirm="Xác nhận đã thanh toán cho <?= e($row['member']) ?>?"
+                                            data-api-success-title="Đã xác nhận thanh toán">Xác nhận</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -158,13 +167,13 @@ $revenueDelta = $prevRevenue > 0 ? round(100 * ($currentRevenue - $prevRevenue) 
             <div class="app-card-header"><h2>Tỷ lệ lấp đầy</h2></div>
             <div class="app-card-body">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="donut" style="--p:78;">
-                        <span class="donut-value">78%<small>trung bình</small></span>
+                    <div class="donut" style="--p:<?= $occupancy ?>;">
+                        <span class="donut-value"><?= $occupancy ?>%<small>trung bình</small></span>
                     </div>
                     <div class="text-small flex-grow-1">
-                        <div class="d-flex justify-content-between mb-1"><span class="text-muted-2">Đã đăng ký</span><strong>1.024</strong></div>
-                        <div class="d-flex justify-content-between mb-1"><span class="text-muted-2">Sức chứa</span><strong>1.312</strong></div>
-                        <div class="d-flex justify-content-between"><span class="text-muted-2">Lớp đầy</span><strong class="text-warning">2</strong></div>
+                        <div class="d-flex justify-content-between mb-1"><span class="text-muted-2">Đã đăng ký</span><strong><?= number_format($totalEnrolled, 0, ',', '.') ?></strong></div>
+                        <div class="d-flex justify-content-between mb-1"><span class="text-muted-2">Sức chứa</span><strong><?= number_format($totalCapacity, 0, ',', '.') ?></strong></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted-2">Lớp đầy</span><strong class="text-warning"><?= $fullClasses ?></strong></div>
                     </div>
                 </div>
                 <div class="mt-3">
@@ -190,21 +199,20 @@ $revenueDelta = $prevRevenue > 0 ? round(100 * ($currentRevenue - $prevRevenue) 
             </div>
             <div class="app-card-body">
                 <ul class="app-timeline">
-                    <li>
-                        <span class="tl-dot warning"><?= icon('calendar-plus') ?></span>
-                        <div class="tl-title">Trần Thu Hà · 26/10</div>
-                        <div class="tl-meta">07:00 – 09:00 · Chờ duyệt</div>
-                    </li>
-                    <li>
-                        <span class="tl-dot warning"><?= icon('calendar-plus') ?></span>
-                        <div class="tl-title">Nguyễn Đức Anh · 27/10</div>
-                        <div class="tl-meta">06:00 – 07:30 · Chờ duyệt</div>
-                    </li>
-                    <li>
-                        <span class="tl-dot warning"><?= icon('receipt') ?></span>
-                        <div class="tl-title">4 thanh toán chờ xác nhận</div>
-                        <div class="tl-meta">Tổng giá trị 5,9 triệu</div>
-                    </li>
+                    <?php foreach (array_slice($pendingSlotsList, 0, 2) as $slot): ?>
+                        <li>
+                            <span class="tl-dot warning"><?= icon('calendar-plus') ?></span>
+                            <div class="tl-title"><?= e($slot['instructor']) ?> · <?= e($slot['date']) ?></div>
+                            <div class="tl-meta"><?= e($slot['start'] . ' – ' . $slot['end']) ?> · Chờ duyệt</div>
+                        </li>
+                    <?php endforeach; ?>
+                    <?php if ($pendingPackages): ?>
+                        <li>
+                            <span class="tl-dot warning"><?= icon('receipt') ?></span>
+                            <div class="tl-title"><?= count($pendingPackages) ?> thanh toán chờ xác nhận</div>
+                            <div class="tl-meta">Tổng giá trị <?= e(money(array_sum(array_column($pendingPackages, 'price')))) ?></div>
+                        </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>

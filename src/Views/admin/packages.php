@@ -87,7 +87,13 @@ $revenueLabel = $estimatedRevenue >= 1000000000
                 <div class="price"><?= e(number_format((float) $package['price'], 0, ',', '.')) ?><small>đ</small></div>
                 <div class="d-flex align-items-center gap-2 mt-2">
                     <?= status_badge($package['status']) ?>
-                    <button class="btn btn-ghost btn-sm ms-auto" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"><?= icon('pencil') ?> Sửa</button>
+                    <button class="btn btn-ghost btn-sm ms-auto" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"
+                            data-package-id="<?= (int) $package['id'] ?>"
+                            data-package-name="<?= e($package['name']) ?>"
+                            data-package-days="<?= (int) $package['days'] ?>"
+                            data-package-price="<?= (int) $package['price'] ?>"
+                            data-package-desc="<?= e($package['desc'] ?? '') ?>"
+                            data-package-status="<?= e($package['status']) ?>"><?= icon('pencil') ?> Sửa</button>
                 </div>
             </div>
         </div>
@@ -114,8 +120,18 @@ $revenueLabel = $estimatedRevenue >= 1000000000
                         <td class="cell-strong"><?= e(money($package['price'] * $package['sold'])) ?></td>
                         <td><?= status_badge($package['status']) ?></td>
                         <td class="cell-actions">
-                            <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"><?= icon('pencil') ?></button>
-                            <button class="btn btn-ghost btn-sm text-danger" type="button" data-confirm-action="Xóa gói <?= e($package['name']) ?>? Dữ liệu sẽ không thể khôi phục." data-confirm-title="Đã xóa gói tập"><?= icon('trash3') ?></button>
+                            <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"
+                                    data-package-id="<?= (int) $package['id'] ?>"
+                                    data-package-name="<?= e($package['name']) ?>"
+                                    data-package-days="<?= (int) $package['days'] ?>"
+                                    data-package-price="<?= (int) $package['price'] ?>"
+                                    data-package-desc="<?= e($package['desc'] ?? '') ?>"
+                                    data-package-status="<?= e($package['status']) ?>"><?= icon('pencil') ?></button>
+                            <button class="btn btn-ghost btn-sm text-danger" type="button"
+                                    data-api-url="/api/packages/<?= (int) $package['id'] ?>"
+                                    data-api-method="DELETE"
+                                    data-api-confirm="Xóa gói <?= e($package['name']) ?>? Dữ liệu sẽ không thể khôi phục."
+                                    data-api-success-title="Đã xóa gói tập"><?= icon('trash3') ?></button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -128,7 +144,7 @@ $revenueLabel = $estimatedRevenue >= 1000000000
 <div class="modal fade" id="packageFormModal" tabindex="-1" aria-labelledby="packageFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form >
+            <form id="package-form" data-api-url="/api/packages" data-api-method="POST" data-api-success-title="Đã lưu gói tập">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="packageFormTitle">Thông tin gói tập</h2>

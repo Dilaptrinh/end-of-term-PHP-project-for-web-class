@@ -30,15 +30,25 @@ C:\xampp\php\php.exe -l đường\dẫn\file.php
 ## 3. Bản đồ kiến trúc
 
 ```text
-public/index.php        khai báo route + dispatch, KHÔNG chứa nghiệp vụ
+public/index.php        bootstrap + dispatch; TỰ NẠP route, không liệt kê route
+src/Routes/Pages/       route GET theo role (10-public, 20-customer, 30-instructor, 40-admin)
+src/Routes/Api/         route API theo domain (10-auth, 20-instructor, ...)
 src/Core/Router.php     lọc method + path, chạy middleware, gọi handler
 src/Controllers/Api/    nhận HTTP, đọc Request, trả Response
 src/Services/           validate + nghiệp vụ, không biết HTTP
 src/Repositories/       SQL, prepared statements
 src/Models/             object giữ dữ liệu + getter
-src/Views/              HTML; dữ liệu qua src/Views/data/data.php
+src/Views/              HTML; dữ liệu qua src/Views/data/data.php (loader)
+src/Views/data/         common, shared, admin, customer, instructor
+src/Views/partials/menu/ menu riêng từng role
 mysql/                  config, schema, seed, setup
 ```
+
+`src/Routes/` được `public/index.php` nạp tự động bằng `glob()` + `sort()`:
+
+- Pages nạp ngay sau khi tạo Router.
+- Api nạp trong `if ($db !== null)`.
+- Thêm file mới là route tự có; **không sửa `index.php`**.
 
 Luật phụ thuộc:
 
@@ -67,11 +77,12 @@ Không được đảo ngược (Repository không gọi Service, View không g�
    - `require_once __DIR__ . '/../data/data.php';`
    - Lấy dữ liệu qua `data_*()`.
    - In dữ liệu bằng `e()`.
-2. Hàm dữ liệu: thêm `data_xxx()` trong `src/Views/data/data.php`.
+2. Hàm dữ liệu: thêm `data_xxx()` vào `src/Views/data/<role>.php`
+   (`admin.php`, `customer.php`, `instructor.php`) hoặc `shared.php` nếu nhiều role dùng.
    - Dùng `view_db()`.
    - Trả mảng kết hợp.
    - Ép số bằng `view_cast_ints()` nếu cần tính toán.
-3. Route: `public/index.php`
+3. Route: thêm vào `src/Routes/Pages/<role>.php` (không sửa `index.php`)
 
 ```php
 $router->add('GET', '/admin/xxx', function (): void {
@@ -83,7 +94,7 @@ $router->add('GET', '/admin/xxx', function (): void {
 });
 ```
 
-4. Menu: thêm item vào `app_menu($role)` trong `src/Views/partials/menu.php`.
+4. Menu: thêm item vào `src/Views/partials/menu/<role>.php`.
 5. Nếu có JS: thêm file vào `public/assets/js/pages/`, tăng `?v=` trong `src/Views/layouts/app.php`.
 
 **Không** viết SQL trực tiếp trong view nếu có thể đặt vào `data.php`.
@@ -159,16 +170,20 @@ Response::json(['success' => false, 'message' => '...', 'errors' => $errors], 42
 ## 10. Trạng thái hiện tại
 
 Đã xong:
-- Đăng nhập, phân quyền admin.
-- CRUD giáo viên + tạo tài khoản giáo viên.
-- Toàn bộ trang đọc dữ liệu MySQL.
-- Schema + seed tự động.
+- Đăng nhập, đăng ký hội viên, phân quyền 3 vai trò.
+- Middleware đăng nhập + vai trò cho route trang.
+- CRUD giáo viên kèm tài khoản.
+- CRUD hội viên, gói tập, lớp học.
+- Đăng ký gói: tạo, xác nhận thanh toán, hủy.
+- Đăng ký lớp: hội viên đăng ký/hủy, kiểm tra trùng và sức chứa.
+- Lịch dạy: giáo viên gửi/hủy, admin duyệt/từ chối.
+- Cập nhật hồ sơ + đổi mật khẩu cho customer/instructor.
+- Toàn bộ trang đọc dữ liệu MySQL; schema + seed tự động.
 
-Chưa xong (nếu làm tiếp):
-- CRUD hội viên, gói tập, lớp học, đăng ký, duyệt lịch.
-- Cập nhật hồ sơ/mật khẩu cho customer/instructor.
-- Middleware đăng nhập cho các route trang GET.
-- Đăng ký tài khoản hội viên thật (route `/register` hiện chỉ redirect).
+Còn có thể mở rộng:
+- Xuất Excel/PDF, thông báo realtime.
+- Upload ảnh đại diện.
+- Lịch sử đăng nhập chi tiết.
 
 ## 11. Checklist trước khi commit
 

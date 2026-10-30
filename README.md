@@ -23,10 +23,15 @@ Tài liệu này là nguồn tham chiếu chính cho cả đồng đội và AI 
 - Quản lý hồ sơ cá nhân.
 
 ### Trạng thái hoàn thiện
-- ✅ Đăng nhập, phân quyền admin, CRUD giáo viên (kèm tài khoản đăng nhập).
+- ✅ Đăng nhập, đăng ký hội viên, phân quyền admin/instructor/customer.
+- ✅ Middleware đăng nhập + vai trò cho toàn bộ route trang.
+- ✅ CRUD giáo viên kèm tài khoản đăng nhập.
+- ✅ CRUD hội viên, gói tập, lớp học.
+- ✅ Tạo đăng ký gói, xác nhận thanh toán, hủy đăng ký.
+- ✅ Hội viên đăng ký/hủy lớp; kiểm tra trùng và sức chứa.
+- ✅ Giáo viên gửi/hủy yêu cầu lịch dạy; admin duyệt/từ chối.
+- ✅ Cập nhật hồ sơ + đổi mật khẩu cho hội viên/giáo viên.
 - ✅ Toàn bộ trang đọc dữ liệu thật từ MySQL.
-- ⚠️ Các form thêm/sửa hội viên, gói tập, lớp, đăng ký mới chỉ hiển thị giao diện; chưa có endpoint lưu.
-- ⚠️ Các route trang (GET) chưa gắn middleware đăng nhập (phục vụ demo đồ án).
 
 ---
 
@@ -40,20 +45,21 @@ Tài liệu này là nguồn tham chiếu chính cho cả đồng đội và AI 
 
 ## 3. Cài đặt
 
-1. Khởi động **Apache** và **MySQL** trong XAMPP.
-2. Kiểm tra kết nối trong `mysql/config.php`.
-3. Tạo CSDL và dữ liệu nền:
-
-```bash
-C:\xampp\php\php.exe mysql\setup.php
-```
-
-Nếu CSDL trống, ứng dụng cũng tự tạo cấu trúc + dữ liệu nền ở lần truy cập đầu tiên.
-
-4. Mở:
+1. Clone/copy dự án vào `C:\xampp\htdocs\Project_ck`.
+2. Khởi động **Apache** và **MySQL** trong XAMPP.
+3. Mở:
 
 ```text
 http://localhost/Project_ck/public
+```
+
+Ứng dụng tự tạo CSDL `phongtap`, toàn bộ bảng và dữ liệu nền ở lần truy cập đầu tiên. Không cần tạo database hay chạy SQL thủ công.
+
+> Chỉ cần sửa `mysql/config.php` nếu MySQL của bạn khác mặc định (user `root`, mật khẩu rỗng, cổng `3306`).
+> Muốn khởi tạo lại bằng CLI (tùy chọn):
+
+```bash
+C:\xampp\php\php.exe mysql\setup.php
 ```
 
 > Nếu đã cấu hình `.htaccess` ở gốc `htdocs` (xem mục 11), có thể gọi tắt `http://localhost/api/...`.
@@ -89,6 +95,9 @@ Project_ck/
 │
 ├── src/
 │   ├── bootstrap.php             # Autoload PSR-4 + helpers
+│   ├── Routes/                   # Route tự nạp, KHÔNG sửa index.php khi thêm route
+│   │   ├── Pages/                # 10-public, 20-customer, 30-instructor, 40-admin
+│   │   └── Api/                  # 10-auth, 20-instructor, ... mỗi domain một file
 │   ├── Core/                     # Hạ tầng dùng chung
 │   │   ├── Router.php            # Định tuyến URL
 │   │   ├── Request.php           # Đọc body JSON
@@ -123,8 +132,10 @@ Project_ck/
 │   └── Views/
 │       ├── layouts/              # public.php, auth.php, app.php
 │       ├── partials/             # sidebar, topbar, menu, flash
+│       ├── partials/menu/        # admin.php, instructor.php, customer.php
 │       ├── components/ui.php     # icon(), badge(), avatar(), ...
-│       ├── data/data.php         # Truy vấn dữ liệu cho view
+│       ├── data/                 # common, shared, admin, customer, instructor
+│       │   └── data.php          # Loader cho view (require_once)
 │       ├── admin/                # Trang quản trị
 │       ├── customer/             # Trang hội viên
 │       ├── instructor/           # Trang giáo viên
@@ -279,7 +290,7 @@ $rooms = data_rooms();
 ```
 
 ### Bước 2 — Thêm dữ liệu cho view
-`src/Views/data/data.php`
+`src/Views/data/admin.php` (hoặc `customer.php` / `instructor.php` / `shared.php` tùy phạm vi)
 
 ```php
 function data_rooms(): array
@@ -292,7 +303,7 @@ function data_rooms(): array
 Nếu dữ liệu cần tái sử dụng cho API, tạo Repository thay vì query trong view.
 
 ### Bước 3 — Đăng ký route
-`public/index.php`
+Thêm vào `src/Routes/Pages/40-admin.php`. **Không sửa `public/index.php`.**
 
 ```php
 $router->add('GET', '/admin/rooms', function (): void {
@@ -303,8 +314,10 @@ $router->add('GET', '/admin/rooms', function (): void {
 });
 ```
 
+`index.php` tự nạp mọi file trong `src/Routes/Pages/` theo thứ tự tên file.
+
 ### Bước 4 — Thêm menu
-`src/Views/partials/menu.php` → thêm item vào `app_menu('admin')`:
+`src/Views/partials/menu/admin.php` → thêm item:
 
 ```php
 ['label' => 'Phòng tập', 'icon' => 'door-open', 'href' => '/admin/rooms', 'key' => 'rooms'],
@@ -404,18 +417,31 @@ class RoomApiController
 }
 ```
 
-### Bước 5 — Đăng ký route + khởi tạo trong `index.php`
+### Bước 5 — Tạo file route API
+
+Tạo `src/Routes/Api/30-room.php`. **Không sửa `public/index.php`.**
 
 ```php
-if ($db !== null) {
-    // ...
-    $roomRepo = new RoomRepository($db);
-    $roomService = new RoomService($roomRepo);
-    $roomController = new RoomApiController($roomService);
+<?php
+/**
+ * @var \App\Core\Router $router
+ * @var \mysqli $db
+ * @var callable $requireAuth
+ * @var callable $requireAdmin
+ */
 
-    $router->add('POST', '/api/rooms', [$roomController, 'store'], [$requireAuth, $requireAdmin]);
-}
+use App\Controllers\Api\RoomApiController;
+use App\Repositories\RoomRepository;
+use App\Services\RoomService;
+
+$roomRepo = new RoomRepository($db);
+$roomService = new RoomService($roomRepo);
+$roomController = new RoomApiController($roomService);
+
+$router->add('POST', '/api/rooms', [$roomController, 'store'], [$requireAuth, $requireAdmin]);
 ```
+
+`index.php` tự nạp mọi file trong `src/Routes/Api/` **chỉ khi DB kết nối thành công**, theo thứ tự tên file. Đặt tiền tố số (`10-`, `20-`, `30-`) nếu cần kiểm soát thứ tự route tĩnh trước route `{id}`.
 
 ### Bước 6 — Gọi từ JS
 
@@ -428,7 +454,7 @@ await window.api.post('/api/rooms', { ten_phong: 'P.101' });
 - [ ] Repository dùng prepared statement
 - [ ] Service validate dữ liệu
 - [ ] Controller trả `Response::json` đúng mã
-- [ ] Route nằm trong khối `if ($db !== null)`
+- [ ] Route nằm trong `src/Routes/Api/` (tự nạp khi DB OK)
 - [ ] Có middleware `$requireAuth` / `$requireAdmin` nếu cần
 - [ ] Test bằng Network tab + kiểm tra DB
 
@@ -476,6 +502,26 @@ await window.api.post('/api/rooms', { ten_phong: 'P.101' });
 | POST | `/api/instructors` | Admin |
 | PUT | `/api/instructors/{id}` | Admin |
 | DELETE | `/api/instructors/{id}` | Admin |
+| GET | `/api/members`, `/api/members/{id}` | Đăng nhập |
+| POST/PUT/DELETE | `/api/members`, `/api/members/{id}` | Admin |
+| GET | `/api/packages`, `/api/packages/{id}` | Đăng nhập |
+| POST/PUT/DELETE | `/api/packages`, `/api/packages/{id}` | Admin |
+| GET | `/api/classes`, `/api/classes/{id}` | Đăng nhập |
+| POST/PUT/DELETE | `/api/classes`, `/api/classes/{id}` | Admin |
+| GET | `/api/registrations/packages`, `/api/registrations/classes` | Admin |
+| POST | `/api/registrations/packages` | Admin |
+| POST | `/api/registrations/packages/{id}/confirm` | Admin |
+| POST | `/api/registrations/packages/{id}/cancel` | Admin |
+| POST | `/api/registrations/classes` | Hội viên |
+| POST | `/api/registrations/classes/{id}/cancel` | Đăng nhập (chủ sở hữu/admin) |
+| GET | `/api/availability` | Đăng nhập |
+| POST | `/api/availability` | Giáo viên |
+| POST | `/api/availability/{id}/approve` | Admin |
+| POST | `/api/availability/{id}/reject` | Admin |
+| POST | `/api/availability/{id}/cancel` | Giáo viên/admin |
+| POST | `/api/register` | Công khai |
+| PUT | `/api/profile` | Đăng nhập |
+| POST | `/api/profile/password` | Đăng nhập |
 
 API base URL trong JS:
 
@@ -505,7 +551,6 @@ Các bảng do `mysql/schema.php` tạo:
 | `dang_ky_goi` | Đăng ký gói + thanh toán |
 | `dang_ky_lop` | Đăng ký lớp |
 | `lich_ranh` | Lịch rảnh / yêu cầu dạy của giáo viên |
-| `diem_danh` | Điểm danh |
 | `doanh_thu` | Doanh thu theo tháng (biểu đồ) |
 
 Quan hệ chính:
@@ -519,8 +564,6 @@ dang_ky_lop.hoi_vien_id → hoi_vien.id
 dang_ky_lop.lop_hoc_id  → lop_hoc.id
 lop_hoc.giao_vien_id    → giao_vien.id
 lich_ranh.giao_vien_id  → giao_vien.id
-diem_danh.lop_hoc_id    → lop_hoc.id
-diem_danh.hoi_vien_id   → hoi_vien.id
 ```
 
 ---
@@ -567,6 +610,7 @@ http://localhost/Project_ck/public/...
 | --- | --- |
 | `docs/workflow-tong-hop.md` | Toàn bộ luồng GET mở trang và POST tạo giáo viên, kèm trace giá trị thực, bảng lỗi, debug, cheat sheet |
 | `docs/tao-giao-vien-workflow.md` | Giải thích sâu cú pháp PHP qua đúng đoạn code của dự án |
+| `docs/team-workflow.md` | Phân vai admin/customer/instructor, bản đồ sở hữu file, quy trình làm song song |
 | `AGENTS.md` | Quy ước + checklist dành cho AI agent/đồng đội khi sửa code |
 
 ---
@@ -604,17 +648,40 @@ C:\xampp\php\php.exe -l đường\dẫn\file.php
 
 ```bash
 git add .
-git commit -m "feat: thêm quản lý phòng tập"
-git push origin main
-```
-
-Nếu làm nhánh riêng:
-
-```bash
+git commit -m "feat(admin): thêm quản lý phòng tập"
 git push -u origin feature/ten-tinh-nang
 ```
 
-Sau đó tạo Pull Request trên GitHub để đồng đội review.
+Sau đó tạo Pull Request trên GitHub để đồng đội review. Không push trực tiếp lên `main` khi làm nhóm.
+
+---
+
+## 15. Làm việc song song theo role
+
+Ba người có thể làm **admin / customer / instructor** cùng lúc nhờ cấu trúc tách file:
+
+| Phạm vi | Admin | Customer | Instructor |
+| --- | --- | --- | --- |
+| View | `src/Views/admin/` | `src/Views/customer/` | `src/Views/instructor/` |
+| Route trang | `src/Routes/Pages/40-admin.php` | `src/Routes/Pages/20-customer.php` | `src/Routes/Pages/30-instructor.php` |
+| Route API | `src/Routes/Api/3x-*.php` | `src/Routes/Api/4x-*.php` | `src/Routes/Api/5x-*.php` |
+| Dữ liệu view | `src/Views/data/admin.php` | `src/Views/data/customer.php` | `src/Views/data/instructor.php` |
+| Menu | `src/Views/partials/menu/admin.php` | `src/Views/partials/menu/customer.php` | `src/Views/partials/menu/instructor.php` |
+| JS | `public/assets/js/pages/admin-*.js` | `public/assets/js/pages/customer-*.js` | `public/assets/js/pages/instructor-*.js` |
+
+Điểm quan trọng:
+
+- **Thêm route mới = tạo file mới** trong `src/Routes/Pages/` hoặc `src/Routes/Api/`. `public/index.php` tự nạp, **không cần sửa**.
+- Mỗi domain API tự khởi tạo Repository → Service → Controller trong file route của mình.
+- `src/Views/data/data.php` chỉ là loader; dữ liệu tách theo `common/shared/admin/customer/instructor`.
+- Menu tách theo role.
+- File dùng chung (`src/Core/`, `layouts/`, `api.js`, `ui.js`, `schema.php`, `shared.php`, `common.php`) chỉ sửa khi thật cần, theo PR nhỏ và báo team.
+
+Chi tiết phân vai, quy trình branch/PR và cách xử lý file chung: `docs/team-workflow.md`.
+
+---
+
+## 16. Dành cho AI agent
 
 ---
 

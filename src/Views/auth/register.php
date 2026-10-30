@@ -2,7 +2,7 @@
     <h1>Tạo tài khoản hội viên</h1>
     <p class="auth-sub">Điền thông tin bên dưới để bắt đầu tập luyện cùng FitZone.</p>
 
-    <form method="post" action="<?= e(url('/register')) ?>">
+    <form data-api-url="/api/register" data-api-method="POST" data-api-success-title="Tạo tài khoản thành công" data-api-redirect="<?= e(url('/login')) ?>">
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label" for="reg-name">Họ và tên <span class="req">*</span></label>

@@ -136,32 +136,6 @@
         });
     });
 
-    /* ---------- Toggle trạng thái điểm danh ---------- */
-    document.addEventListener('change', function (event) {
-        const input = event.target.closest('[data-attendance-status]');
-        if (!input) return;
-        const row = input.closest('.attendance-row');
-        if (!row) return;
-        const label = row.querySelector('[data-attendance-label]');
-        if (label) label.textContent = input.value === 'co_mat' ? 'Có mặt' : input.value === 'vang' ? 'Vắng' : 'Có phép';
-    });
-
-    /* ---------- Lưu điểm danh (demo) ---------- */
-    document.addEventListener('click', function (event) {
-        const btn = event.target.closest('[data-attendance-save]');
-        if (!btn) return;
-        const scope = document.querySelector(btn.dataset.attendanceSave || '#attendance-list');
-        let present = 0;
-        let absent = 0;
-        if (scope) {
-            scope.querySelectorAll('input[data-attendance-status]:checked').forEach(function (input) {
-                if (input.value === 'co_mat') present++;
-                if (input.value === 'vang') absent++;
-            });
-        }
-        showToast('Đã lưu điểm danh', 'Có mặt: ' + present + ' · Vắng: ' + absent + ' (demo giao diện).');
-    });
-
     /* ---------- Sao chép ---------- */
     document.addEventListener('click', function (event) {
         const link = event.target.closest('[data-copy]');
@@ -174,6 +148,99 @@
             }).catch(function () {
                 showToast('Không sao chép được', value, 'warning');
             });
+        }
+    });
+
+    /* ---------- Form gửi API (data-api-url) ---------- */
+    document.addEventListener('submit', async function (event) {
+        const form = event.target.closest('form[data-api-url]');
+        if (!form || !window.api) return;
+        event.preventDefault();
+
+        const submitter = event.submitter || form.querySelector('[type="submit"]');
+        if (submitter) submitter.classList.add('is-loading');
+
+        const payload = {};
+        new FormData(form).forEach(function (value, key) {
+            payload[key] = value;
+        });
+
+        try {
+            const response = await window.api.request(
+                (form.dataset.apiMethod || 'POST').toUpperCase(),
+                form.dataset.apiUrl,
+                payload
+            );
+
+            const modalEl = form.closest('.modal');
+            if (modalEl && window.bootstrap) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            showToast(
+                form.dataset.apiSuccessTitle || 'Thành công',
+                response.message || form.dataset.apiSuccess || 'Đã lưu dữ liệu.',
+                'success'
+            );
+
+            if (form.dataset.apiRedirect) {
+                window.location.href = form.dataset.apiRedirect;
+                return;
+            }
+            if (form.dataset.apiReload !== 'false') {
+                window.setTimeout(function () { window.location.reload(); }, 500);
+            }
+        } catch (error) {
+            const details = error.data && error.data.errors
+                ? Object.values(error.data.errors).join(' ')
+                : (error.message || 'Đã xảy ra lỗi.');
+            showToast('Không thể lưu', details, 'danger');
+        } finally {
+            if (submitter) submitter.classList.remove('is-loading');
+        }
+    });
+
+    /* ---------- Nút gọi API (data-api-url) ---------- */
+    document.addEventListener('click', async function (event) {
+        const trigger = event.target.closest('[data-api-url]');
+        if (!trigger || trigger.tagName === 'FORM' || !window.api) return;
+        event.preventDefault();
+
+        if (trigger.dataset.apiConfirm && !window.confirm(trigger.dataset.apiConfirm)) {
+            return;
+        }
+
+        let body = {};
+        if (trigger.dataset.apiBody) {
+            try {
+                body = JSON.parse(trigger.dataset.apiBody);
+            } catch (error) {
+                body = {};
+            }
+        }
+
+        trigger.classList.add('is-loading');
+        try {
+            const response = await window.api.request(
+                (trigger.dataset.apiMethod || 'POST').toUpperCase(),
+                trigger.dataset.apiUrl,
+                body
+            );
+            showToast(
+                trigger.dataset.apiSuccessTitle || 'Thành công',
+                response.message || 'Đã xử lý.',
+                'success'
+            );
+            if (trigger.dataset.apiReload !== 'false') {
+                window.setTimeout(function () { window.location.reload(); }, 400);
+            }
+        } catch (error) {
+            const details = error.data && error.data.errors
+                ? Object.values(error.data.errors).join(' ')
+                : (error.message || 'Đã xảy ra lỗi.');
+            showToast('Không thể thực hiện', details, 'danger');
+            trigger.classList.remove('is-loading');
         }
     });
 

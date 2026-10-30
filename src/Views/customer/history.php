@@ -102,7 +102,11 @@ $classHistory = data_customer_class_history();
                                 <td><?= status_badge($row['status']) ?></td>
                                 <td class="cell-actions">
                                     <?php if ($row['status'] === 'dang_ky'): ?>
-                                        <button class="btn btn-danger-soft btn-sm" type="button" data-confirm-action="Hủy đăng ký lớp <?= e($row['class']) ?>?">Hủy</button>
+                                        <button class="btn btn-danger-soft btn-sm" type="button"
+                                                data-api-url="/api/registrations/classes/<?= (int) $row['id'] ?>/cancel"
+                                                data-api-method="POST"
+                                                data-api-confirm="Hủy đăng ký lớp <?= e($row['class']) ?>?"
+                                                data-api-success-title="Đã hủy đăng ký lớp">Hủy</button>
                                     <?php else: ?>
                                         <button class="btn btn-ghost btn-sm" type="button" disabled>—</button>
                                     <?php endif; ?>

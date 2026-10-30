@@ -1,7 +1,16 @@
 <?php
 require_once __DIR__ . '/../data/data.php';
 
-$students = data_students_for_class(1);
+$instructor = data_current_instructor();
+$instructorId = (int) ($instructor['id'] ?? 0);
+$myClasses = array_values(array_filter(
+    data_classes(),
+    static fn ($class) => (int) $class['giao_vien_id'] === $instructorId
+));
+$classId = (int) ($_GET['class_id'] ?? 0);
+$keyword = trim((string) ($_GET['q'] ?? ''));
+$status = trim((string) ($_GET['status'] ?? ''));
+$students = data_students_for_instructor($instructorId, $classId ?: null, $keyword, $status);
 ?>
 <div class="page-head">
     <div>
@@ -14,24 +23,24 @@ $students = data_students_for_class(1);
     <div class="filter-field filter-search">
         <label class="form-label" for="stu-q">Tên hoặc số điện thoại</label>
         <div class="position-relative">
-            <input class="form-control" id="stu-q" name="q" type="search" value="" placeholder="VD: Lê Hoàng Nam hoặc 0901…" autofocus>
+            <input class="form-control" id="stu-q" name="q" type="search" value="<?= e($keyword) ?>" placeholder="VD: Lê Hoàng Nam hoặc 0901…" autofocus>
         </div>
     </div>
     <div class="filter-field">
         <label class="form-label" for="stu-class">Lớp học</label>
         <select class="form-select" id="stu-class" name="class_id">
             <option value="">Tất cả lớp của tôi</option>
-            <option value="1">Yoga cơ bản</option>
-            <option value="4">Zumba Dance</option>
-            <option value="7">Yoga nâng cao</option>
+            <?php foreach ($myClasses as $class): ?>
+                <option value="<?= (int) $class['id'] ?>" <?= $classId === (int) $class['id'] ? 'selected' : '' ?>><?= e($class['name']) ?></option>
+            <?php endforeach; ?>
         </select>
     </div>
     <div class="filter-field">
         <label class="form-label" for="stu-status">Trạng thái</label>
         <select class="form-select" id="stu-status" name="status">
             <option value="">Tất cả</option>
-            <option value="hoat_dong">Đang hoạt động</option>
-            <option value="ngung_hoat_dong">Ngừng hoạt động</option>
+            <option value="hoat_dong" <?= $status === 'hoat_dong' ? 'selected' : '' ?>>Đang hoạt động</option>
+            <option value="ngung_hoat_dong" <?= $status === 'ngung_hoat_dong' ? 'selected' : '' ?>>Ngừng hoạt động</option>
         </select>
     </div>
     <div class="filter-field" style="min-width:auto;">
@@ -71,7 +80,7 @@ $students = data_students_for_class(1);
                                 </span>
                             </div>
                         </td>
-                        <td>Yoga cơ bản<div class="cell-sub">Thứ 2 · 18:00</div></td>
+                        <td><?= e($student['class_name']) ?><div class="cell-sub"><?= e(weekday($student['weekday']) . ' · ' . $student['start']) ?></div></td>
                         <td class="text-muted-2"><?= e($student['phone']) ?></td>
                         <td><?= status_badge($student['status']) ?></td>
                     </tr>

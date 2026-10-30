@@ -13,6 +13,8 @@ $pendingInvoices = count(array_filter($packageRegs, static fn ($r) => $r['paymen
 $totalEnrolled = (int) array_sum(array_column($classes, 'enrolled'));
 $totalCapacity = (int) array_sum(array_column($classes, 'capacity'));
 $occupancy = $totalCapacity > 0 ? (int) round(100 * $totalEnrolled / $totalCapacity) : 0;
+$openClasses = count(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo'));
+$fullClasses = count(array_filter($classes, static fn ($c) => (int) $c['capacity'] > 0 && (int) $c['enrolled'] >= (int) $c['capacity']));
 $currentRevenue = 0;
 foreach ($revenue as $row) {
     if ($row['month'] === 'T10') {
@@ -106,13 +108,13 @@ foreach ($revenue as $row) {
             <div class="app-card-header"><h2>Tình trạng lớp học</h2></div>
             <div class="app-card-body">
                 <div class="text-center mb-3">
-                    <div class="donut mx-auto" style="--p:78;width:104px;height:104px;">
-                        <span class="donut-value" style="font-size:1.1rem;">78%<small>lấp đầy</small></span>
+                    <div class="donut mx-auto" style="--p:<?= $occupancy ?>;width:104px;height:104px;">
+                        <span class="donut-value" style="font-size:1.1rem;"><?= $occupancy ?>%<small>lấp đầy</small></span>
                     </div>
                 </div>
                 <div class="kv-list">
-                    <div class="kv"><span>Lớp đang mở</span><span>8</span></div>
-                    <div class="kv"><span>Lớp đầy</span><span class="text-warning">2</span></div>
+                    <div class="kv"><span>Lớp đang mở</span><span><?= $openClasses ?></span></div>
+                    <div class="kv"><span>Lớp đầy</span><span class="text-warning"><?= $fullClasses ?></span></div>
                 </div>
             </div>
         </div>

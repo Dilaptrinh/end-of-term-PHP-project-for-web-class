@@ -71,6 +71,7 @@
         },
         post: function (path, body) { return request('POST', path, body || {}); },
         put: function (path, body) { return request('PUT', path, body || {}); },
-        delete: function (path) { return request('DELETE', path); }
+        delete: function (path) { return request('DELETE', path); },
+        request: function (method, path, body) { return request(method, path, body); }
     };
 })();

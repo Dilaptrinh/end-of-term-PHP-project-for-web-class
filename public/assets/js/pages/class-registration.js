@@ -9,6 +9,8 @@
             modal.querySelector('[data-modal-class-name]').textContent = trigger.dataset.className || '';
             modal.querySelector('[data-modal-class-meta]').textContent = trigger.dataset.classMeta || '';
             modal.querySelector('[data-modal-class-teacher]').textContent = trigger.dataset.classTeacher || '';
+            const idInput = document.getElementById('register-class-id');
+            if (idInput) idInput.value = trigger.dataset.classId || '';
         });
     }
 

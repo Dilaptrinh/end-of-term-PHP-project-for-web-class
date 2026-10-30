@@ -64,7 +64,7 @@ $totalHours = (int) round($totalHours);
                 <span class="stat-icon ms-auto"><?= icon('calendar-plus') ?></span>
             </div>
             <div class="app-card-body">
-                <form >
+                <form data-api-url="/api/availability" data-api-method="POST" data-api-success-title="Đã gửi yêu cầu">
                     <div class="mb-3">
                         <label class="form-label" for="av-date">Ngày dạy <span class="req">*</span></label>
                         <input class="form-control" id="av-date" name="ngay_day" type="date" required min="2026-10-23">
@@ -130,10 +130,12 @@ $totalHours = (int) round($totalHours);
                                 <td><?= status_badge($request['status']) ?></td>
                                 <td class="text-muted-2"><?= e($request['approved_by']) ?></td>
                                 <td class="cell-actions">
-                                    <?php if (in_array($request['status'], ['cho_duyet', 'da_duyet'], true)): ?>
+                                    <?php if ($request['status'] === 'cho_duyet'): ?>
                                         <button class="btn btn-danger-soft btn-sm" type="button"
-                                                data-confirm-action="Hủy yêu cầu lịch dạy ngày <?= e($request['date']) ?>?"
-                                                data-confirm-title="Đã hủy yêu cầu">
+                                                data-api-url="/api/availability/<?= (int) $request['id'] ?>/cancel"
+                                                data-api-method="POST"
+                                                data-api-confirm="Hủy yêu cầu lịch dạy ngày <?= e($request['date']) ?>?"
+                                                data-api-success-title="Đã hủy yêu cầu">
                                             <?= icon('x-lg') ?> Hủy
                                         </button>
                                     <?php else: ?>

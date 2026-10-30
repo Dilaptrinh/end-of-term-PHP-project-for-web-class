@@ -58,7 +58,7 @@ $memberCode = 'HV-' . str_pad((string) ($member['id'] ?? 0), 4, '0', STR_PAD_LEF
                 </div>
             </div>
             <div class="app-card-body">
-                <form>
+                <form data-api-url="/api/profile" data-api-method="PUT" data-api-success-title="Đã lưu hồ sơ">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label" for="acc-name">Họ và tên <span class="req">*</span></label>
@@ -133,7 +133,7 @@ $memberCode = 'HV-' . str_pad((string) ($member['id'] ?? 0), 4, '0', STR_PAD_LEF
                 <span class="stat-icon ms-auto"><?= icon('shield-lock') ?></span>
             </div>
             <div class="app-card-body">
-                <form>
+                <form data-api-url="/api/profile/password" data-api-method="POST" data-api-success-title="Đã đổi mật khẩu">
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label" for="pw-current">Mật khẩu hiện tại <span class="req">*</span></label>

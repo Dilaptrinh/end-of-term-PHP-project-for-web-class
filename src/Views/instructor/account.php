@@ -55,7 +55,7 @@ $instructorCode = 'GV-' . str_pad((string) ($instructor['id'] ?? 0), 4, '0', STR
                 </div>
             </div>
             <div class="app-card-body">
-                <form>
+                <form data-api-url="/api/profile" data-api-method="PUT" data-api-success-title="Đã lưu hồ sơ">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label" for="ins-name">Họ và tên <span class="req">*</span></label>
@@ -79,7 +79,7 @@ $instructorCode = 'GV-' . str_pad((string) ($instructor['id'] ?? 0), 4, '0', STR
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="ins-desc">Giới thiệu</label>
-                            <textarea class="form-control" id="ins-desc" name="mo_ta" rows="3">Huấn luyện viên Yoga với 8 năm kinh nghiệm, chứng chỉ RYT-500. Chuyên hướng dẫn Yoga trị liệu và Pilates cho người mới bắt đầu.</textarea>
+                            <textarea class="form-control" id="ins-desc" name="gioi_thieu" rows="3"><?= e($instructor['gioi_thieu'] ?? '') ?></textarea>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="ins-account">Tên đăng nhập</label>
@@ -108,7 +108,7 @@ $instructorCode = 'GV-' . str_pad((string) ($instructor['id'] ?? 0), 4, '0', STR
                 <span class="stat-icon ms-auto"><?= icon('shield-lock') ?></span>
             </div>
             <div class="app-card-body">
-                <form>
+                <form data-api-url="/api/profile/password" data-api-method="POST" data-api-success-title="Đã đổi mật khẩu">
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label" for="ins-pw-current">Mật khẩu hiện tại <span class="req">*</span></label>

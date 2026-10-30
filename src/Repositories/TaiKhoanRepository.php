@@ -56,6 +56,16 @@ class TaiKhoanRepository extends BaseRepository
         return $row ?: null;
     }
 
+    public function findHashById(int $id): ?string
+    {
+        $stmt = $this->db->prepare('SELECT mat_khau FROM `tai_khoan` WHERE id = ? LIMIT 1');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ? (string) $row['mat_khau'] : null;
+    }
+
     public function existsByUsername(string $tenDangNhap): bool
     {
         $stmt = $this->db->prepare(

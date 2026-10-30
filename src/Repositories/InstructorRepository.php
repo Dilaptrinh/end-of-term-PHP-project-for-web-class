@@ -31,6 +31,7 @@ class InstructorRepository extends BaseRepository
             "SELECT gv.*, tk.ten_dang_nhap
              FROM `{$this->table}` gv
              LEFT JOIN `tai_khoan` tk ON tk.id = gv.tai_khoan_id
+             WHERE gv.deleted_at IS NULL
              ORDER BY gv.id"
         );
 
@@ -46,7 +47,7 @@ class InstructorRepository extends BaseRepository
             "SELECT gv.*, tk.ten_dang_nhap
              FROM `{$this->table}` gv
              LEFT JOIN `tai_khoan` tk ON tk.id = gv.tai_khoan_id
-             WHERE gv.id = ?
+             WHERE gv.id = ? AND gv.deleted_at IS NULL
              LIMIT 1"
         );
         $stmt->bind_param('i', $id);
@@ -55,6 +56,18 @@ class InstructorRepository extends BaseRepository
         $stmt->close();
 
         return $row ? $this->mapRow($row) : null;
+    }
+
+    public function findByAccount(int $accountId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT * FROM `giao_vien` WHERE tai_khoan_id = ? AND deleted_at IS NULL LIMIT 1'
+        );
+        $stmt->bind_param('i', $accountId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
     }
 
     public function emailExists(string $email, ?int $ignoreId = null): bool

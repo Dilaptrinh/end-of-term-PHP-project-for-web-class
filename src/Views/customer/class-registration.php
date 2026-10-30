@@ -119,6 +119,7 @@ $instructors = array_values(array_unique(array_map(static fn ($c) => $c['instruc
                     <?php else: ?>
                         <button class="btn btn-primary btn-sm" type="button"
                                 data-bs-toggle="modal" data-bs-target="#registerClassModal"
+                                data-class-id="<?= (int) $class['id'] ?>"
                                 data-class-name="<?= e($class['name']) ?>"
                                 data-class-meta="<?= e(weekday($class['weekday']) . ' · ' . $class['start'] . ' – ' . $class['end'] . ' · ' . $class['room']) ?>"
                                 data-class-teacher="<?= e($class['instructor']) ?>">
@@ -162,7 +163,8 @@ $instructors = array_values(array_unique(array_map(static fn ($c) => $c['instruc
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Hủy</button>
-                <form >
+                <form data-api-url="/api/registrations/classes" data-api-method="POST" data-api-success-title="Đã đăng ký lớp">
+                    <input type="hidden" name="lop_hoc_id" id="register-class-id" value="">
                     <button type="submit" class="btn btn-primary"><?= icon('check-lg') ?> Xác nhận đăng ký</button>
                 </form>
             </div>

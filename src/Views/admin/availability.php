@@ -109,11 +109,14 @@ $cancelled = count(array_filter($requests, static fn ($r) => $r['status'] === 'd
                         <td class="text-muted-2 text-tiny"><?= e($request['approved_by']) ?></td>
                         <td class="cell-actions">
                             <?php if ($request['status'] === 'cho_duyet'): ?>
-                                <button class="btn btn-primary btn-sm" type="button"
-                                        data-confirm-action="Duyệt lịch dạy của <?= e($request['instructor']) ?> ngày <?= e($request['date']) ?>?"
-                                        data-confirm-title="Đã duyệt lịch dạy"><?= icon('check-lg') ?> Duyệt</button>
-                                <button class="btn btn-danger-soft btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#rejectModal"
-                                        data-instructor="<?= e($request['instructor']) ?>" data-date="<?= e($request['date']) ?>"><?= icon('x-lg') ?> Từ chối</button>
+                                        <button class="btn btn-primary btn-sm" type="button"
+                                                data-api-url="/api/availability/<?= (int) $request['id'] ?>/approve"
+                                                data-api-method="POST"
+                                                data-api-confirm="Duyệt lịch dạy của <?= e($request['instructor']) ?> ngày <?= e($request['date']) ?>?"
+                                                data-api-success-title="Đã duyệt lịch dạy"><?= icon('check-lg') ?> Duyệt</button>
+                                        <button class="btn btn-danger-soft btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#rejectModal"
+                                                data-request-id="<?= (int) $request['id'] ?>"
+                                                data-instructor="<?= e($request['instructor']) ?>" data-date="<?= e($request['date']) ?>"><?= icon('x-lg') ?> Từ chối</button>
                             <?php else: ?>
                                 <button class="btn btn-ghost btn-sm" type="button" data-toast="Chi tiết lịch dạy sẽ được nối API."><?= icon('eye') ?> Xem</button>
                             <?php endif; ?>
@@ -129,7 +132,7 @@ $cancelled = count(array_filter($requests, static fn ($r) => $r['status'] === 'd
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form >
+            <form id="reject-form" data-api-method="POST" data-api-success-title="Đã từ chối lịch dạy">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="rejectModalTitle">Từ chối lịch dạy</h2>

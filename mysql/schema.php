@@ -141,18 +141,6 @@ if (!function_exists('ensure_schema')) {
         ");
 
         $conn->query("
-            CREATE TABLE IF NOT EXISTS `diem_danh` (
-                id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                lop_hoc_id  INT UNSIGNED NOT NULL,
-                hoi_vien_id INT UNSIGNED NOT NULL,
-                ngay        DATE NOT NULL,
-                trang_thai  VARCHAR(20) NOT NULL DEFAULT 'co_mat',
-                ghi_chu     VARCHAR(255) NULL,
-                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
-
-        $conn->query("
             CREATE TABLE IF NOT EXISTS `doanh_thu` (
                 id     INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 thang  TINYINT NOT NULL,
@@ -302,21 +290,6 @@ if (!function_exists('seed_core_data')) {
             );
             foreach ($rows as [$instructorId, $date, $start, $end, $status, $note, $approver]) {
                 $stmt->bind_param('issssss', $instructorId, $date, $start, $end, $status, $note, $approver);
-                $stmt->execute();
-            }
-            $stmt->close();
-        }
-
-        if ((int) $conn->query('SELECT COUNT(*) AS c FROM diem_danh')->fetch_assoc()['c'] === 0) {
-            $statuses = ['co_mat', 'co_mat', 'vang', 'co_mat', 'phep', 'co_mat', 'vang', 'co_mat', 'co_mat', 'phep'];
-            $stmt = $conn->prepare(
-                'INSERT INTO diem_danh (lop_hoc_id, hoi_vien_id, ngay, trang_thai) VALUES (?, ?, ?, ?)'
-            );
-            for ($i = 1; $i <= 10; $i++) {
-                $classId = ($i % 6) + 1;
-                $status = $statuses[$i - 1];
-                $date = '2026-10-' . str_pad((string) (4 + $i), 2, '0', STR_PAD_LEFT);
-                $stmt->bind_param('iiss', $classId, $i, $date, $status);
                 $stmt->execute();
             }
             $stmt->close();

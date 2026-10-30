@@ -121,9 +121,10 @@ $fullCount = count(array_filter($classes, static fn ($c) => $c['enrolled'] >= $c
                                 <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" aria-label="Thao tác"><?= icon('three-dots') ?></button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="<?= e(url('/admin/classes')) ?>" data-bs-toggle="modal" data-bs-target="#classFormModal"
-                                           data-form-mode="edit"
+                                        data-form-mode="edit"
+                                        data-class-id="<?= (int) $class['id'] ?>"
                                            data-class-name="<?= e($class['name']) ?>"
-                                           data-class-instructor="<?= e($class['instructor']) ?>"
+                                           data-class-instructor="<?= (int) $class['giao_vien_id'] ?>"
                                            data-class-day="<?= e((string) $class['weekday']) ?>"
                                            data-class-start="<?= e($class['start']) ?>"
                                            data-class-end="<?= e($class['end']) ?>"
@@ -133,7 +134,11 @@ $fullCount = count(array_filter($classes, static fn ($c) => $c['enrolled'] >= $c
                                            data-class-desc="<?= e($class['desc']) ?>"><?= icon('pencil') ?> Sửa lớp</a></li>
                                     <li><a class="dropdown-item" href="<?= e(url('/admin/classes')) ?>"><?= icon('people') ?> Xem học viên</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><button class="dropdown-item text-danger" type="button" data-confirm-action="Xóa lớp <?= e($class['name']) ?>? Dữ liệu sẽ không thể khôi phục." data-confirm-title="Đã xóa lớp"><?= icon('trash3') ?> Xóa lớp</button></li>
+                                    <li><button class="dropdown-item text-danger" type="button"
+                                                data-api-url="/api/classes/<?= (int) $class['id'] ?>"
+                                                data-api-method="DELETE"
+                                                data-api-confirm="Xóa lớp <?= e($class['name']) ?>? Dữ liệu sẽ không thể khôi phục."
+                                                data-api-success-title="Đã xóa lớp"><?= icon('trash3') ?> Xóa lớp</button></li>
                                 </ul>
                             </div>
                         </td>
@@ -148,7 +153,7 @@ $fullCount = count(array_filter($classes, static fn ($c) => $c['enrolled'] >= $c
 <div class="modal fade" id="classFormModal" tabindex="-1" aria-labelledby="classFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <form >
+            <form id="class-form" data-api-url="/api/classes" data-api-method="POST" data-api-success-title="Đã lưu lớp học">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="classFormTitle">Thêm lớp học</h2>
@@ -174,9 +179,9 @@ $fullCount = count(array_filter($classes, static fn ($c) => $c['enrolled'] >= $c
                         <div class="col-md-6">
                             <label class="form-label" for="cf-teacher">Giáo viên <span class="req">*</span></label>
                             <select class="form-select" id="cf-teacher" name="giao_vien_id" required data-field="instructor">
-                                <?php foreach ($instructors as $instructor): ?>
-                                    <option><?= e($instructor['name']) ?></option>
-                                <?php endforeach; ?>
+                            <?php foreach ($instructors as $instructor): ?>
+                                <option value="<?= (int) $instructor['id'] ?>"><?= e($instructor['name']) ?></option>
+                            <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-6">

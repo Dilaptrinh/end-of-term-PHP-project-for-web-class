@@ -127,10 +127,22 @@ foreach (data_package_registrations() as $reg) {
                                 <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" aria-label="Thao tác"><?= icon('three-dots') ?></button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="#" data-toast="Trang chi tiết hội viên sẽ được nối API."><?= icon('eye') ?> Xem chi tiết</a></li>
-                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#memberFormModal"><?= icon('pencil') ?> Sửa hồ sơ</a></li>
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#memberFormModal"
+                                           data-member-id="<?= (int) $member['id'] ?>"
+                                           data-member-name="<?= e($member['name']) ?>"
+                                           data-member-phone="<?= e($member['phone']) ?>"
+                                           data-member-email="<?= e($member['email']) ?>"
+                                           data-member-birth="<?= e($member['birth']) ?>"
+                                           data-member-gender="<?= e($member['gender_raw'] ?? 'khac') ?>"
+                                           data-member-address="<?= e($member['dia_chi'] ?? '') ?>"
+                                           data-member-note="<?= e($member['ghi_chu'] ?? '') ?>"><?= icon('pencil') ?> Sửa hồ sơ</a></li>
                                     <li><a class="dropdown-item" href="#" data-toast="Đã gửi liên kết tạo tài khoản."><?= icon('person-gear') ?> Tạo tài khoản</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><button class="dropdown-item text-danger" type="button" data-confirm-action="Xóa hội viên <?= e($member['name']) ?>? Hồ sơ sẽ không thể khôi phục." data-confirm-title="Đã xóa hội viên"><?= icon('trash3') ?> Xóa</button></li>
+                                    <li><button class="dropdown-item text-danger" type="button"
+                                                data-api-url="/api/members/<?= (int) $member['id'] ?>"
+                                                data-api-method="DELETE"
+                                                data-api-confirm="Xóa hội viên <?= e($member['name']) ?>? Hồ sơ sẽ không thể khôi phục."
+                                                data-api-success-title="Đã xóa hội viên"><?= icon('trash3') ?> Xóa</button></li>
                                 </ul>
                             </div>
                         </td>
@@ -145,7 +157,7 @@ foreach (data_package_registrations() as $reg) {
 <div class="modal fade" id="memberFormModal" tabindex="-1" aria-labelledby="memberFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form >
+            <form id="member-form" data-api-url="/api/members" data-api-method="POST" data-api-success-title="Đã lưu hội viên">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="memberFormTitle">Thông tin hội viên</h2>
@@ -174,9 +186,9 @@ foreach (data_package_registrations() as $reg) {
                         <div class="col-md-6">
                             <label class="form-label" for="mf-gender">Giới tính</label>
                             <select class="form-select" id="mf-gender" name="gioi_tinh">
-                                <option>Khác</option>
-                                <option>Nam</option>
-                                <option>Nữ</option>
+                                <option value="khac">Khác</option>
+                                <option value="nam">Nam</option>
+                                <option value="nu">Nữ</option>
                             </select>
                         </div>
                         <div class="col-md-6">
