@@ -36,7 +36,7 @@
 ## Cấu trúc dự án
 
 ```
-Project_ck/
+fitness/
 ├── index.php                 # Trang chủ
 ├── login.php                 # Đăng nhập
 ├── register.php              # Đăng ký hội viên
@@ -65,10 +65,10 @@ Project_ck/
 ## Cài đặt & chạy
 
 1. Cài **XAMPP** (PHP 8+, MySQL/MariaDB).
-2. Clone project vào `C:\xampp\htdocs\Project_ck`.
+2. Clone project vào `C:\xampp\htdocs\fitness`.
 3. Bật **Apache** và **MySQL** trong XAMPP.
 4. Kiểm tra cấu hình ở `common/mysql/config.php` (mặc định `127.0.0.1`, user `root`, mật khẩu rỗng).
-5. Mở trình duyệt: `http://localhost/Project_ck/`.
+5. Mở trình duyệt: `http://localhost/fitness/`.
 
 Cơ sở dữ liệu `phongtap` sẽ **tự động được tạo** (bảng + tài khoản mẫu) ở lần query đầu tiên nhờ `common_db()`. Có thể khởi tạo thủ công:
 
@@ -113,7 +113,7 @@ require $partials . '/foot.php';
 
 ## API chính
 
-Base: `/Project_ck/common/api.php/api/...`
+Base: `/fitness/common/api.php/api/...`
 
 | Method | Endpoint | Quyền |
 | --- | --- | --- |
@@ -140,5 +140,5 @@ Base: `/Project_ck/common/api.php/api/...`
 ## Ghi chú
 
 - `common/mysql/config.php` mặc định cấu hình cho XAMPP (`root`, không mật khẩu). Khi deploy cần đổi thông tin kết nối.
-- Khi chạy trên máy khác, dùng URL đầy đủ dạng `/Project_ck/...` (không có `.htaccess` rút gọn).
+- Khi chạy trên máy khác, dùng URL đầy đủ dạng `/fitness/...` (không có `.htaccess` rút gọn).
 - Dự án phục vụ môn học nhóm; ưu tiên dễ đọc, ít file hơn là kiến trúc MVC đầy đủ.
