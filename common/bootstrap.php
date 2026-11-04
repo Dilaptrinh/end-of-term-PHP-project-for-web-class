@@ -5,6 +5,13 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => !empty($_SERVER['HTTPS']),
+    ]);
     session_start();
 }
 

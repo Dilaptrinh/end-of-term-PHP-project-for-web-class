@@ -1,5 +1,41 @@
 ﻿<?php
 require __DIR__ . '/../common/bootstrap.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'customer') {
+        json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
+    }
+
+    $raw = file_get_contents('php://input') ?: '';
+    $input = json_decode($raw, true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $classId = (int) ($input['lop_hoc_id'] ?? 0);
+    $db = common_db();
+    $accountId = (int) $user['id'];
+
+    $stmt = $db->prepare('SELECT id FROM hoi_vien WHERE tai_khoan_id = ? LIMIT 1');
+    $stmt->bind_param('i', $accountId);
+    $stmt->execute();
+    $member = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$member || $classId <= 0) {
+        json_response(['success' => false, 'message' => 'Dữ liệu đăng ký không hợp lệ.'], 422);
+    }
+
+    $memberId = (int) $member['id'];
+    $stmt = $db->prepare('INSERT INTO dang_ky_lop (hoi_vien_id, lop_hoc_id, trang_thai, ngay_dang_ky) VALUES (?, ?, "dang_ky", NOW())');
+    $stmt->bind_param('ii', $memberId, $classId);
+    $stmt->execute();
+    $stmt->close();
+
+    json_response(['success' => true, 'message' => 'Đã đăng ký lớp học.'], 201);
+}
+
 require_role('customer');
 
 $menu = require __DIR__ . '/../common/menus/customer.php';
@@ -7,7 +43,7 @@ $menu = require __DIR__ . '/../common/menus/customer.php';
 $appRole = 'customer';
 $activeMenu = 'class-registration';
 $pageTitle = 'Đăng ký lớp học';
-$pageScripts = ['class-registration.js'];
+$pageScripts = [];
 
 $classes = data_classes();
 $open = array_values(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo'));
@@ -183,7 +219,7 @@ require $partials . '/head.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Hủy</button>
-                <form data-api-url="/api/registrations/classes" data-api-method="POST" data-api-success-title="Đã đăng ký lớp">
+                <form id="register-form">
                     <input type="hidden" name="lop_hoc_id" id="register-class-id" value="">
                     <button type="submit" class="btn btn-primary"><?= icon('check-lg') ?> Xác nhận đăng ký</button>
                 </form>
@@ -196,4 +232,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/customer/class-registration.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

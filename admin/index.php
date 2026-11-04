@@ -1,5 +1,30 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require __DIR__ . '/queries.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    if (($_GET['action'] ?? '') !== 'confirm-package') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    }
+
+    $id = (int) ($_GET['id'] ?? 0);
+    if ($id <= 0) {
+        json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+    }
+
+    $changed = admin_package_registration_confirm($id);
+
+    json_response([
+        'success' => $changed,
+        'message' => $changed ? 'Đã xác nhận thanh toán.' : 'Không tìm thấy đăng ký.',
+    ], $changed ? 200 : 404);
+}
+
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -169,10 +194,8 @@ require $partials . '/head.php';
                                 <td><?= status_badge($row['payment']) ?></td>
                                 <td class="cell-actions">
                                     <button class="btn btn-primary btn-sm" type="button"
-                                            data-api-url="/api/registrations/packages/<?= (int) $row['id'] ?>/confirm"
-                                            data-api-method="POST"
-                                            data-api-confirm="Xác nhận đã thanh toán cho <?= e($row['member']) ?>?"
-                                            data-api-success-title="Đã xác nhận thanh toán">Xác nhận</button>
+                                            data-confirm-package="<?= (int) $row['id'] ?>"
+                                            data-confirm-text="Xác nhận đã thanh toán cho <?= e($row['member']) ?>?">Xác nhận</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -266,4 +289,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/index.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

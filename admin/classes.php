@@ -1,5 +1,79 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require __DIR__ . '/queries.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    $action = (string) ($_GET['action'] ?? '');
+    $id = (int) ($_GET['id'] ?? 0);
+    $db = common_db();
+
+    if ($action === 'delete') {
+        if ($id <= 0) {
+            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+        }
+        $changed = admin_class_delete($id);
+        json_response([
+            'success' => $changed,
+            'message' => $changed ? 'Đã xóa lớp học.' : 'Không tìm thấy lớp học.',
+        ], $changed ? 200 : 404);
+    }
+
+    if ($action !== 'save') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    }
+
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $errors = [];
+    foreach (['ten_lop', 'gio_bat_dau', 'gio_ket_thuc', 'ngay_bat_dau', 'ngay_ket_thuc'] as $field) {
+        if (trim((string) ($input[$field] ?? '')) === '') {
+            $errors[$field] = 'Trường này bắt buộc.';
+        }
+    }
+    if ((int) ($input['giao_vien_id'] ?? 0) <= 0) {
+        $errors['giao_vien_id'] = 'Vui lòng chọn giáo viên.';
+    }
+    if ((int) ($input['suc_chua'] ?? 0) < 1) {
+        $errors['suc_chua'] = 'Sức chứa không hợp lệ.';
+    }
+    if ($errors) {
+        json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
+    }
+
+    $values = [
+        trim((string) $input['ten_lop']),
+        (int) $input['giao_vien_id'],
+        (int) ($input['thu_trong_tuan'] ?? 1),
+        (string) $input['gio_bat_dau'],
+        (string) $input['gio_ket_thuc'],
+        (string) $input['ngay_bat_dau'],
+        (string) $input['ngay_ket_thuc'],
+        (int) $input['suc_chua'],
+        ($input['phong_hoc'] ?? '') !== '' ? (string) $input['phong_hoc'] : null,
+        ($input['mo_ta'] ?? '') !== '' ? (string) $input['mo_ta'] : null,
+        ($input['trinh_do'] ?? '') !== '' ? (string) $input['trinh_do'] : null,
+        (string) ($input['trang_thai'] ?? 'dang_mo'),
+    ];
+    $savedId = admin_class_save($values, $id);
+
+    if ($id === 0) {
+        json_response(['success' => true, 'data' => ['id' => $savedId], 'message' => 'Đã tạo lớp học.'], 201);
+    }
+    if ($savedId === 0) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy lớp học.'], 404);
+    }
+
+    json_response(['success' => true, 'message' => 'Đã cập nhật lớp học.']);
+}
+
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -7,7 +81,7 @@ $menu = require __DIR__ . '/../common/menus/admin.php';
 $appRole = 'admin';
 $activeMenu = 'classes';
 $pageTitle = 'Quản lý lớp học';
-$pageScripts = ['admin-classes.js'];
+$pageScripts = [];
 
 $classes = data_classes();
 $instructors = data_instructors();
@@ -155,10 +229,8 @@ require $partials . '/head.php';
                                     <li><a class="dropdown-item" href="<?= e(url('/admin/classes')) ?>"><?= icon('people') ?> Xem học viên</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" type="button"
-                                                data-api-url="/api/classes/<?= (int) $class['id'] ?>"
-                                                data-api-method="DELETE"
-                                                data-api-confirm="Xóa lớp <?= e($class['name']) ?>? Dữ liệu sẽ không thể khôi phục."
-                                                data-api-success-title="Đã xóa lớp"><?= icon('trash3') ?> Xóa lớp</button></li>
+                                                data-delete-id="<?= (int) $class['id'] ?>"
+                                                data-delete-name="<?= e($class['name']) ?>"><?= icon('trash3') ?> Xóa lớp</button></li>
                                 </ul>
                             </div>
                         </td>
@@ -173,7 +245,7 @@ require $partials . '/head.php';
 <div class="modal fade" id="classFormModal" tabindex="-1" aria-labelledby="classFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <form id="class-form" data-api-url="/api/classes" data-api-method="POST" data-api-success-title="Đã lưu lớp học">
+            <form id="class-form">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="classFormTitle">Thêm lớp học</h2>
@@ -253,4 +325,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

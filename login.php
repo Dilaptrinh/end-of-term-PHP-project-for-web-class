@@ -1,8 +1,39 @@
 <?php
 require __DIR__ . '/common/bootstrap.php';
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $raw = file_get_contents('php://input') ?: '';
+    $input = json_decode($raw, true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $username = trim((string) ($input['ten_dang_nhap'] ?? $input['username'] ?? ''));
+    $password = (string) ($input['mat_khau'] ?? $input['password'] ?? '');
+
+    $stmt = common_db()->prepare('SELECT id, mat_khau, trang_thai, vai_tro FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    $account = $stmt->get_result()->fetch_assoc() ?: null;
+    $stmt->close();
+
+    if (!$account || (int) $account['trang_thai'] !== 1 || !password_verify($password, (string) $account['mat_khau'])) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Tên đăng nhập hoặc mật khẩu không đúng.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    session_regenerate_id(true);
+    $_SESSION['tai_khoan_id'] = (int) $account['id'];
+
+    echo json_encode(['success' => true, 'data' => ['vai_tro' => $account['vai_tro']], 'message' => 'Đăng nhập thành công.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $pageTitle = 'Đăng nhập';
-$pageScripts = ['login.js'];
+$pageScripts = [];
 
 ?>
 <!DOCTYPE html>
@@ -48,6 +79,7 @@ $pageScripts = ['login.js'];
     <p class="auth-sub">Đăng nhập một cổng cho hội viên, giáo viên và quản trị viên.</p>
 
     <form id="login-form" class="mt-3" novalidate
+          data-login-url="<?= e(url('/login.php')) ?>"
           data-redirect-admin="<?= e(url('/admin')) ?>"
           data-redirect-instructor="<?= e(url('/instructor')) ?>"
           data-redirect-customer="<?= e(url('/customer')) ?>">
@@ -87,15 +119,6 @@ $pageScripts = ['login.js'];
     </main>
 </div>
 
-<script src="<?= e(url('/common/assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script>
-<script>
-    window.APP_BASE = <?= json_encode(base_url(), JSON_UNESCAPED_SLASHES) ?>;
-</script>
-<script src="<?= e(url('/common/assets/js/api.js')) ?>?v=5"></script>
-<script src="<?= e(url('/common/assets/js/ui.js')) ?>?v=5"></script>
-<?php foreach ($pageScripts as $script): ?>
-    <script src="<?= e(url('/common/assets/js/pages/' . $script . '?v=3')) ?>"></script>
-<?php endforeach; ?>
-</body>
-</html>
+<script src="<?= e(url('/common/assets/js/auth/login.js')) ?>?v=4"></script>
+<?php require __DIR__ . '/common/partials/foot.php'; ?>
 

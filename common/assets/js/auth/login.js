@@ -28,7 +28,7 @@
         event.preventDefault();
 
         if (username.value.trim() === '' || password.value.trim() === '') {
-            window.showToast('Thiếu thông tin', 'Vui lòng nhập tên đăng nhập và mật khẩu.', 'warning');
+            alert('Vui lòng nhập tên đăng nhập và mật khẩu.');
             return;
         }
 
@@ -36,18 +36,28 @@
         submit.disabled = true;
 
         try {
-            const response = await window.api.post('/api/auth/login', {
-                ten_dang_nhap: username.value.trim(),
-                mat_khau: password.value
+            const response = await fetch(form.dataset.loginUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ten_dang_nhap: username.value.trim(),
+                    mat_khau: password.value
+                }),
+                credentials: 'same-origin'
             });
 
-            const role = response && response.data && response.data.vai_tro
-                ? response.data.vai_tro
-                : 'customer';
+            const data = await response.json().catch(function () {
+                return { success: false, message: 'Phản hồi không hợp lệ từ máy chủ.' };
+            });
 
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Không thể đăng nhập.');
+            }
+
+            const role = data.data && data.data.vai_tro ? data.data.vai_tro : 'customer';
             window.location.href = redirectFor(role);
         } catch (error) {
-            window.showToast('Đăng nhập thất bại', error.message || 'Không thể đăng nhập.', 'danger');
+            alert(error.message || 'Không thể đăng nhập.');
             submit.classList.remove('is-loading');
             submit.disabled = false;
         }

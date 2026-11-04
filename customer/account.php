@@ -1,5 +1,87 @@
 ﻿<?php
 require __DIR__ . '/../common/bootstrap.php';
+
+$requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if ($requestMethod === 'PUT' || $requestMethod === 'POST') {
+    $action = (string) ($_GET['action'] ?? '');
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'customer') {
+        json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
+    }
+
+    $raw = file_get_contents('php://input') ?: '';
+    $input = json_decode($raw, true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $db = common_db();
+    $accountId = (int) $user['id'];
+
+    if ($action === 'profile') {
+        $name = trim((string) ($input['ho_ten'] ?? ''));
+        $phone = trim((string) ($input['sdt'] ?? ''));
+        $email = trim((string) ($input['email'] ?? ''));
+        $errors = [];
+        if (mb_strlen($name) < 2) {
+            $errors['ho_ten'] = 'Họ tên không hợp lệ.';
+        }
+        if ($phone === '') {
+            $errors['sdt'] = 'Số điện thoại không hợp lệ.';
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Email không hợp lệ.';
+        }
+        if ($errors) {
+            json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
+        }
+
+        $stmt = $db->prepare('UPDATE tai_khoan SET ho_ten = ? WHERE id = ?');
+        $stmt->bind_param('si', $name, $accountId);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $db->prepare('UPDATE hoi_vien SET ho_ten = ?, sdt = ?, email = ? WHERE tai_khoan_id = ?');
+        $stmt->bind_param('sssi', $name, $phone, $email, $accountId);
+        $stmt->execute();
+        $stmt->close();
+
+        json_response(['success' => true, 'message' => 'Đã cập nhật hồ sơ.']);
+    }
+
+    if ($action === 'password' && $requestMethod === 'POST') {
+        $old = (string) ($input['mat_khau_cu'] ?? '');
+        $new = (string) ($input['mat_khau_moi'] ?? '');
+        $confirm = (string) ($input['mat_khau_xac_nhan'] ?? '');
+
+        $stmt = $db->prepare('SELECT mat_khau FROM tai_khoan WHERE id = ?');
+        $stmt->bind_param('i', $accountId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$row || !password_verify($old, (string) $row['mat_khau'])) {
+            json_response(['success' => false, 'message' => 'Mật khẩu hiện tại không đúng.', 'errors' => ['mat_khau_cu' => 'Mật khẩu hiện tại không đúng.']], 422);
+        }
+        if (strlen($new) < 6) {
+            json_response(['success' => false, 'message' => 'Mật khẩu mới phải có ít nhất 6 ký tự.', 'errors' => ['mat_khau_moi' => 'Mật khẩu mới phải có ít nhất 6 ký tự.']], 422);
+        }
+        if ($new !== $confirm) {
+            json_response(['success' => false, 'message' => 'Mật khẩu xác nhận không khớp.', 'errors' => ['mat_khau_xac_nhan' => 'Mật khẩu xác nhận không khớp.']], 422);
+        }
+
+        $hash = password_hash($new, PASSWORD_DEFAULT);
+        $stmt = $db->prepare('UPDATE tai_khoan SET mat_khau = ? WHERE id = ?');
+        $stmt->bind_param('si', $hash, $accountId);
+        $stmt->execute();
+        $stmt->close();
+
+        json_response(['success' => true, 'message' => 'Đã đổi mật khẩu.']);
+    }
+
+    json_response(['success' => false, 'message' => 'Không tìm thấy thao tác.'], 404);
+}
+
 require_role('customer');
 
 $menu = require __DIR__ . '/../common/menus/customer.php';
@@ -41,7 +123,7 @@ require $partials . '/head.php';
         <div class="app-card mb-3">
             <div class="app-card-body text-center">
                 <?= avatar($member['ho_ten'] ?? 'Hội viên', 'avatar-xl', 'mx-auto') ?>
-                <h2 class="mt-3 mb-1" style="font-size:1.05rem;"><?= e($member['ho_ten'] ?? '') ?></h2>
+                <h2 class="mt-3 mb-1" id="account-name" style="font-size:1.05rem;"><?= e($member['ho_ten'] ?? '') ?></h2>
                 <p class="text-muted-2 text-small mb-2">Hội viên · Mã <?= e($memberCode) ?></p>
                 <div class="d-flex justify-content-center gap-2 mb-3">
                     <?= badge('Đang hoạt động', 'success') ?>
@@ -78,7 +160,7 @@ require $partials . '/head.php';
                 </div>
             </div>
             <div class="app-card-body">
-                <form data-api-url="/api/profile" data-api-method="PUT" data-api-success-title="Đã lưu hồ sơ">
+                <form id="profile-form">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label" for="acc-name">Họ và tên <span class="req">*</span></label>
@@ -153,7 +235,7 @@ require $partials . '/head.php';
                 <span class="stat-icon ms-auto"><?= icon('shield-lock') ?></span>
             </div>
             <div class="app-card-body">
-                <form data-api-url="/api/profile/password" data-api-method="POST" data-api-success-title="Đã đổi mật khẩu">
+                <form id="password-form">
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label" for="pw-current">Mật khẩu hiện tại <span class="req">*</span></label>
@@ -179,5 +261,7 @@ require $partials . '/head.php';
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
+
+<script src="<?= e(url('/common/assets/js/customer/account.js')) ?>?v=1"></script>
 
 <?php require $partials . '/foot.php'; ?>

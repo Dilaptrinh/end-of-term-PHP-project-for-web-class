@@ -1,5 +1,31 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require __DIR__ . '/queries.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    $action = (string) ($_GET['action'] ?? '');
+    $id = (int) ($_GET['id'] ?? 0);
+    if ($id <= 0) {
+        json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+    }
+    if ($action !== 'approve' && $action !== 'reject') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    }
+
+    $status = $action === 'approve' ? 'da_duyet' : 'tu_choi';
+    $changed = admin_availability_update($id, $status, (string) $user['ho_ten']);
+
+    json_response([
+        'success' => $changed,
+        'message' => $changed ? 'Đã cập nhật lịch dạy.' : 'Không tìm thấy lịch dạy.',
+    ], $changed ? 200 : 404);
+}
+
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -7,7 +33,7 @@ $menu = require __DIR__ . '/../common/menus/admin.php';
 $appRole = 'admin';
 $activeMenu = 'availability';
 $pageTitle = 'Duyệt lịch dạy';
-$pageScripts = ['admin-availability.js'];
+$pageScripts = [];
 
 $requests = data_availability();
 $pending = count(array_filter($requests, static fn ($r) => $r['status'] === 'cho_duyet'));
@@ -130,10 +156,9 @@ require $partials . '/head.php';
                         <td class="cell-actions">
                             <?php if ($request['status'] === 'cho_duyet'): ?>
                                         <button class="btn btn-primary btn-sm" type="button"
-                                                data-api-url="/api/availability/<?= (int) $request['id'] ?>/approve"
-                                                data-api-method="POST"
-                                                data-api-confirm="Duyệt lịch dạy của <?= e($request['instructor']) ?> ngày <?= e($request['date']) ?>?"
-                                                data-api-success-title="Đã duyệt lịch dạy"><?= icon('check-lg') ?> Duyệt</button>
+                                                data-approve-id="<?= (int) $request['id'] ?>"
+                                                data-approve-instructor="<?= e($request['instructor']) ?>"
+                                                data-approve-date="<?= e($request['date']) ?>"><?= icon('check-lg') ?> Duyệt</button>
                                         <button class="btn btn-danger-soft btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#rejectModal"
                                                 data-request-id="<?= (int) $request['id'] ?>"
                                                 data-instructor="<?= e($request['instructor']) ?>" data-date="<?= e($request['date']) ?>"><?= icon('x-lg') ?> Từ chối</button>
@@ -152,7 +177,7 @@ require $partials . '/head.php';
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="reject-form" data-api-method="POST" data-api-success-title="Đã từ chối lịch dạy">
+            <form id="reject-form">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="rejectModalTitle">Từ chối lịch dạy</h2>
@@ -182,4 +207,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/availability.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

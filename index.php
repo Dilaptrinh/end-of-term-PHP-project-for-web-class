@@ -266,12 +266,5 @@ $pageScripts = [];
     </footer>
 </div>
 
-<script src="<?= e(url('/common/assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script>
-<script src="<?= e(url('/common/assets/js/api.js')) ?>?v=5"></script>
-<script src="<?= e(url('/common/assets/js/ui.js')) ?>?v=5"></script>
-<?php foreach ($pageScripts as $script): ?>
-    <script src="<?= e(url('/common/assets/js/pages/' . $script . '?v=5')) ?>"></script>
-<?php endforeach; ?>
-</body>
-</html>
+<?php require __DIR__ . '/common/partials/foot.php'; ?>
 

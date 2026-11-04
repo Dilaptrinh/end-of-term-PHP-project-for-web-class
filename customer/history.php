@@ -1,5 +1,39 @@
 ﻿<?php
 require __DIR__ . '/../common/bootstrap.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'customer') {
+        json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
+    }
+
+    $registrationId = (int) ($_GET['id'] ?? 0);
+    if ($registrationId <= 0) {
+        json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+    }
+
+    $db = common_db();
+    $stmt = $db->prepare('SELECT d.id, hv.tai_khoan_id FROM dang_ky_lop d JOIN hoi_vien hv ON hv.id = d.hoi_vien_id WHERE d.id = ? LIMIT 1');
+    $stmt->bind_param('i', $registrationId);
+    $stmt->execute();
+    $registration = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$registration) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy đăng ký.'], 404);
+    }
+    if ((int) $registration['tai_khoan_id'] !== (int) $user['id']) {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền hủy đăng ký này.'], 403);
+    }
+
+    $stmt = $db->prepare('UPDATE dang_ky_lop SET trang_thai = "da_huy" WHERE id = ?');
+    $stmt->bind_param('i', $registrationId);
+    $stmt->execute();
+    $stmt->close();
+
+    json_response(['success' => true, 'message' => 'Đã hủy đăng ký lớp.']);
+}
+
 require_role('customer');
 
 $menu = require __DIR__ . '/../common/menus/customer.php';
@@ -123,10 +157,8 @@ require $partials . '/head.php';
                                 <td class="cell-actions">
                                     <?php if ($row['status'] === 'dang_ky'): ?>
                                         <button class="btn btn-danger-soft btn-sm" type="button"
-                                                data-api-url="/api/registrations/classes/<?= (int) $row['id'] ?>/cancel"
-                                                data-api-method="POST"
-                                                data-api-confirm="Hủy đăng ký lớp <?= e($row['class']) ?>?"
-                                                data-api-success-title="Đã hủy đăng ký lớp">Hủy</button>
+                                                data-cancel-id="<?= (int) $row['id'] ?>"
+                                                data-cancel-class="<?= e($row['class']) ?>">Hủy</button>
                                     <?php else: ?>
                                         <button class="btn btn-ghost btn-sm" type="button" disabled>—</button>
                                     <?php endif; ?>
@@ -146,4 +178,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/customer/history.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

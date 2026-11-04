@@ -27,7 +27,6 @@ function common_url(string $path = '/'): string
     } elseif (
         !str_contains($path, '.')
         && !str_contains($path, '#')
-        && !str_starts_with($path, '/api/')
         && !str_starts_with($path, '/common/')
     ) {
         $path .= '.php';
@@ -48,6 +47,14 @@ function url(string $path = '/'): string
 function redirect(string $path): never
 {
     header('Location: ' . common_url($path));
+    exit;
+}
+
+function json_response(array $body, int $status = 200): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 

@@ -1,5 +1,69 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require __DIR__ . '/queries.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    $action = (string) ($_GET['action'] ?? '');
+    $id = (int) ($_GET['id'] ?? 0);
+    $db = common_db();
+
+    if ($action === 'delete') {
+        if ($id <= 0) {
+            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+        }
+        $changed = admin_package_delete($id);
+        json_response([
+            'success' => $changed,
+            'message' => $changed ? 'Đã xóa gói tập.' : 'Không tìm thấy gói tập.',
+        ], $changed ? 200 : 404);
+    }
+
+    if ($action !== 'save') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    }
+
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $name = trim((string) ($input['ten_goi'] ?? ''));
+    $days = (int) ($input['thoi_han_ngay'] ?? 0);
+    $errors = [];
+    if (mb_strlen($name) < 2) {
+        $errors['ten_goi'] = 'Tên gói không hợp lệ.';
+    }
+    if ($days < 1) {
+        $errors['thoi_han_ngay'] = 'Thời hạn không hợp lệ.';
+    }
+    if ($errors) {
+        json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
+    }
+
+    $values = [
+        $name,
+        $days,
+        (float) ($input['gia'] ?? 0),
+        ($input['mo_ta'] ?? '') !== '' ? (string) $input['mo_ta'] : null,
+        (string) ($input['trang_thai'] ?? 'dang_ban'),
+    ];
+    $savedId = admin_package_save($values, $id);
+
+    if ($id === 0) {
+        json_response(['success' => true, 'data' => ['id' => $savedId], 'message' => 'Đã tạo gói tập.'], 201);
+    }
+    if ($savedId === 0) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy gói tập.'], 404);
+    }
+
+    json_response(['success' => true, 'message' => 'Đã cập nhật gói tập.']);
+}
+
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -7,7 +71,7 @@ $menu = require __DIR__ . '/../common/menus/admin.php';
 $appRole = 'admin';
 $activeMenu = 'packages';
 $pageTitle = 'Quản lý gói tập';
-$pageScripts = ['admin-packages.js'];
+$pageScripts = [];
 
 $packages = data_packages();
 $selling = count(array_filter($packages, static fn ($p) => $p['status'] === 'dang_ban'));
@@ -148,10 +212,8 @@ require $partials . '/head.php';
                                     data-package-desc="<?= e($package['desc'] ?? '') ?>"
                                     data-package-status="<?= e($package['status']) ?>"><?= icon('pencil') ?></button>
                             <button class="btn btn-ghost btn-sm text-danger" type="button"
-                                    data-api-url="/api/packages/<?= (int) $package['id'] ?>"
-                                    data-api-method="DELETE"
-                                    data-api-confirm="Xóa gói <?= e($package['name']) ?>? Dữ liệu sẽ không thể khôi phục."
-                                    data-api-success-title="Đã xóa gói tập"><?= icon('trash3') ?></button>
+                                    data-delete-id="<?= (int) $package['id'] ?>"
+                                    data-delete-name="<?= e($package['name']) ?>"><?= icon('trash3') ?></button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -164,7 +226,7 @@ require $partials . '/head.php';
 <div class="modal fade" id="packageFormModal" tabindex="-1" aria-labelledby="packageFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="package-form" data-api-url="/api/packages" data-api-method="POST" data-api-success-title="Đã lưu gói tập">
+            <form id="package-form">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="packageFormTitle">Thông tin gói tập</h2>
@@ -212,4 +274,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

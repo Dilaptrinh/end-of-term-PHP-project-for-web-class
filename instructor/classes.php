@@ -7,7 +7,7 @@ $menu = require __DIR__ . '/../common/menus/instructor.php';
 $appRole = 'instructor';
 $activeMenu = 'classes';
 $pageTitle = 'Lớp tôi đang dạy';
-$pageScripts = ['instructor-classes.js'];
+$pageScripts = [];
 
 $classes = array_values(array_filter(data_classes(), static fn ($c) => $c['instructor'] === data_current_instructor_name()));
 
@@ -166,4 +166,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/instructor/instructor-classes.js')) ?>?v=6"></script>
 <?php require $partials . '/foot.php'; ?>

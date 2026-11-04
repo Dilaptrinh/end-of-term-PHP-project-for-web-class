@@ -1,5 +1,83 @@
 <?php
 require __DIR__ . '/common/bootstrap.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $username = trim((string) ($input['ten_dang_nhap'] ?? ''));
+    $password = (string) ($input['mat_khau'] ?? '');
+    $confirm = (string) ($input['mat_khau_xac_nhan'] ?? '');
+    $name = trim((string) ($input['ho_ten'] ?? ''));
+    $email = trim((string) ($input['email'] ?? ''));
+    $phone = trim((string) ($input['sdt'] ?? ''));
+    $gender = (string) ($input['gioi_tinh'] ?? 'khac');
+    $birth = trim((string) ($input['ngay_sinh'] ?? ''));
+    $address = trim((string) ($input['dia_chi'] ?? ''));
+
+    $errors = [];
+    if (!preg_match('/^[A-Za-z0-9_]{3,50}$/', $username)) {
+        $errors['ten_dang_nhap'] = 'Tên đăng nhập 3–50 ký tự, chỉ chữ/số/gạch dưới.';
+    }
+    if (strlen($password) < 6) {
+        $errors['mat_khau'] = 'Mật khẩu tối thiểu 6 ký tự.';
+    }
+    if ($password !== $confirm) {
+        $errors['mat_khau_xac_nhan'] = 'Mật khẩu xác nhận không khớp.';
+    }
+    if (mb_strlen($name) < 2) {
+        $errors['ho_ten'] = 'Họ tên không hợp lệ.';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Email không hợp lệ.';
+    }
+    if ($phone === '') {
+        $errors['sdt'] = 'Số điện thoại không hợp lệ.';
+    }
+    if ($errors) {
+        json_response(['success' => false, 'message' => 'Thông tin đăng ký không hợp lệ.', 'errors' => $errors], 422);
+    }
+
+    $db = common_db();
+
+    $stmt = $db->prepare('SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    $exists = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($exists) {
+        json_response(['success' => false, 'message' => 'Tên đăng nhập đã tồn tại.', 'errors' => ['ten_dang_nhap' => 'Tên đăng nhập đã tồn tại.']], 422);
+    }
+
+    $stmt = $db->prepare('SELECT id FROM hoi_vien WHERE email = ? LIMIT 1');
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $exists = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($exists) {
+        json_response(['success' => false, 'message' => 'Email đã được sử dụng.', 'errors' => ['email' => 'Email đã được sử dụng.']], 422);
+    }
+
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $stmt = $db->prepare('INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, ho_ten, vai_tro, trang_thai) VALUES (?, ?, ?, "customer", 1)');
+    $stmt->bind_param('sss', $username, $hash, $name);
+    $stmt->execute();
+    $accountId = $stmt->insert_id;
+    $stmt->close();
+
+    $birth = $birth !== '' ? $birth : null;
+    $address = $address !== '' ? $address : null;
+
+    $stmt = $db->prepare('INSERT INTO hoi_vien (tai_khoan_id, ho_ten, sdt, email, gioi_tinh, ngay_sinh, dia_chi, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?, "hoat_dong")');
+    $stmt->bind_param('issssss', $accountId, $name, $phone, $email, $gender, $birth, $address);
+    $stmt->execute();
+    $stmt->close();
+
+    json_response(['success' => true, 'message' => 'Tạo tài khoản thành công.'], 201);
+}
+
 $pageTitle = 'Đăng ký hội viên';
 $pageScripts = [];
 
@@ -46,8 +124,13 @@ $pageScripts = [];
     <h1>Tạo tài khoản hội viên</h1>
     <p class="auth-sub">Điền thông tin bên dưới để bắt đầu tập luyện cùng FitZone.</p>
 
-    <form data-api-url="/api/register" data-api-method="POST" data-api-success-title="Tạo tài khoản thành công" data-api-redirect="<?= e(url('/login')) ?>">
+    <form id="register-form">
         <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="reg-username">Tên đăng nhập <span class="req">*</span></label>
+                <input class="form-control" id="reg-username" name="ten_dang_nhap" type="text" required minlength="3" maxlength="50" pattern="[A-Za-z0-9_]+" placeholder="vd: nguyenvana" autocomplete="username">
+                <div class="form-text">Chỉ chữ, số, dấu gạch dưới; tối thiểu 3 ký tự.</div>
+            </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-name">Họ và tên <span class="req">*</span></label>
                 <input class="form-control" id="reg-name" name="ho_ten" type="text" required placeholder="Nguyễn Văn A">
@@ -56,7 +139,7 @@ $pageScripts = [];
                 <label class="form-label" for="reg-phone">Số điện thoại <span class="req">*</span></label>
                 <input class="form-control" id="reg-phone" name="sdt" type="tel" required placeholder="0901 234 567">
             </div>
-            <div class="col-12">
+            <div class="col-md-6">
                 <label class="form-label" for="reg-email">Email <span class="req">*</span></label>
                 <input class="form-control" id="reg-email" name="email" type="email" required placeholder="ban@email.com">
             </div>
@@ -105,15 +188,6 @@ $pageScripts = [];
     </main>
 </div>
 
-<script src="<?= e(url('/common/assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script>
-<script>
-    window.APP_BASE = <?= json_encode(base_url(), JSON_UNESCAPED_SLASHES) ?>;
-</script>
-<script src="<?= e(url('/common/assets/js/api.js')) ?>?v=5"></script>
-<script src="<?= e(url('/common/assets/js/ui.js')) ?>?v=5"></script>
-<?php foreach ($pageScripts as $script): ?>
-    <script src="<?= e(url('/common/assets/js/pages/' . $script . '?v=3')) ?>"></script>
-<?php endforeach; ?>
-</body>
-</html>
+<script src="<?= e(url('/common/assets/js/auth/register.js')) ?>?v=1"></script>
+<?php require __DIR__ . '/common/partials/foot.php'; ?>
 

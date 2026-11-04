@@ -1,5 +1,64 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require __DIR__ . '/queries.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    $action = (string) ($_GET['action'] ?? '');
+    $id = (int) ($_GET['id'] ?? 0);
+    $db = common_db();
+
+    if ($action === 'create-package') {
+        $input = json_decode(file_get_contents('php://input') ?: '', true);
+        if (!is_array($input)) {
+            $input = $_POST;
+        }
+        $memberId = (int) ($input['hoi_vien_id'] ?? 0);
+        $packageId = (int) ($input['goi_tap_id'] ?? 0);
+        $from = trim((string) ($input['ngay_bat_dau'] ?? ''));
+        $to = trim((string) ($input['ngay_ket_thuc'] ?? ''));
+        $payMethod = trim((string) ($input['phuong_thuc_thanh_toan'] ?? ''));
+
+        if ($memberId <= 0 || $packageId <= 0 || $from === '' || $to === '') {
+            json_response(['success' => false, 'message' => 'Vui lòng chọn hội viên, gói tập và thời hạn.'], 422);
+        }
+
+        $newId = admin_package_registration_create($memberId, $packageId, $from, $to, $payMethod !== '' ? $payMethod : null);
+        if ($newId === 0) {
+            json_response(['success' => false, 'message' => 'Gói tập không tồn tại.'], 404);
+        }
+
+        json_response(['success' => true, 'message' => 'Đã tạo đăng ký gói.'], 201);
+    }
+
+    if ($action === 'confirm-package' || $action === 'cancel-package' || $action === 'cancel-class') {
+        if ($id <= 0) {
+            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+        }
+    }
+
+    if ($action === 'confirm-package') {
+        admin_package_registration_confirm($id);
+        json_response(['success' => true, 'message' => 'Đã xác nhận thanh toán.']);
+    }
+
+    if ($action === 'cancel-package') {
+        admin_package_registration_cancel($id);
+        json_response(['success' => true, 'message' => 'Đã hủy đăng ký gói.']);
+    }
+
+    if ($action === 'cancel-class') {
+        admin_class_registration_cancel($id);
+        json_response(['success' => true, 'message' => 'Đã hủy đăng ký lớp.']);
+    }
+
+    json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+}
+
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -129,15 +188,13 @@ require $partials . '/head.php';
                                 <td class="cell-actions">
                                     <?php if ($reg['payment'] === 'chua_thanh_toan'): ?>
                                         <button class="btn btn-primary btn-sm" type="button"
-                                                data-api-url="/api/registrations/packages/<?= (int) $reg['id'] ?>/confirm"
-                                                data-api-method="POST"
-                                                data-api-confirm="Xác nhận thanh toán <?= e(money($reg['price'])) ?> cho <?= e($reg['member']) ?>?"
-                                                data-api-success-title="Đã xác nhận thanh toán"><?= icon('check-lg') ?> Xác nhận</button>
+                                                data-reg-action="confirm-package"
+                                                data-reg-id="<?= (int) $reg['id'] ?>"
+                                                data-reg-confirm="Xác nhận thanh toán <?= e(money($reg['price'])) ?> cho <?= e($reg['member']) ?>?"><?= icon('check-lg') ?> Xác nhận</button>
                                         <button class="btn btn-danger-soft btn-sm" type="button"
-                                                data-api-url="/api/registrations/packages/<?= (int) $reg['id'] ?>/cancel"
-                                                data-api-method="POST"
-                                                data-api-confirm="Hủy đăng ký của <?= e($reg['member']) ?>?"
-                                                data-api-success-title="Đã hủy đăng ký">Hủy</button>
+                                                data-reg-action="cancel-package"
+                                                data-reg-id="<?= (int) $reg['id'] ?>"
+                                                data-reg-confirm="Hủy đăng ký của <?= e($reg['member']) ?>?">Hủy</button>
                                     <?php else: ?>
                                         <button class="btn btn-ghost btn-sm" type="button" data-toast="Chi tiết giao dịch sẽ được nối API."><?= icon('eye') ?> Xem</button>
                                     <?php endif; ?>
@@ -175,10 +232,9 @@ require $partials . '/head.php';
                                 <td class="cell-actions">
                                     <?php if ($reg['status'] === 'dang_ky'): ?>
                                         <button class="btn btn-danger-soft btn-sm" type="button"
-                                                data-api-url="/api/registrations/classes/<?= (int) $reg['id'] ?>/cancel"
-                                                data-api-method="POST"
-                                                data-api-confirm="Hủy đăng ký lớp <?= e($reg['class']) ?> của <?= e($reg['member']) ?>?"
-                                                data-api-success-title="Đã hủy đăng ký lớp">Hủy</button>
+                                                data-reg-action="cancel-class"
+                                                data-reg-id="<?= (int) $reg['id'] ?>"
+                                                data-reg-confirm="Hủy đăng ký lớp <?= e($reg['class']) ?> của <?= e($reg['member']) ?>?">Hủy</button>
                                     <?php else: ?>
                                         <button class="btn btn-ghost btn-sm" type="button" disabled>—</button>
                                     <?php endif; ?>
@@ -196,7 +252,7 @@ require $partials . '/head.php';
 <div class="modal fade" id="registrationFormModal" tabindex="-1" aria-labelledby="registrationFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form data-api-url="/api/registrations/packages" data-api-method="POST" data-api-success-title="Đã tạo đăng ký">
+            <form id="registration-form">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="registrationFormTitle">Tạo đăng ký gói</h2>
@@ -257,4 +313,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/registrations.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

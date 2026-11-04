@@ -1,5 +1,77 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'instructor') {
+        json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
+    }
+
+    $action = (string) ($_GET['action'] ?? 'create');
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $db = common_db();
+    $accountId = (int) $user['id'];
+
+    $stmt = $db->prepare('SELECT id FROM giao_vien WHERE tai_khoan_id = ? LIMIT 1');
+    $stmt->bind_param('i', $accountId);
+    $stmt->execute();
+    $instructor = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$instructor) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy hồ sơ giáo viên.'], 404);
+    }
+
+    $instructorId = (int) $instructor['id'];
+
+    if ($action === 'cancel') {
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+        }
+
+        $stmt = $db->prepare('SELECT giao_vien_id FROM lich_ranh WHERE id = ? LIMIT 1');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$row) {
+            json_response(['success' => false, 'message' => 'Không tìm thấy lịch dạy.'], 404);
+        }
+        if ((int) $row['giao_vien_id'] !== $instructorId) {
+            json_response(['success' => false, 'message' => 'Bạn không có quyền hủy lịch dạy này.'], 403);
+        }
+
+        $stmt = $db->prepare('UPDATE lich_ranh SET trang_thai = "da_huy" WHERE id = ?');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $stmt->close();
+
+        json_response(['success' => true, 'message' => 'Đã hủy lịch dạy.']);
+    }
+
+    $date = trim((string) ($input['ngay_day'] ?? $input['ngay'] ?? ''));
+    $start = trim((string) ($input['gio_bat_dau'] ?? ''));
+    $end = trim((string) ($input['gio_ket_thuc'] ?? ''));
+    $note = trim((string) ($input['ghi_chu'] ?? ''));
+
+    if ($date === '' || $start === '' || $end === '') {
+        json_response(['success' => false, 'message' => 'Vui lòng chọn ngày và khung giờ.'], 422);
+    }
+
+    $stmt = $db->prepare('INSERT INTO lich_ranh (giao_vien_id, ngay, gio_bat_dau, gio_ket_thuc, ghi_chu, trang_thai) VALUES (?, ?, ?, ?, ?, "cho_duyet")');
+    $stmt->bind_param('issss', $instructorId, $date, $start, $end, $note);
+    $stmt->execute();
+    $stmt->close();
+
+    json_response(['success' => true, 'message' => 'Đã gửi yêu cầu lịch dạy.'], 201);
+}
+
 require_role('instructor');
 
 $menu = require __DIR__ . '/../common/menus/instructor.php';
@@ -84,7 +156,7 @@ require $partials . '/head.php';
                 <span class="stat-icon ms-auto"><?= icon('calendar-plus') ?></span>
             </div>
             <div class="app-card-body">
-                <form data-api-url="/api/availability" data-api-method="POST" data-api-success-title="Đã gửi yêu cầu">
+                <form id="availability-create-form">
                     <div class="mb-3">
                         <label class="form-label" for="av-date">Ngày dạy <span class="req">*</span></label>
                         <input class="form-control" id="av-date" name="ngay_day" type="date" required min="2026-10-23">
@@ -152,10 +224,8 @@ require $partials . '/head.php';
                                 <td class="cell-actions">
                                     <?php if ($request['status'] === 'cho_duyet'): ?>
                                         <button class="btn btn-danger-soft btn-sm" type="button"
-                                                data-api-url="/api/availability/<?= (int) $request['id'] ?>/cancel"
-                                                data-api-method="POST"
-                                                data-api-confirm="Hủy yêu cầu lịch dạy ngày <?= e($request['date']) ?>?"
-                                                data-api-success-title="Đã hủy yêu cầu">
+                                                data-cancel-id="<?= (int) $request['id'] ?>"
+                                                data-cancel-date="<?= e($request['date']) ?>">
                                             <?= icon('x-lg') ?> Hủy
                                         </button>
                                     <?php else: ?>
@@ -176,4 +246,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/instructor/availability.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

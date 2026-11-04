@@ -1,5 +1,77 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require __DIR__ . '/queries.php';
+
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    $action = (string) ($_GET['action'] ?? '');
+    $id = (int) ($_GET['id'] ?? 0);
+    $db = common_db();
+
+    if ($action === 'delete') {
+        if ($id <= 0) {
+            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+        }
+        $changed = admin_member_delete($id);
+        json_response([
+            'success' => $changed,
+            'message' => $changed ? 'Đã xóa hội viên.' : 'Không tìm thấy hội viên.',
+        ], $changed ? 200 : 404);
+    }
+
+    if ($action !== 'save') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    }
+
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $name = trim((string) ($input['ho_ten'] ?? ''));
+    $phone = trim((string) ($input['sdt'] ?? ''));
+    $email = trim((string) ($input['email'] ?? ''));
+
+    $errors = [];
+    if (mb_strlen($name) < 2) {
+        $errors['ho_ten'] = 'Họ tên không hợp lệ.';
+    }
+    if ($phone === '') {
+        $errors['sdt'] = 'Số điện thoại không hợp lệ.';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Email không hợp lệ.';
+    }
+    if ($errors) {
+        json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
+    }
+
+    $values = [
+        $name,
+        $phone,
+        $email,
+        (string) ($input['gioi_tinh'] ?? 'khac'),
+        ($input['ngay_sinh'] ?? '') !== '' ? (string) $input['ngay_sinh'] : null,
+        ($input['dia_chi'] ?? '') !== '' ? (string) $input['dia_chi'] : null,
+        ($input['ghi_chu'] ?? '') !== '' ? (string) $input['ghi_chu'] : null,
+        (string) ($input['trang_thai'] ?? 'hoat_dong'),
+    ];
+    $savedId = admin_member_save($values, $id);
+
+    if ($id === 0) {
+        json_response(['success' => true, 'data' => ['id' => $savedId], 'message' => 'Đã tạo hội viên.'], 201);
+    }
+    if ($savedId === 0) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy hội viên.'], 404);
+    }
+
+    json_response(['success' => true, 'message' => 'Đã cập nhật hội viên.']);
+}
+
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -7,7 +79,7 @@ $menu = require __DIR__ . '/../common/menus/admin.php';
 $appRole = 'admin';
 $activeMenu = 'members';
 $pageTitle = 'Quản lý hội viên';
-$pageScripts = ['admin-members.js'];
+$pageScripts = [];
 
 $members = data_members();
 $packages = data_packages();
@@ -159,10 +231,8 @@ require $partials . '/head.php';
                                     <li><a class="dropdown-item" href="#" data-toast="Đã gửi liên kết tạo tài khoản."><?= icon('person-gear') ?> Tạo tài khoản</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" type="button"
-                                                data-api-url="/api/members/<?= (int) $member['id'] ?>"
-                                                data-api-method="DELETE"
-                                                data-api-confirm="Xóa hội viên <?= e($member['name']) ?>? Hồ sơ sẽ không thể khôi phục."
-                                                data-api-success-title="Đã xóa hội viên"><?= icon('trash3') ?> Xóa</button></li>
+                                                data-delete-id="<?= (int) $member['id'] ?>"
+                                                data-delete-name="<?= e($member['name']) ?>"><?= icon('trash3') ?> Xóa</button></li>
                                 </ul>
                             </div>
                         </td>
@@ -177,7 +247,7 @@ require $partials . '/head.php';
 <div class="modal fade" id="memberFormModal" tabindex="-1" aria-labelledby="memberFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form id="member-form" data-api-url="/api/members" data-api-method="POST" data-api-success-title="Đã lưu hội viên">
+            <form id="member-form">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="memberFormTitle">Thông tin hội viên</h2>
@@ -241,4 +311,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/members.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

@@ -1,5 +1,94 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require __DIR__ . '/queries.php';
+
+$requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+$requestAction = (string) ($_GET['action'] ?? '');
+
+if (($requestMethod === 'GET' && $requestAction === 'detail') || $requestMethod === 'POST') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    $db = common_db();
+    $id = (int) ($_GET['id'] ?? 0);
+
+    if ($requestMethod === 'GET') {
+        if ($id <= 0) {
+            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+        }
+        $row = admin_instructor_find($id);
+        json_response($row ? ['success' => true, 'data' => $row] : ['success' => false, 'message' => 'Không tìm thấy giáo viên.'], $row ? 200 : 404);
+    }
+
+    if ($requestAction === 'delete') {
+        if ($id <= 0) {
+            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+        }
+        $changed = admin_instructor_delete($id);
+        json_response([
+            'success' => $changed,
+            'message' => $changed ? 'Đã xóa giáo viên.' : 'Không tìm thấy giáo viên.',
+        ], $changed ? 200 : 404);
+    }
+
+    if ($requestAction !== 'save') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    }
+
+    $input = json_decode(file_get_contents('php://input') ?: '', true);
+    if (!is_array($input)) {
+        $input = $_POST;
+    }
+
+    $name = trim((string) ($input['ho_ten'] ?? ''));
+    $phone = trim((string) ($input['sdt'] ?? ''));
+    $email = trim((string) ($input['email'] ?? ''));
+    $specialty = trim((string) ($input['chuyen_mon'] ?? ''));
+    $intro = trim((string) ($input['mo_ta'] ?? ''));
+    $status = (string) ($input['trang_thai'] ?? 'dang_lam');
+
+    $errors = [];
+    if (mb_strlen($name) < 2) {
+        $errors['ho_ten'] = 'Họ tên không hợp lệ.';
+    }
+    if ($phone === '') {
+        $errors['sdt'] = 'Số điện thoại không hợp lệ.';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Email không hợp lệ.';
+    }
+    if ($errors) {
+        json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
+    }
+
+    if ($id === 0) {
+        $username = trim((string) ($input['ten_dang_nhap'] ?? ''));
+        $password = (string) ($input['mat_khau'] ?? '');
+        if (!preg_match('/^[A-Za-z0-9_]{3,50}$/', $username)) {
+            json_response(['success' => false, 'message' => 'Tên đăng nhập không hợp lệ.', 'errors' => ['ten_dang_nhap' => 'Tên đăng nhập 3–50 ký tự, chỉ chữ/số/gạch dưới.']], 422);
+        }
+        if (strlen($password) < 6) {
+            json_response(['success' => false, 'message' => 'Mật khẩu quá ngắn.', 'errors' => ['mat_khau' => 'Mật khẩu tối thiểu 6 ký tự.']], 422);
+        }
+
+        if (admin_username_exists($username)) {
+            json_response(['success' => false, 'message' => 'Tên đăng nhập đã tồn tại.', 'errors' => ['ten_dang_nhap' => 'Tên đăng nhập đã tồn tại.']], 422);
+        }
+
+        $newId = admin_instructor_create($username, $password, $name, $phone, $email, $specialty, $intro, $status);
+        json_response(['success' => true, 'data' => ['id' => $newId], 'message' => 'Đã tạo giáo viên.'], 201);
+    }
+
+    $password = (string) ($input['mat_khau'] ?? '');
+    if (!admin_instructor_update($id, $name, $phone, $email, $specialty, $intro, $status, $password)) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy giáo viên.'], 404);
+    }
+
+    json_response(['success' => true, 'message' => 'Đã cập nhật giáo viên.']);
+}
+
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -7,7 +96,7 @@ $menu = require __DIR__ . '/../common/menus/admin.php';
 $appRole = 'admin';
 $activeMenu = 'instructors';
 $pageTitle = 'Quản lý giáo viên';
-$pageScripts = ['admin-instructors.js'];
+$pageScripts = [];
 
 $instructors = data_instructors();
 $active = count(array_filter($instructors, static fn ($i) => $i['status'] === 'hoat_dong'));
@@ -223,4 +312,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/instructors.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>
