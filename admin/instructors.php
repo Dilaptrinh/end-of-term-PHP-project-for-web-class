@@ -45,7 +45,7 @@ if (($requestMethod === 'GET' && $requestAction === 'detail') || $requestMethod 
     $name = trim((string) ($input['ho_ten'] ?? ''));
     $phone = trim((string) ($input['sdt'] ?? ''));
     $email = trim((string) ($input['email'] ?? ''));
-    $specialty = trim((string) ($input['chuyen_mon'] ?? ''));
+    $specialtyIds = array_values(array_filter(array_map('intval', (array) ($input['chuyen_mon_ids'] ?? []))));
     $intro = trim((string) ($input['mo_ta'] ?? ''));
     $status = (string) ($input['trang_thai'] ?? 'dang_lam');
 
@@ -77,12 +77,12 @@ if (($requestMethod === 'GET' && $requestAction === 'detail') || $requestMethod 
             json_response(['success' => false, 'message' => 'Tên đăng nhập đã tồn tại.', 'errors' => ['ten_dang_nhap' => 'Tên đăng nhập đã tồn tại.']], 422);
         }
 
-        $newId = admin_instructor_create($username, $password, $name, $phone, $email, $specialty, $intro, $status);
+        $newId = admin_instructor_create($username, $password, $name, $phone, $email, $specialtyIds, $intro, $status);
         json_response(['success' => true, 'data' => ['id' => $newId], 'message' => 'Đã tạo giáo viên.'], 201);
     }
 
     $password = (string) ($input['mat_khau'] ?? '');
-    if (!admin_instructor_update($id, $name, $phone, $email, $specialty, $intro, $status, $password)) {
+    if (!admin_instructor_update($id, $name, $phone, $email, $specialtyIds, $intro, $status, $password)) {
         json_response(['success' => false, 'message' => 'Không tìm thấy giáo viên.'], 404);
     }
 
@@ -104,6 +104,7 @@ $classes = data_classes();
 $openClasses = count(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo'));
 $studentCount = count(array_unique(array_column(data_class_registrations(), 'member')));
 $pendingSlots = count(array_filter(data_availability(), static fn ($r) => $r['status'] === 'cho_duyet'));
+$specialties = data_specialties();
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -173,79 +174,32 @@ require $partials . '/head.php';
     </div>
     <div class="filter-field ms-auto" style="min-width:auto;">
         <label class="form-label">&nbsp;</label>
-        <button class="btn btn-ghost" type="button" data-toast="Đã xóa bộ lọc." data-toast-title="Bộ lọc"><?= icon('arrow-counterclockwise') ?> Đặt lại</button>
+        <button class="btn btn-ghost" type="button" data-reload-page><?= icon('arrow-counterclockwise') ?> Đặt lại</button>
     </div>
 </div>
 
-<div class="row g-3">
-    <?php foreach ($instructors as $instructor): ?>
-        <div class="col-md-6 col-xl-4">
-            <div class="app-card h-100">
-                <div class="app-card-body">
-                    <div class="d-flex align-items-start gap-3">
-                        <?= avatar($instructor['name'], 'avatar-lg') ?>
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="d-flex align-items-center gap-2">
-                                <h2 class="text-truncate" style="font-size:.98rem;"><?= e($instructor['name']) ?></h2>
-                                <span class="ms-auto"><?= status_badge($instructor['status']) ?></span>
-                            </div>
-                            <div class="text-tiny text-brand fw-700"><?= e($instructor['specialty']) ?></div>
-                            <div class="text-tiny text-muted-2 mt-1"><?= icon('telephone') ?> <?= e($instructor['phone']) ?></div>
-                            <div class="text-tiny text-muted-2"><?= icon('envelope') ?> <?= e($instructor['email']) ?></div>
-                        </div>
-                    </div>
-                    <div class="row g-2 mt-3">
-                        <div class="col-4">
-                            <div class="kit-box text-center py-2">
-                                <div class="fw-800"><?= e((string) $instructor['classes']) ?></div>
-                                <div class="text-tiny text-muted-2">Lớp</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="kit-box text-center py-2">
-                                <div class="fw-800"><?= e((string) $instructor['students']) ?></div>
-                                <div class="text-tiny text-muted-2">Học viên</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="kit-box text-center py-2">
-                                <div class="fw-800 text-warning"><?= icon('star-fill') ?> 4.9</div>
-                                <div class="text-tiny text-muted-2">Đánh giá</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 mt-3 pt-3 border-top" style="border-color:var(--border-soft) !important;">
-                        <span class="text-tiny text-muted-2"><?= icon('person-badge') ?> <?= e($instructor['account']) ?></span>
-                        <div class="ms-auto d-flex gap-1">
-                            <button class="btn btn-ghost btn-sm" type="button" data-instructor-edit="<?= e((string) $instructor['id']) ?>" aria-label="Sửa"><?= icon('pencil') ?></button>
-                            <a class="btn btn-ghost btn-sm" href="<?= e(url('/admin/classes')) ?>" aria-label="Lớp dạy"><?= icon('journal-bookmark') ?></a>
-                            <button class="btn btn-ghost btn-sm text-danger" type="button" data-instructor-delete="<?= e((string) $instructor['id']) ?>" aria-label="Xóa"><?= icon('trash3') ?></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php endforeach; ?>
-</div>
-
-<div class="app-card mt-3">
+<div class="app-card">
     <div class="app-card-header">
         <h2>Danh sách giáo viên</h2>
         <span class="badge-soft ms-auto"><?= count($instructors) ?> giáo viên</span>
     </div>
     <div class="app-table-wrap">
         <table class="app-table" id="instructors-table">
-            <thead><tr><th>Giáo viên</th><th>Chuyên môn</th><th>Tài khoản</th><th>Lớp</th><th>Học viên</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr></thead>
+            <thead><tr><th>Giáo viên</th><th>Liên hệ</th><th>Chuyên môn</th><th>Tài khoản</th><th>Lớp</th><th>Học viên</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr></thead>
             <tbody>
                 <?php foreach ($instructors as $instructor): ?>
                     <tr data-row>
                         <td><div class="user-inline"><?= avatar($instructor['name'], 'avatar-sm') ?><span class="user-name"><?= e($instructor['name']) ?></span></div></td>
+                        <td><?= e($instructor['phone']) ?><div class="cell-sub"><?= e($instructor['email']) ?></div></td>
                         <td><?= e($instructor['specialty']) ?></td>
                         <td class="text-muted-2"><?= e($instructor['account']) ?></td>
                         <td><?= e((string) $instructor['classes']) ?></td>
                         <td><?= e((string) $instructor['students']) ?></td>
                         <td><?= status_badge($instructor['status']) ?></td>
-                        <td class="cell-actions"><button class="btn btn-outline-primary btn-sm" type="button" data-instructor-edit="<?= e((string) $instructor['id']) ?>"><?= icon('pencil') ?> Sửa</button></td>
+                        <td class="cell-actions">
+                            <button class="btn btn-ghost btn-sm" type="button" data-instructor-edit="<?= e((string) $instructor['id']) ?>" aria-label="Sửa"><?= icon('pencil') ?></button>
+                            <button class="btn btn-ghost btn-sm text-danger" type="button" data-instructor-delete="<?= e((string) $instructor['id']) ?>" aria-label="Xóa"><?= icon('trash3') ?></button>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -280,8 +234,12 @@ require $partials . '/head.php';
                             <input class="form-control" id="if-email" name="email" type="email" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="if-specialty">Chuyên môn</label>
-                            <input class="form-control" id="if-specialty" name="chuyen_mon" type="text" placeholder="VD: Yoga · Pilates">
+                            <label class="form-label">Chuyên môn</label>
+                            <select class="form-select" id="if-specialty" name="chuyen_mon_ids[]">
+                                <?php foreach ($specialties as $specialty): ?>
+                                    <option value="<?= (int) $specialty['id'] ?>"><?= e($specialty['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="if-username">Tên đăng nhập <span class="req">*</span></label>
@@ -312,5 +270,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/instructors.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>
+<script src="<?= e(url('/common/assets/js/admin/instructors.js')) ?>?v=2"></script>

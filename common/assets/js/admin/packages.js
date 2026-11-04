@@ -7,6 +7,24 @@
     if (!modal || !form) return;
 
     var title = document.getElementById('packageFormTitle');
+    var query = document.getElementById('pk-q');
+    var status = document.getElementById('pk-status');
+    var reset = document.getElementById('pk-reset');
+
+    function filterCards() {
+        var text = (query.value || '').trim().toLowerCase();
+        var selected = status.value;
+        document.querySelectorAll('#packages-table [data-row]').forEach(function (card) {
+            var matchesText = !text || card.textContent.toLowerCase().indexOf(text) !== -1;
+            var matchesStatus = selected === 'Tất cả' || (selected === 'Đang bán' && card.dataset.packageStatus === 'dang_ban') || (selected === 'Ngừng bán' && card.dataset.packageStatus === 'ngung_ban');
+            card.hidden = !matchesText || !matchesStatus;
+        });
+    }
+    if (query && status) {
+        query.addEventListener('input', filterCards);
+        status.addEventListener('change', filterCards);
+        reset.addEventListener('click', function () { query.value = ''; status.value = 'Tất cả'; filterCards(); });
+    }
 
     modal.addEventListener('show.bs.modal', function (event) {
         var trigger = event.relatedTarget;

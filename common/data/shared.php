@@ -9,7 +9,8 @@ declare(strict_types=1);
 function data_instructors(): array
 {
     $sql = "
-        SELECT gv.id, gv.ho_ten AS name, gv.sdt AS phone, gv.email, gv.chuyen_mon AS specialty,
+        SELECT gv.id, gv.ho_ten AS name, gv.sdt AS phone, gv.email,
+               COALESCE(GROUP_CONCAT(DISTINCT cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR ' · '), gv.chuyen_mon) AS specialty,
                (SELECT COUNT(*) FROM lop_hoc lh WHERE lh.giao_vien_id = gv.id AND lh.deleted_at IS NULL) AS classes,
                (SELECT COUNT(DISTINCT dkl.hoi_vien_id)
                   FROM dang_ky_lop dkl
@@ -19,10 +20,19 @@ function data_instructors(): array
                COALESCE(tk.ten_dang_nhap, '—') AS account
         FROM giao_vien gv
         LEFT JOIN tai_khoan tk ON tk.id = gv.tai_khoan_id
+        LEFT JOIN giao_vien_chuyen_mon gvcm ON gvcm.giao_vien_id = gv.id
+        LEFT JOIN chuyen_mon cm ON cm.id = gvcm.chuyen_mon_id AND cm.trang_thai = 1
         WHERE gv.deleted_at IS NULL
+        GROUP BY gv.id
         ORDER BY gv.id
     ";
     return view_cast_ints(view_db()->query($sql)->fetch_all(MYSQLI_ASSOC), ['id', 'classes', 'students']);
+}
+
+function data_specialties(): array
+{
+    $rows = view_db()->query('SELECT id, ten_chuyen_mon AS name FROM chuyen_mon WHERE trang_thai = 1 ORDER BY ten_chuyen_mon')->fetch_all(MYSQLI_ASSOC);
+    return view_cast_ints($rows, ['id']);
 }
 
 function data_classes(): array

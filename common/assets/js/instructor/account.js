@@ -25,7 +25,10 @@
         var data = {
             ho_ten: document.getElementById('ins-name').value.trim(),
             sdt: document.getElementById('ins-phone').value.trim(),
-            email: document.getElementById('ins-email').value.trim()
+            email: document.getElementById('ins-email').value.trim(),
+            chuyen_mon_ids: Array.from(document.getElementById('ins-specialty').selectedOptions).map(function (option) {
+                return option.value;
+            })
         };
 
         try {

@@ -11,11 +11,11 @@
     var title = document.getElementById('instructorFormTitle');
     var username = document.getElementById('if-username');
     var password = document.getElementById('if-password');
+    var specialty = document.getElementById('if-specialty');
     var fields = {
         ho_ten: document.getElementById('if-name'),
         sdt: document.getElementById('if-phone'),
         email: document.getElementById('if-email'),
-        chuyen_mon: document.getElementById('if-specialty'),
         mo_ta: document.getElementById('if-desc')
     };
 
@@ -33,7 +33,10 @@
         fields.ho_ten.value = instructor.ho_ten || '';
         fields.sdt.value = instructor.sdt || '';
         fields.email.value = instructor.email || '';
-        fields.chuyen_mon.value = instructor.chuyen_mon || '';
+        var selectedSpecialties = (instructor.chuyen_mon_ids || '').split(',');
+        Array.from(specialty.options).forEach(function (option) {
+            option.selected = selectedSpecialties.indexOf(option.value) !== -1;
+        });
         fields.mo_ta.value = instructor.gioi_thieu || '';
         username.value = instructor.ten_dang_nhap || '';
         username.readOnly = true;
@@ -91,7 +94,9 @@
             ho_ten: fields.ho_ten.value.trim(),
             sdt: fields.sdt.value.trim(),
             email: fields.email.value.trim(),
-            chuyen_mon: fields.chuyen_mon.value.trim(),
+            chuyen_mon_ids: Array.from(specialty.selectedOptions).map(function (option) {
+                return option.value;
+            }),
             mo_ta: fields.mo_ta.value.trim(),
             trang_thai: 'dang_lam'
         };

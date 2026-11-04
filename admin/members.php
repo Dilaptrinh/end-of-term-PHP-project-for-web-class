@@ -116,7 +116,6 @@ require $partials . '/head.php';
         <p><?= count($members) ?> hội viên · <?= $active ?> đang hoạt động · <?= $inactive ?> ngừng hoạt động.</p>
     </div>
     <div class="page-head-actions">
-        <button class="btn btn-outline-primary" type="button" data-toast="Danh sách hội viên sẽ được xuất Excel khi nối API." data-toast-title="Xuất dữ liệu"><?= icon('download') ?> Xuất Excel</button>
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#memberFormModal"><?= icon('person-plus') ?> Thêm hội viên</button>
     </div>
 </div>
@@ -182,10 +181,6 @@ require $partials . '/head.php';
 </form>
 
 <div class="app-card">
-    <div class="table-toolbar">
-        <input class="form-control toolbar-search" type="search" placeholder="Lọc nhanh trong bảng…" data-table-filter="#members-table" aria-label="Lọc nhanh hội viên">
-        <span class="ms-auto text-tiny text-muted-2">Trang 1 / 1</span>
-    </div>
     <div class="app-table-wrap">
         <table class="app-table" id="members-table">
             <thead>
@@ -218,7 +213,7 @@ require $partials . '/head.php';
                             <div class="dropdown">
                                 <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" aria-label="Thao tác"><?= icon('three-dots') ?></button>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="#" data-toast="Trang chi tiết hội viên sẽ được nối API."><?= icon('eye') ?> Xem chi tiết</a></li>
+                                    <li><button class="dropdown-item" type="button" data-detail="<?= e($member['name'] . ' · ' . $member['phone'] . ' · ' . $member['email']) ?>"><?= icon('eye') ?> Xem chi tiết</button></li>
                                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#memberFormModal"
                                            data-member-id="<?= (int) $member['id'] ?>"
                                            data-member-name="<?= e($member['name']) ?>"
@@ -228,7 +223,7 @@ require $partials . '/head.php';
                                            data-member-gender="<?= e($member['gender_raw'] ?? 'khac') ?>"
                                            data-member-address="<?= e($member['dia_chi'] ?? '') ?>"
                                            data-member-note="<?= e($member['ghi_chu'] ?? '') ?>"><?= icon('pencil') ?> Sửa hồ sơ</a></li>
-                                    <li><a class="dropdown-item" href="#" data-toast="Đã gửi liên kết tạo tài khoản."><?= icon('person-gear') ?> Tạo tài khoản</a></li>
+                                    <li><a class="dropdown-item" href="<?= e(url('/admin/accounts')) ?>"><?= icon('person-gear') ?> Quản lý tài khoản</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" type="button"
                                                 data-delete-id="<?= (int) $member['id'] ?>"

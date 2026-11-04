@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
+require_once __DIR__ . '/../admin/queries.php';
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $user = common_user();
@@ -20,6 +21,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $name = trim((string) ($input['ho_ten'] ?? ''));
         $phone = trim((string) ($input['sdt'] ?? ''));
         $email = trim((string) ($input['email'] ?? ''));
+        $specialtyIds = array_values(array_filter(array_map('intval', (array) ($input['chuyen_mon_ids'] ?? []))));
         $errors = [];
         if (mb_strlen($name) < 2) {
             $errors['ho_ten'] = 'Họ tên không hợp lệ.';
@@ -38,6 +40,15 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $stmt->bind_param('si', $name, $accountId);
         $stmt->execute();
         $stmt->close();
+
+        $stmt = $db->prepare('SELECT id FROM giao_vien WHERE tai_khoan_id = ? LIMIT 1');
+        $stmt->bind_param('i', $accountId);
+        $stmt->execute();
+        $instructorRow = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if ($instructorRow) {
+            admin_instructor_sync_specialties((int) $instructorRow['id'], $specialtyIds);
+        }
 
         $stmt = $db->prepare('UPDATE giao_vien SET ho_ten = ?, sdt = ?, email = ? WHERE tai_khoan_id = ?');
         $stmt->bind_param('sssi', $name, $phone, $email, $accountId);
@@ -89,7 +100,7 @@ $activeMenu = 'account';
 $pageTitle = 'Quản lý tài khoản';
 $pageScripts = [];
 
-$specialties = ['Yoga', 'Pilates', 'HIIT', 'Boxing', 'Gym & Strength', 'Zumba', 'Cardio'];
+$specialties = data_specialties();
 $instructor = data_current_instructor();
 $instructorCode = 'GV-' . str_pad((string) ($instructor['id'] ?? 0), 4, '0', STR_PAD_LEFT);
 
@@ -171,9 +182,9 @@ require $partials . '/head.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="ins-specialty">Chuyên môn</label>
-                            <select class="form-select" id="ins-specialty" name="chuyen_mon">
+                            <select class="form-select" id="ins-specialty" name="chuyen_mon_ids[]" multiple>
                                 <?php foreach ($specialties as $specialty): ?>
-                                    <option <?= $specialty === ($instructor['specialty'] ?? '') ? 'selected' : '' ?>><?= e($specialty) ?></option>
+                                    <option value="<?= (int) $specialty['id'] ?>" <?= in_array((int) $specialty['id'], $instructor['specialty_ids'] ?? [], true) ? 'selected' : '' ?>><?= e($specialty['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>

@@ -106,7 +106,6 @@ require $partials . '/head.php';
         <p><?= count($classes) ?> lớp · <?= $openCount ?> đang mở · <?= $fullCount ?> đã đầy.</p>
     </div>
     <div class="page-head-actions">
-        <button class="btn btn-outline-primary" type="button" data-toast="Danh sách lớp sẽ được xuất Excel khi nối API." data-toast-title="Xuất dữ liệu"><?= icon('download') ?> Xuất Excel</button>
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#classFormModal" data-form-mode="create"><?= icon('plus-lg') ?> Thêm lớp học</button>
     </div>
 </div>
@@ -174,15 +173,8 @@ require $partials . '/head.php';
 </form>
 
 <div class="app-card">
-    <div class="table-toolbar">
-        <label class="form-check form-switch mb-0 d-flex align-items-center gap-2">
-            <input class="form-check-input" type="checkbox">
-            <span class="form-check-label text-small">Chỉ lớp còn chỗ</span>
-        </label>
-        <span class="ms-auto text-tiny text-muted-2">Hiển thị <?= count($classes) ?> / <?= count($classes) ?> lớp</span>
-    </div>
     <div class="app-table-wrap">
-        <table class="app-table">
+        <table class="app-table" id="classes-table">
             <thead>
                 <tr>
                     <th>Lớp học</th>

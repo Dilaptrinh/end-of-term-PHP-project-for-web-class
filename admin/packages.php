@@ -142,10 +142,10 @@ require $partials . '/head.php';
     </div>
 </div>
 
-<div class="filter-bar">
+<div class="filter-bar" id="package-filters">
     <div class="filter-field filter-search">
         <label class="form-label" for="pk-q">Tìm gói tập</label>
-        <input class="form-control" id="pk-q" type="search" placeholder="Tên gói…" data-table-filter="#packages-table">
+        <input class="form-control" id="pk-q" type="search" placeholder="Tên gói…">
     </div>
     <div class="filter-field">
         <label class="form-label" for="pk-status">Trạng thái</label>
@@ -157,31 +157,8 @@ require $partials . '/head.php';
     </div>
     <div class="filter-field ms-auto" style="min-width:auto;">
         <label class="form-label">&nbsp;</label>
-        <button class="btn btn-ghost" type="button" data-toast="Đã xóa bộ lọc." data-toast-title="Bộ lọc"><?= icon('arrow-counterclockwise') ?> Đặt lại</button>
+        <button class="btn btn-ghost" type="button" id="pk-reset"><?= icon('arrow-counterclockwise') ?> Đặt lại</button>
     </div>
-</div>
-
-<div class="row g-3 mb-3">
-    <?php foreach (array_slice($packages, 0, 4) as $index => $package): ?>
-        <div class="col-sm-6 col-xl-3">
-            <div class="price-card<?= $index === 2 ? ' featured' : '' ?>">
-                <?php if ($index === 2): ?><span class="ribbon">Phổ biến</span><?php endif; ?>
-                <h3><?= e($package['name']) ?></h3>
-                <p class="text-muted-2 text-small mb-0"><?= e((string) $package['days']) ?> ngày · <?= e((string) $package['sold']) ?> lượt</p>
-                <div class="price"><?= e(number_format((float) $package['price'], 0, ',', '.')) ?><small>đ</small></div>
-                <div class="d-flex align-items-center gap-2 mt-2">
-                    <?= status_badge($package['status']) ?>
-                    <button class="btn btn-ghost btn-sm ms-auto" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"
-                            data-package-id="<?= (int) $package['id'] ?>"
-                            data-package-name="<?= e($package['name']) ?>"
-                            data-package-days="<?= (int) $package['days'] ?>"
-                            data-package-price="<?= (int) $package['price'] ?>"
-                            data-package-desc="<?= e($package['desc'] ?? '') ?>"
-                            data-package-status="<?= e($package['status']) ?>"><?= icon('pencil') ?> Sửa</button>
-                </div>
-            </div>
-        </div>
-    <?php endforeach; ?>
 </div>
 
 <div class="app-card">
@@ -191,36 +168,31 @@ require $partials . '/head.php';
     </div>
     <div class="app-table-wrap">
         <table class="app-table" id="packages-table">
-            <thead>
-                <tr><th>Gói tập</th><th>Thời hạn</th><th>Giá bán</th><th>Đã bán</th><th>Doanh thu</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr>
-            </thead>
+            <thead><tr><th>Gói tập</th><th>Thời hạn</th><th>Giá bán</th><th>Đã bán</th><th>Doanh thu</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr></thead>
             <tbody>
-                <?php foreach ($packages as $package): ?>
-                    <tr data-row>
-                        <td class="cell-strong"><?= e($package['name']) ?><div class="cell-sub"><?= e(truncate($package['desc'], 46)) ?></div></td>
-                        <td><?= e((string) $package['days']) ?> ngày</td>
-                        <td class="cell-strong"><?= e(money($package['price'])) ?></td>
-                        <td><?= e((string) $package['sold']) ?></td>
-                        <td class="cell-strong"><?= e(money($package['price'] * $package['sold'])) ?></td>
-                        <td><?= status_badge($package['status']) ?></td>
-                        <td class="cell-actions">
-                            <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"
-                                    data-package-id="<?= (int) $package['id'] ?>"
-                                    data-package-name="<?= e($package['name']) ?>"
-                                    data-package-days="<?= (int) $package['days'] ?>"
-                                    data-package-price="<?= (int) $package['price'] ?>"
-                                    data-package-desc="<?= e($package['desc'] ?? '') ?>"
-                                    data-package-status="<?= e($package['status']) ?>"><?= icon('pencil') ?></button>
-                            <button class="btn btn-ghost btn-sm text-danger" type="button"
-                                    data-delete-id="<?= (int) $package['id'] ?>"
-                                    data-delete-name="<?= e($package['name']) ?>"><?= icon('trash3') ?></button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
+            <?php foreach ($packages as $package): ?>
+                <tr data-row data-package-status="<?= e($package['status']) ?>">
+                    <td class="cell-strong"><?= e($package['name']) ?><div class="cell-sub"><?= e(truncate($package['desc'], 46)) ?></div></td>
+                    <td><?= e((string) $package['days']) ?> ngày</td>
+                    <td class="cell-strong"><?= e(money($package['price'])) ?></td>
+                    <td><?= e((string) $package['sold']) ?></td>
+                    <td class="cell-strong"><?= e(money($package['price'] * $package['sold'])) ?></td>
+                    <td><?= status_badge($package['status']) ?></td>
+                    <td class="cell-actions">
+                        <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"
+                                data-package-id="<?= (int) $package['id'] ?>"
+                                data-package-name="<?= e($package['name']) ?>"
+                                data-package-days="<?= (int) $package['days'] ?>"
+                                data-package-price="<?= (int) $package['price'] ?>"
+                                data-package-desc="<?= e($package['desc'] ?? '') ?>"
+                                data-package-status="<?= e($package['status']) ?>"><?= icon('pencil') ?></button>
+                        <button class="btn btn-ghost btn-sm text-danger" type="button" data-delete-id="<?= (int) $package['id'] ?>" data-delete-name="<?= e($package['name']) ?>"><?= icon('trash3') ?></button>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
             </tbody>
         </table>
     </div>
-    <?= pagination(count($packages), 1, 10, 'gói tập') ?>
 </div>
 
 <div class="modal fade" id="packageFormModal" tabindex="-1" aria-labelledby="packageFormTitle" aria-hidden="true">
@@ -274,5 +246,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>
+<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=2"></script>

@@ -48,8 +48,6 @@ require $partials . '/head.php';
         <p>Số liệu từ 01/10/2026 đến 23/10/2026.</p>
     </div>
     <div class="page-head-actions">
-        <button class="btn btn-outline-primary" type="button" data-toast="Báo cáo PDF sẽ được tạo khi nối API." data-toast-title="Đang xuất báo cáo"><?= icon('file-earmark-pdf') ?> Xuất PDF</button>
-        <button class="btn btn-primary" type="button" data-toast="Đã làm mới số liệu." data-toast-title="Làm mới"><?= icon('arrow-clockwise') ?> Làm mới</button>
     </div>
 </div>
 

@@ -86,6 +86,24 @@ function data_current_instructor(): array
     }
 
     $id = (int) $row['id'];
+    $specialtyStmt = $conn->prepare(
+        'SELECT GROUP_CONCAT(cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR " · ") AS specialty
+           FROM giao_vien_chuyen_mon gvcm
+           JOIN chuyen_mon cm ON cm.id = gvcm.chuyen_mon_id AND cm.trang_thai = 1
+          WHERE gvcm.giao_vien_id = ?'
+    );
+    $specialtyStmt->bind_param('i', $id);
+    $specialtyStmt->execute();
+    $specialty = $specialtyStmt->get_result()->fetch_assoc();
+    $specialtyStmt->close();
+    $specialtyIds = [];
+    $specialtyIdStmt = $conn->prepare('SELECT chuyen_mon_id FROM giao_vien_chuyen_mon WHERE giao_vien_id = ?');
+    $specialtyIdStmt->bind_param('i', $id);
+    $specialtyIdStmt->execute();
+    foreach ($specialtyIdStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $specialtyRow) {
+        $specialtyIds[] = (int) $specialtyRow['chuyen_mon_id'];
+    }
+    $specialtyIdStmt->close();
     $classes = (int) $conn->query("SELECT COUNT(*) AS c FROM lop_hoc WHERE giao_vien_id = $id AND deleted_at IS NULL")->fetch_assoc()['c'];
     $students = (int) $conn->query("
         SELECT COUNT(DISTINCT dkl.hoi_vien_id) AS c
@@ -99,7 +117,8 @@ function data_current_instructor(): array
         'name'      => $row['ho_ten'],
         'phone'     => $row['sdt'],
         'email'     => $row['email'],
-        'specialty' => (string) ($row['chuyen_mon'] ?? ''),
+        'specialty' => (string) ($specialty['specialty'] ?? $row['chuyen_mon'] ?? ''),
+        'specialty_ids' => $specialtyIds,
         'status'    => $row['trang_thai'],
         'classes'   => $classes,
         'students'  => $students,

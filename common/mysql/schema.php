@@ -41,6 +41,25 @@ if (!function_exists('ensure_schema')) {
         ");
 
         $conn->query("
+            CREATE TABLE IF NOT EXISTS `chuyen_mon` (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                ten_chuyen_mon VARCHAR(100) NOT NULL,
+                trang_thai TINYINT(1) NOT NULL DEFAULT 1,
+                UNIQUE KEY uq_chuyen_mon_ten (ten_chuyen_mon)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS `giao_vien_chuyen_mon` (
+                giao_vien_id INT UNSIGNED NOT NULL,
+                chuyen_mon_id INT UNSIGNED NOT NULL,
+                PRIMARY KEY (giao_vien_id, chuyen_mon_id),
+                CONSTRAINT fk_gvcm_giao_vien FOREIGN KEY (giao_vien_id) REFERENCES giao_vien(id) ON DELETE CASCADE,
+                CONSTRAINT fk_gvcm_chuyen_mon FOREIGN KEY (chuyen_mon_id) REFERENCES chuyen_mon(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        $conn->query("
             CREATE TABLE IF NOT EXISTS `hoi_vien` (
                 id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 tai_khoan_id INT UNSIGNED NULL,
@@ -157,6 +176,14 @@ if (!function_exists('ensure_schema')) {
 if (!function_exists('seed_core_data')) {
     function seed_core_data(mysqli $conn): void
     {
+        $specialties = ['Yoga', 'Pilates', 'HIIT', 'Boxing', 'Gym & Strength', 'Zumba', 'Cardio'];
+        $specialtyStmt = $conn->prepare('INSERT IGNORE INTO chuyen_mon (ten_chuyen_mon) VALUES (?)');
+        foreach ($specialties as $specialty) {
+            $specialtyStmt->bind_param('s', $specialty);
+            $specialtyStmt->execute();
+        }
+        $specialtyStmt->close();
+
         if ((int) $conn->query('SELECT COUNT(*) AS c FROM giao_vien')->fetch_assoc()['c'] === 0) {
             $instructors = [
                 ['Trần Thu Hà', '0911222333', 'thuha@fitzone.vn', 'Yoga · Pilates', 'dang_lam'],
@@ -174,6 +201,29 @@ if (!function_exists('seed_core_data')) {
             }
             $stmt->close();
         }
+
+        $legacy = $conn->query('SELECT id, chuyen_mon FROM giao_vien WHERE chuyen_mon IS NOT NULL AND chuyen_mon <> ""');
+        $findSpecialty = $conn->prepare('SELECT id FROM chuyen_mon WHERE ten_chuyen_mon = ? LIMIT 1');
+        $linkSpecialty = $conn->prepare('INSERT IGNORE INTO giao_vien_chuyen_mon (giao_vien_id, chuyen_mon_id) VALUES (?, ?)');
+        while ($row = $legacy->fetch_assoc()) {
+            $names = preg_split('/\s*[·,;]\s*/u', (string) $row['chuyen_mon'], -1, PREG_SPLIT_NO_EMPTY);
+            if (str_contains((string) $row['chuyen_mon'], 'Gym') && str_contains((string) $row['chuyen_mon'], 'Strength')) {
+                $names = array_values(array_filter($names, static fn (string $name): bool => $name !== 'Gym' && $name !== 'Strength'));
+                $names[] = 'Gym & Strength';
+            }
+            foreach ($names as $name) {
+                $findSpecialty->bind_param('s', $name);
+                $findSpecialty->execute();
+                $specialtyRow = $findSpecialty->get_result()->fetch_assoc();
+                if (!$specialtyRow) continue;
+                $instructorId = (int) $row['id'];
+                $specialtyId = (int) $specialtyRow['id'];
+                $linkSpecialty->bind_param('ii', $instructorId, $specialtyId);
+                $linkSpecialty->execute();
+            }
+        }
+        $findSpecialty->close();
+        $linkSpecialty->close();
 
         if ((int) $conn->query('SELECT COUNT(*) AS c FROM hoi_vien')->fetch_assoc()['c'] === 0) {
             $members = [
@@ -306,5 +356,24 @@ if (!function_exists('seed_core_data')) {
             }
             $stmt->close();
         }
+
+        $legacy = $conn->query('SELECT id, chuyen_mon FROM giao_vien WHERE chuyen_mon IS NOT NULL AND chuyen_mon <> ""');
+        $findSpecialty = $conn->prepare('SELECT id FROM chuyen_mon WHERE ten_chuyen_mon = ? LIMIT 1');
+        $linkSpecialty = $conn->prepare('INSERT IGNORE INTO giao_vien_chuyen_mon (giao_vien_id, chuyen_mon_id) VALUES (?, ?)');
+        while ($row = $legacy->fetch_assoc()) {
+            $names = preg_split('/\s*[·,;]\s*/u', (string) $row['chuyen_mon'], -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($names as $name) {
+                $findSpecialty->bind_param('s', $name);
+                $findSpecialty->execute();
+                $specialtyRow = $findSpecialty->get_result()->fetch_assoc();
+                if (!$specialtyRow) continue;
+                $instructorId = (int) $row['id'];
+                $specialtyId = (int) $specialtyRow['id'];
+                $linkSpecialty->bind_param('ii', $instructorId, $specialtyId);
+                $linkSpecialty->execute();
+            }
+        }
+        $findSpecialty->close();
+        $linkSpecialty->close();
     }
 }

@@ -35,6 +35,44 @@
         }
     });
 
+    document.addEventListener('click', function (event) {
+        const reload = event.target.closest('[data-reload-page]');
+        if (reload) {
+            event.preventDefault();
+            window.location.reload();
+            return;
+        }
+        const print = event.target.closest('[data-print-page]');
+        if (print) {
+            event.preventDefault();
+            window.print();
+            return;
+        }
+        const exportButton = event.target.closest('[data-export-table]');
+        if (!exportButton) return;
+        const table = document.querySelector(exportButton.dataset.exportTable);
+        if (!table) return;
+        const rows = Array.from(table.querySelectorAll('tr')).map(function (row) {
+            return Array.from(row.querySelectorAll('th,td')).map(function (cell) {
+                return '"' + cell.innerText.replace(/"/g, '""').replace(/\n/g, ' ') + '"';
+            }).join(',');
+        });
+        const blob = new Blob(["\ufeff" + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = exportButton.dataset.exportName || 'fitzone-export.csv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    });
+
+    document.addEventListener('click', function (event) {
+        const detail = event.target.closest('[data-detail]');
+        if (detail) {
+            event.preventDefault();
+            alert(detail.dataset.detail || 'Không có thông tin chi tiết.');
+        }
+    });
+
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') closeSidebar();
     });

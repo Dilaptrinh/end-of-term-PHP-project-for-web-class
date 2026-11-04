@@ -100,7 +100,6 @@ require $partials . '/head.php';
         <p>Đăng ký gói tập, lớp học và xác nhận thanh toán.</p>
     </div>
     <div class="page-head-actions">
-        <button class="btn btn-outline-primary" type="button" data-toast="Danh sách đăng ký sẽ được xuất Excel khi nối API." data-toast-title="Xuất dữ liệu"><?= icon('download') ?> Xuất Excel</button>
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#registrationFormModal"><?= icon('plus-lg') ?> Tạo đăng ký</button>
     </div>
 </div>
@@ -196,7 +195,7 @@ require $partials . '/head.php';
                                                 data-reg-id="<?= (int) $reg['id'] ?>"
                                                 data-reg-confirm="Hủy đăng ký của <?= e($reg['member']) ?>?">Hủy</button>
                                     <?php else: ?>
-                                        <button class="btn btn-ghost btn-sm" type="button" data-toast="Chi tiết giao dịch sẽ được nối API."><?= icon('eye') ?> Xem</button>
+                                        <button class="btn btn-ghost btn-sm" type="button" data-detail="<?= e($reg['member'] . ' · ' . $reg['package'] . ' · ' . money($reg['price'])) ?>"><?= icon('eye') ?> Xem</button>
                                     <?php endif; ?>
                                 </td>
                             </tr>

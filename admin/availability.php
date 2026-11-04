@@ -59,7 +59,6 @@ require $partials . '/head.php';
         <p>Xem xét các khung giờ giáo viên đăng ký và phản hồi kịp thời.</p>
     </div>
     <div class="page-head-actions">
-        <button class="btn btn-outline-primary" type="button" data-toast="Đã làm mới danh sách yêu cầu." data-toast-title="Làm mới"><?= icon('arrow-clockwise') ?> Làm mới</button>
     </div>
 </div>
 
@@ -122,7 +121,7 @@ require $partials . '/head.php';
     </div>
     <div class="filter-field" style="min-width:auto;">
         <label class="form-label">&nbsp;</label>
-        <button class="btn btn-primary" type="button" data-toast="Đã áp dụng bộ lọc." data-toast-title="Bộ lọc"><?= icon('funnel') ?> Lọc</button>
+        <button class="btn btn-primary" type="button" data-reload-page><?= icon('funnel') ?> Lọc</button>
     </div>
 </div>
 
@@ -163,7 +162,7 @@ require $partials . '/head.php';
                                                 data-request-id="<?= (int) $request['id'] ?>"
                                                 data-instructor="<?= e($request['instructor']) ?>" data-date="<?= e($request['date']) ?>"><?= icon('x-lg') ?> Từ chối</button>
                             <?php else: ?>
-                                <button class="btn btn-ghost btn-sm" type="button" data-toast="Chi tiết lịch dạy sẽ được nối API."><?= icon('eye') ?> Xem</button>
+                                <button class="btn btn-ghost btn-sm" type="button" data-detail="<?= e($request['instructor'] . ' · ' . $request['date'] . ' · ' . $request['start'] . '–' . $request['end']) ?>"><?= icon('eye') ?> Xem</button>
                             <?php endif; ?>
                         </td>
                     </tr>
