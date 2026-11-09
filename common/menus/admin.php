@@ -11,5 +11,4 @@ return [
     ['label' => 'Tài khoản', 'icon' => 'person-gear', 'href' => '/admin/accounts', 'key' => 'accounts'],
     ['group' => 'Phân tích'],
     ['label' => 'Thống kê', 'icon' => 'bar-chart-line', 'href' => '/admin/reports', 'key' => 'reports'],
-    ['label' => 'Tra cứu', 'icon' => 'search', 'href' => '/admin/search', 'key' => 'search'],
 ];

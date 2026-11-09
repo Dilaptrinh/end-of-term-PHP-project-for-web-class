@@ -73,9 +73,17 @@ $pageTitle = 'Quản lý tài khoản';
 $pageScripts = [];
 
 $accounts = data_accounts();
-$locked = count(array_filter($accounts, static fn ($a) => $a['status'] === 'bi_khoa'));
+$locked = 0;
+$adminCount = 0;
+foreach ($accounts as $account) {
+    if ($account['status'] === 'bi_khoa') {
+        $locked++;
+    }
+    if ($account['role'] === 'admin') {
+        $adminCount++;
+    }
+}
 $activeAccounts = count($accounts) - $locked;
-$adminCount = count(array_filter($accounts, static fn ($a) => $a['role'] === 'admin'));
 $activePercent = count($accounts) > 0 ? (int) round(100 * $activeAccounts / count($accounts)) : 0;
 
 $partials = __DIR__ . '/../common/partials';

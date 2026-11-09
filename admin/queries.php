@@ -46,7 +46,11 @@ function admin_class_save(array $values, int $id = 0): int
     }
 
     $values[] = $id;
-    $sets = implode(',', array_map(static fn ($column): string => "$column = ?", explode(',', $columns)));
+    $setParts = [];
+    foreach (explode(',', $columns) as $column) {
+        $setParts[] = $column . ' = ?';
+    }
+    $sets = implode(',', $setParts);
     $stmt = $db->prepare("UPDATE lop_hoc SET $sets WHERE id = ?");
     $stmt->bind_param('siissssissssi', ...$values);
     $stmt->execute();
@@ -89,7 +93,11 @@ function admin_member_save(array $values, int $id = 0): int
     }
 
     $values[] = $id;
-    $sets = implode(',', array_map(static fn ($column): string => "$column = ?", explode(',', $columns)));
+    $setParts = [];
+    foreach (explode(',', $columns) as $column) {
+        $setParts[] = $column . ' = ?';
+    }
+    $sets = implode(',', $setParts);
     $stmt = $db->prepare("UPDATE hoi_vien SET $sets WHERE id = ?");
     $stmt->bind_param('ssssssssi', ...$values);
     $stmt->execute();
@@ -174,8 +182,13 @@ function admin_instructor_sync_specialties(int $instructorId, array $specialtyId
     $stmt->execute();
     $stmt->close();
     $stmt = $db->prepare('INSERT INTO giao_vien_chuyen_mon (giao_vien_id, chuyen_mon_id) SELECT ?, id FROM chuyen_mon WHERE id = ? AND trang_thai = 1');
-    foreach (array_unique(array_map('intval', $specialtyIds)) as $specialtyId) {
-        if ($specialtyId <= 0) continue;
+    $usedSpecialtyIds = [];
+    foreach ($specialtyIds as $specialtyId) {
+        $specialtyId = (int) $specialtyId;
+        if ($specialtyId <= 0 || isset($usedSpecialtyIds[$specialtyId])) {
+            continue;
+        }
+        $usedSpecialtyIds[$specialtyId] = true;
         $stmt->bind_param('ii', $instructorId, $specialtyId);
         $stmt->execute();
     }

@@ -34,32 +34,32 @@ $activeMenu = 'dashboard';
 $pageTitle = 'Tổng quan hệ thống';
 $pageScripts = [];
 
-$revenue = data_revenue();
-$max = max(array_column($revenue, 'value')) ?: 1;
 $registrations = data_package_registrations();
-$pendingPackages = array_values(array_filter($registrations, static fn ($r) => $r['payment'] === 'chua_thanh_toan'));
+$pendingPackages = [];
+foreach ($registrations as $registration) {
+    if ($registration['payment'] === 'chua_thanh_toan') {
+        $pendingPackages[] = $registration;
+    }
+}
 $classes = data_classes();
 $packages = data_packages();
 $members = data_members();
 $availability = data_availability();
-$pendingSlots = count(array_filter($availability, static fn ($r) => $r['status'] === 'cho_duyet'));
-$pendingTotal = $pendingSlots + count($pendingPackages);
-$currentRevenue = 0;
-$prevRevenue = 0;
-foreach ($revenue as $row) {
-    if ($row['month'] === 'T10') {
-        $currentRevenue = $row['value'];
-    }
-    if ($row['month'] === 'T9') {
-        $prevRevenue = $row['value'];
+$pendingSlots = 0;
+$pendingSlotsList = [];
+foreach ($availability as $request) {
+    if ($request['status'] === 'cho_duyet') {
+        $pendingSlots++;
+        $pendingSlotsList[] = $request;
     }
 }
-$revenueDelta = $prevRevenue > 0 ? round(100 * ($currentRevenue - $prevRevenue) / $prevRevenue, 1) : 0;
-$totalEnrolled = (int) array_sum(array_column($classes, 'enrolled'));
-$totalCapacity = (int) array_sum(array_column($classes, 'capacity'));
-$occupancy = $totalCapacity > 0 ? (int) round(100 * $totalEnrolled / $totalCapacity) : 0;
-$fullClasses = count(array_filter($classes, static fn ($c) => (int) $c['capacity'] > 0 && (int) $c['enrolled'] >= (int) $c['capacity']));
-$pendingSlotsList = array_values(array_filter($availability, static fn ($r) => $r['status'] === 'cho_duyet'));
+$pendingTotal = $pendingSlots + count($pendingPackages);
+$openClasses = 0;
+foreach ($classes as $class) {
+    if ($class['status'] === 'dang_mo') {
+        $openClasses++;
+    }
+}
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -76,31 +76,14 @@ require $partials . '/head.php';
 <div class="page-head">
     <div>
         <h1>Tổng quan hệ thống</h1>
-        <p>Cập nhật lúc <?= e(date('d/m/Y H:i')) ?> · Tháng 10/2026</p>
+        <p>Cập nhật lúc <?= e(date('d/m/Y H:i')) ?></p>
     </div>
     <div class="page-head-actions">
-        <select class="form-select form-select-sm" aria-label="Khoảng thời gian" style="width:auto;">
-            <option>Tháng này</option>
-            <option>Quý này</option>
-            <option>Năm nay</option>
-        </select>
-        <a class="btn btn-primary" href="<?= e(url('/admin/reports')) ?>"><?= icon('bar-chart-line') ?> Xem thống kê</a>
+        <a class="btn btn-primary" href="<?= e(url('/admin/registrations')) ?>"><?= icon('receipt') ?> Xem đăng ký</a>
     </div>
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-start">
-                <div>
-                    <div class="stat-label">Doanh thu tháng 10</div>
-                    <div class="stat-value" style="font-size:1.45rem;"><?= e(number_format($currentRevenue, 1, ',', '.')) ?>tr</div>
-                    <div class="stat-foot"><span class="trend <?= $revenueDelta >= 0 ? 'up' : 'down' ?>"><?= icon($revenueDelta >= 0 ? 'arrow-up-right' : 'arrow-down-right') ?> <?= e(number_format($revenueDelta, 1, ',', '.')) ?>%</span> so với tháng 9</div>
-                </div>
-                <div class="stat-icon ms-auto"><?= icon('cash-stack') ?></div>
-            </div>
-        </div>
-    </div>
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
             <div class="d-flex align-items-start">
@@ -117,9 +100,21 @@ require $partials . '/head.php';
         <div class="stat-card">
             <div class="d-flex align-items-start">
                 <div>
+                    <div class="stat-label">Giáo viên</div>
+                    <div class="stat-value"><?= count(data_instructors()) ?></div>
+                    <div class="stat-foot">Đang quản lý</div>
+                </div>
+                <div class="stat-icon blue ms-auto"><?= icon('person-badge') ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-start">
+                <div>
                     <div class="stat-label">Lớp đang mở</div>
-                    <div class="stat-value"><?= count(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo')) ?></div>
-                    <div class="stat-foot">Tỷ lệ lấp đầy trung bình 78%</div>
+                    <div class="stat-value"><?= $openClasses ?></div>
+                    <div class="stat-foot">Các lớp đang mở</div>
                 </div>
                 <div class="stat-icon blue ms-auto"><?= icon('calendar2-week') ?></div>
             </div>
@@ -141,29 +136,6 @@ require $partials . '/head.php';
 
 <div class="row g-3">
     <div class="col-xl-8">
-        <div class="app-card mb-3">
-            <div class="app-card-header">
-                <div>
-                    <h2>Doanh thu theo tháng</h2>
-                    <p class="sub">Đơn vị: triệu đồng · 10 tháng gần nhất</p>
-                </div>
-                <div class="ms-auto chart-legend">
-                    <span class="lg"><span class="sw"></span> Doanh thu</span>
-                </div>
-            </div>
-            <div class="app-card-body">
-                <div class="chart-bars" role="img" aria-label="Biểu đồ doanh thu theo tháng">
-                    <?php foreach ($revenue as $item): ?>
-                        <div class="bar-col">
-                            <span class="bar-value"><?= $item['value'] > 0 ? e((string) $item['value']) : '' ?></span>
-                            <div class="bar" style="height:<?= $item['value'] > 0 ? (int) round($item['value'] / $max * 100) : 2 ?>%;" title="<?= e($item['month']) ?>: <?= e((string) $item['value']) ?> triệu"></div>
-                            <span class="bar-label"><?= e($item['month']) ?></span>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-
         <div class="app-card">
             <div class="app-card-header">
                 <div>
@@ -206,36 +178,7 @@ require $partials . '/head.php';
     </div>
 
     <div class="col-xl-4">
-        <div class="app-card mb-3">
-            <div class="app-card-header"><h2>Tỷ lệ lấp đầy</h2></div>
-            <div class="app-card-body">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="donut" style="--p:<?= $occupancy ?>;">
-                        <span class="donut-value"><?= $occupancy ?>%<small>trung bình</small></span>
-                    </div>
-                    <div class="text-small flex-grow-1">
-                        <div class="d-flex justify-content-between mb-1"><span class="text-muted-2">Đã đăng ký</span><strong><?= number_format($totalEnrolled, 0, ',', '.') ?></strong></div>
-                        <div class="d-flex justify-content-between mb-1"><span class="text-muted-2">Sức chứa</span><strong><?= number_format($totalCapacity, 0, ',', '.') ?></strong></div>
-                        <div class="d-flex justify-content-between"><span class="text-muted-2">Lớp đầy</span><strong class="text-warning"><?= $fullClasses ?></strong></div>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <?php foreach (array_slice($classes, 0, 3) as $class):
-                        $percent = (int) round($class['enrolled'] / max(1, $class['capacity']) * 100);
-                    ?>
-                        <div class="mb-2">
-                            <div class="d-flex justify-content-between text-tiny mb-1">
-                                <span><?= e($class['name']) ?></span>
-                                <span class="fw-700"><?= $percent ?>%</span>
-                            </div>
-                            <?= progress_bar($percent, $percent >= 90 ? 'amber' : '') ?>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="app-card mb-3">
+        <div class="app-card">
             <div class="app-card-header">
                 <h2>Yêu cầu chờ duyệt</h2>
                 <a class="btn btn-ghost btn-sm ms-auto" href="<?= e(url('/admin/availability')) ?>">Duyệt</a>
@@ -260,28 +203,6 @@ require $partials . '/head.php';
             </div>
         </div>
 
-        <div class="app-card">
-            <div class="app-card-header"><h2>Hoạt động gần đây</h2></div>
-            <div class="app-card-body">
-                <ul class="app-timeline">
-                    <li>
-                        <span class="tl-dot success"><?= icon('check-lg') ?></span>
-                        <div class="tl-title">Xác nhận thanh toán Premium</div>
-                        <div class="tl-meta">Bùi Ngọc Hân · 10 phút trước</div>
-                    </li>
-                    <li>
-                        <span class="tl-dot"><?= icon('person-plus') ?></span>
-                        <div class="tl-title">Hội viên mới: Phạm Anh Tuấn</div>
-                        <div class="tl-meta">32 phút trước</div>
-                    </li>
-                    <li>
-                        <span class="tl-dot warning"><?= icon('calendar-check') ?></span>
-                        <div class="tl-title">Duyệt lịch dạy 18:00</div>
-                        <div class="tl-meta">1 giờ trước</div>
-                    </li>
-                </ul>
-            </div>
-        </div>
     </div>
 </div>
         </main>
