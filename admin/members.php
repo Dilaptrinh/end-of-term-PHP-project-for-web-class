@@ -83,7 +83,12 @@ $pageScripts = [];
 
 $members = data_members();
 $packages = data_packages();
-$active = count(array_filter($members, static fn ($m) => $m['status'] === 'hoat_dong'));
+$active = 0;
+foreach ($members as $member) {
+    if ($member['status'] === 'hoat_dong') {
+        $active++;
+    }
+}
 $inactive = count($members) - $active;
 $activePercent = count($members) > 0 ? (int) round(100 * $active / count($members)) : 0;
 $today = new DateTime('today');

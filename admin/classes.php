@@ -85,8 +85,16 @@ $pageScripts = [];
 
 $classes = data_classes();
 $instructors = data_instructors();
-$openCount = count(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo'));
-$fullCount = count(array_filter($classes, static fn ($c) => $c['enrolled'] >= $c['capacity']));
+$openCount = 0;
+$fullCount = 0;
+foreach ($classes as $class) {
+    if ($class['status'] === 'dang_mo') {
+        $openCount++;
+    }
+    if ($class['enrolled'] >= $class['capacity']) {
+        $fullCount++;
+    }
+}
 
 $partials = __DIR__ . '/../common/partials';
 

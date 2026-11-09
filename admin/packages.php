@@ -74,7 +74,12 @@ $pageTitle = 'Quản lý gói tập';
 $pageScripts = [];
 
 $packages = data_packages();
-$selling = count(array_filter($packages, static fn ($p) => $p['status'] === 'dang_ban'));
+$selling = 0;
+foreach ($packages as $package) {
+    if ($package['status'] === 'dang_ban') {
+        $selling++;
+    }
+}
 $estimatedRevenue = 0;
 foreach ($packages as $package) {
     $estimatedRevenue += $package['price'] * $package['sold'];

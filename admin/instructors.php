@@ -45,7 +45,14 @@ if (($requestMethod === 'GET' && $requestAction === 'detail') || $requestMethod 
     $name = trim((string) ($input['ho_ten'] ?? ''));
     $phone = trim((string) ($input['sdt'] ?? ''));
     $email = trim((string) ($input['email'] ?? ''));
-    $specialtyIds = array_values(array_filter(array_map('intval', (array) ($input['chuyen_mon_ids'] ?? []))));
+    $specialtyIds = [];
+    $inputSpecialtyIds = (array) ($input['chuyen_mon_ids'] ?? []);
+    foreach ($inputSpecialtyIds as $specialtyId) {
+        $specialtyId = (int) $specialtyId;
+        if ($specialtyId > 0) {
+            $specialtyIds[] = $specialtyId;
+        }
+    }
     $intro = trim((string) ($input['mo_ta'] ?? ''));
     $status = (string) ($input['trang_thai'] ?? 'dang_lam');
 
@@ -99,11 +106,30 @@ $pageTitle = 'Quản lý giáo viên';
 $pageScripts = [];
 
 $instructors = data_instructors();
-$active = count(array_filter($instructors, static fn ($i) => $i['status'] === 'hoat_dong'));
+$active = 0;
+foreach ($instructors as $instructor) {
+    if ($instructor['status'] === 'hoat_dong') {
+        $active++;
+    }
+}
 $classes = data_classes();
-$openClasses = count(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo'));
-$studentCount = count(array_unique(array_column(data_class_registrations(), 'member')));
-$pendingSlots = count(array_filter(data_availability(), static fn ($r) => $r['status'] === 'cho_duyet'));
+$openClasses = 0;
+foreach ($classes as $class) {
+    if ($class['status'] === 'dang_mo') {
+        $openClasses++;
+    }
+}
+$studentNames = [];
+foreach (data_class_registrations() as $registration) {
+    $studentNames[$registration['member']] = true;
+}
+$studentCount = count($studentNames);
+$pendingSlots = 0;
+foreach (data_availability() as $request) {
+    if ($request['status'] === 'cho_duyet') {
+        $pendingSlots++;
+    }
+}
 $specialties = data_specialties();
 
 $partials = __DIR__ . '/../common/partials';

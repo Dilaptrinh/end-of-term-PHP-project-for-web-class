@@ -72,15 +72,24 @@ $packageRegs = data_package_registrations();
 $classRegs = data_class_registrations();
 $members = data_members();
 $packages = data_packages();
-$pending = count(array_filter($packageRegs, static fn ($r) => $r['payment'] === 'chua_thanh_toan'));
-$paid = count(array_filter($packageRegs, static fn ($r) => $r['payment'] === 'da_thanh_toan'));
+$pending = 0;
+$paid = 0;
 $paidRevenue = 0;
 foreach ($packageRegs as $reg) {
     if ($reg['payment'] === 'da_thanh_toan') {
+        $paid++;
         $paidRevenue += $reg['price'];
     }
+    if ($reg['payment'] === 'chua_thanh_toan') {
+        $pending++;
+    }
 }
-$cancelledClasses = count(array_filter($classRegs, static fn ($r) => $r['status'] === 'da_huy'));
+$cancelledClasses = 0;
+foreach ($classRegs as $reg) {
+    if ($reg['status'] === 'da_huy') {
+        $cancelledClasses++;
+    }
+}
 
 $partials = __DIR__ . '/../common/partials';
 
