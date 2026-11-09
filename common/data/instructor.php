@@ -117,7 +117,7 @@ function data_current_instructor(): array
         'name'      => $row['ho_ten'],
         'phone'     => $row['sdt'],
         'email'     => $row['email'],
-        'specialty' => (string) ($specialty['specialty'] ?? $row['chuyen_mon'] ?? ''),
+        'specialty' => (string) ($specialty['specialty'] ?? 'Chưa cập nhật'),
         'specialty_ids' => $specialtyIds,
         'status'    => $row['trang_thai'],
         'classes'   => $classes,

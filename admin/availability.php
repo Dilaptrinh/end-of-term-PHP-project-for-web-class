@@ -35,11 +35,25 @@ $activeMenu = 'availability';
 $pageTitle = 'Duyệt lịch dạy';
 $pageScripts = [];
 
-$requests = data_availability();
-$pending = count(array_filter($requests, static fn ($r) => $r['status'] === 'cho_duyet'));
-$approved = count(array_filter($requests, static fn ($r) => $r['status'] === 'da_duyet'));
-$rejected = count(array_filter($requests, static fn ($r) => $r['status'] === 'tu_choi'));
-$cancelled = count(array_filter($requests, static fn ($r) => $r['status'] === 'da_huy'));
+$requests = data_availability(); // lấy danh sách lịch rảnh từ bảng lich_ranh trong database trong shared.php
+
+$pending = 0;
+$approved = 0;
+$rejected = 0;
+$cancelled = 0;
+
+// Duyệt qua từng yêu cầu để đếm
+foreach ($requests as $r) {
+    if ($r['status'] === 'cho_duyet') {
+        $pending++;
+    } elseif ($r['status'] === 'da_duyet') {
+        $approved++;
+    } elseif ($r['status'] === 'tu_choi') {
+        $rejected++;
+    } elseif ($r['status'] === 'da_huy') {
+        $cancelled++;
+    }
+}
 
 $partials = __DIR__ . '/../common/partials';
 

@@ -11,7 +11,7 @@
     var title = document.getElementById('instructorFormTitle');
     var username = document.getElementById('if-username');
     var password = document.getElementById('if-password');
-    var specialty = document.getElementById('if-specialty');
+    var specialtyInputs = document.querySelectorAll('#if-specialties input[name="chuyen_mon_ids[]"]');
     var fields = {
         ho_ten: document.getElementById('if-name'),
         sdt: document.getElementById('if-phone'),
@@ -22,6 +22,7 @@
     function resetForm() {
         form.reset();
         idInput.value = '';
+        specialtyInputs.forEach(function (input) { input.checked = false; });
         title.textContent = 'Thêm giáo viên';
         username.readOnly = false;
         password.required = true;
@@ -33,9 +34,9 @@
         fields.ho_ten.value = instructor.ho_ten || '';
         fields.sdt.value = instructor.sdt || '';
         fields.email.value = instructor.email || '';
-        var selectedSpecialties = (instructor.chuyen_mon_ids || '').split(',');
-        Array.from(specialty.options).forEach(function (option) {
-            option.selected = selectedSpecialties.indexOf(option.value) !== -1;
+        var selectedSpecialties = String(instructor.chuyen_mon_ids || '').split(',');
+        specialtyInputs.forEach(function (input) {
+            input.checked = selectedSpecialties.indexOf(input.value) !== -1;
         });
         fields.mo_ta.value = instructor.gioi_thieu || '';
         username.value = instructor.ten_dang_nhap || '';
@@ -94,8 +95,8 @@
             ho_ten: fields.ho_ten.value.trim(),
             sdt: fields.sdt.value.trim(),
             email: fields.email.value.trim(),
-            chuyen_mon_ids: Array.from(specialty.selectedOptions).map(function (option) {
-                return option.value;
+            chuyen_mon_ids: Array.from(document.querySelectorAll('#if-specialties input[name="chuyen_mon_ids[]"]:checked')).map(function (input) {
+                return input.value;
             }),
             mo_ta: fields.mo_ta.value.trim(),
             trang_thai: 'dang_lam'

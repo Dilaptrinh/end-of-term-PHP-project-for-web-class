@@ -11,7 +11,7 @@ $pageScripts = [];
 $instructor = data_current_instructor();
 $classes = array_values(array_filter(
     data_classes(),
-    static fn (array $class): bool => (int) $class['instructor_id'] === (int) ($instructor['id'] ?? 0)
+    static fn (array $class): bool => (int) $class['giao_vien_id'] === (int) ($instructor['id'] ?? 0)
 ));
 $requests = array_values(array_filter(
     data_availability(),

@@ -26,8 +26,8 @@
             ho_ten: document.getElementById('ins-name').value.trim(),
             sdt: document.getElementById('ins-phone').value.trim(),
             email: document.getElementById('ins-email').value.trim(),
-            chuyen_mon_ids: Array.from(document.getElementById('ins-specialty').selectedOptions).map(function (option) {
-                return option.value;
+            chuyen_mon_ids: Array.from(document.querySelectorAll('#ins-specialties input[name="chuyen_mon_ids[]"]:checked')).map(function (input) {
+                return input.value;
             })
         };
 

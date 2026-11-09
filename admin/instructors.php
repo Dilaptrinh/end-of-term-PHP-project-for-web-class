@@ -233,13 +233,19 @@ require $partials . '/head.php';
                             <label class="form-label" for="if-email">Email <span class="req">*</span></label>
                             <input class="form-control" id="if-email" name="email" type="email" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">Chuyên môn</label>
-                            <select class="form-select" id="if-specialty" name="chuyen_mon_ids[]">
+                            <div class="row row-cols-2 row-cols-md-3 g-2" id="if-specialties">
                                 <?php foreach ($specialties as $specialty): ?>
-                                    <option value="<?= (int) $specialty['id'] ?>"><?= e($specialty['name']) ?></option>
+                                    <div class="col">
+                                        <label class="form-check border rounded p-2 h-100">
+                                            <input class="form-check-input" type="checkbox" name="chuyen_mon_ids[]" value="<?= (int) $specialty['id'] ?>">
+                                            <span class="form-check-label"><?= e($specialty['name']) ?></span>
+                                        </label>
+                                    </div>
                                 <?php endforeach; ?>
-                            </select>
+                            </div>
+                            <div class="form-text">Có thể chọn nhiều chuyên môn.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="if-username">Tên đăng nhập <span class="req">*</span></label>
@@ -271,4 +277,4 @@ require $partials . '/head.php';
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
 <?php require $partials . '/foot.php'; ?>
-<script src="<?= e(url('/common/assets/js/admin/instructors.js')) ?>?v=2"></script>
+<script src="<?= e(url('/common/assets/js/admin/instructors.js')) ?>?v=3"></script>
