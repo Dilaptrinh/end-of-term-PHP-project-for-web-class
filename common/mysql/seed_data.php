@@ -163,6 +163,30 @@ if (!function_exists('seed_core_data')) {
             $stmt->close();
         }
 
+        $memberCount = (int) $conn->query('SELECT COUNT(*) AS c FROM hoi_vien')->fetch_assoc()['c'];
+        if ($memberCount < 50) {
+            $stmt = $conn->prepare('
+                INSERT IGNORE INTO hoi_vien
+                    (ho_ten, sdt, email, gioi_tinh, ngay_sinh, trang_thai, created_at, can_nang, chieu_cao, muc_tieu)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ');
+            for ($number = $memberCount + 1; $number <= 50; $number++) {
+                $name = 'Hội viên mẫu ' . $number;
+                $phone = '098' . str_pad((string) $number, 7, '0', STR_PAD_LEFT);
+                $email = 'hoivien' . $number . '@fitzone.vn';
+                $gender = $number % 2 === 0 ? 'nu' : 'nam';
+                $birth = '1995-01-01';
+                $status = $number % 10 === 0 ? 'ngung_hoat_dong' : 'hoat_dong';
+                $joined = '2026-10-01';
+                $weight = 60.0;
+                $height = 165.0;
+                $goal = 'Duy trì thể lực';
+                $stmt->bind_param('sssssssdds', $name, $phone, $email, $gender, $birth, $status, $joined, $weight, $height, $goal);
+                $stmt->execute();
+            }
+            $stmt->close();
+        }
+
         $packages = [
             ['Basic 1 tháng', 30, 500000, 'Truy cập phòng gym, tủ đồ, phòng tắm trong 30 ngày.', 'dang_ban'],
             ['Standard 3 tháng', 90, 1200000, 'Toàn bộ quyền lợi Basic + tham gia lớp nhóm không giới hạn.', 'dang_ban'],
