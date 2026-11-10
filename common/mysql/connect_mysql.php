@@ -1,5 +1,16 @@
 <?php
-
+/**
+ * mysql/connect_mysql.php
+ * ------------------------------------------------------------------
+ * Mở kết nối tới MySQL bằng mysqli và TRẢ VỀ đối tượng kết nối.
+ *
+ * Cách dùng ở file khác:
+ *   $conn = require __DIR__ . '/connect_mysql.php';
+ *   $result = $conn->query('SELECT * FROM ...');
+ *
+ * Cách test nhanh (chạy trực tiếp):
+ *   C:\xampp\php\php.exe mysql\connect_mysql.php
+ */
 
 // 1) Bật báo lỗi để dễ thấy vấn đề khi đang học
 error_reporting(E_ALL);
@@ -23,10 +34,10 @@ try {
         (int) $config['port']
     );
 
-    // 5) Đặt bảng mã để lưu tiếng Việt đúng
+    // 5) Đặt bảng mã để lưu/đọc tiếng Việt đúng
     $conn->set_charset($config['charset']);
 
-    // 6) Tự tạo CSDL nếu chưa có 
+    // 6) Tự tạo CSDL nếu chưa có (clone về chỉ cần bật XAMPP), rồi chọn CSDL đó.
     $conn->query(
         'CREATE DATABASE IF NOT EXISTS `' . $config['name'] . '` CHARACTER SET utf8mb4'
     );

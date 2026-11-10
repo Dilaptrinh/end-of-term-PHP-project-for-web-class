@@ -16,7 +16,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $db = common_db();
     $accountId = (int) $user['id'];
 
-    $stmt = $db->prepare('SELECT id FROM giao_vien WHERE tai_khoan_id = ? LIMIT 1');
+    $stmt = $db->prepare('SELECT id FROM giao_vien WHERE tai_khoan_id = ? AND deleted_at IS NULL LIMIT 1');
     $stmt->bind_param('i', $accountId);
     $stmt->execute();
     $instructor = $stmt->get_result()->fetch_assoc();
@@ -58,14 +58,29 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $date = trim((string) ($input['ngay_day'] ?? $input['ngay'] ?? ''));
     $start = trim((string) ($input['gio_bat_dau'] ?? ''));
     $end = trim((string) ($input['gio_ket_thuc'] ?? ''));
-    $note = trim((string) ($input['ghi_chu'] ?? ''));
+    $specialty = trim((string) ($input['ghi_chu'] ?? ''));
 
-    if ($date === '' || $start === '' || $end === '') {
-        json_response(['success' => false, 'message' => 'Vui lòng chọn ngày và khung giờ.'], 422);
+    if ($date === '' || $start === '' || $end === '' || $specialty === '') {
+        json_response(['success' => false, 'message' => 'Vui lòng chọn ngày, khung giờ và môn dạy.'], 422);
+    }
+
+    $stmt = $db->prepare(
+        'SELECT cm.id
+           FROM giao_vien_chuyen_mon gvcm
+           JOIN chuyen_mon cm ON cm.id = gvcm.chuyen_mon_id AND cm.trang_thai = 1
+          WHERE gvcm.giao_vien_id = ? AND cm.ten_chuyen_mon = ?
+          LIMIT 1'
+    );
+    $stmt->bind_param('is', $instructorId, $specialty);
+    $stmt->execute();
+    $validSpecialty = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$validSpecialty) {
+        json_response(['success' => false, 'message' => 'Môn dạy không hợp lệ hoặc không thuộc chuyên môn của bạn.'], 422);
     }
 
     $stmt = $db->prepare('INSERT INTO lich_ranh (giao_vien_id, ngay, gio_bat_dau, gio_ket_thuc, ghi_chu, trang_thai) VALUES (?, ?, ?, ?, ?, "cho_duyet")');
-    $stmt->bind_param('issss', $instructorId, $date, $start, $end, $note);
+    $stmt->bind_param('issss', $instructorId, $date, $start, $end, $specialty);
     $stmt->execute();
     $stmt->close();
 
@@ -81,6 +96,11 @@ $activeMenu = 'availability';
 $pageTitle = 'Đăng ký lịch dạy';
 $pageScripts = [];
 
+$instructor = data_current_instructor();
+$specialties = array_values(array_filter(
+    data_specialties(),
+    static fn (array $specialty): bool => in_array($specialty['id'], $instructor['specialty_ids'] ?? [], true)
+));
 $requests = array_values(array_filter(data_availability(), static fn ($a) => $a['instructor'] === data_current_instructor_name()));
 $pending = count(array_filter($requests, static fn ($r) => $r['status'] === 'cho_duyet'));
 $approved = count(array_filter($requests, static fn ($r) => $r['status'] === 'da_duyet'));
@@ -140,18 +160,13 @@ require $partials . '/head.php';
     </div>
 </div>
 
-<div class="alert alert-info d-flex gap-2 align-items-start mb-3">
-    <?= icon('info-circle') ?>
-    <div class="text-small">Khung giờ không được trùng hoặc chồng lấn với lịch dạy hiện có. Sau khi admin duyệt, khung giờ sẽ xuất hiện trong lịch dạy của bạn.</div>
-</div>
-
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="app-card" id="availability-form">
             <div class="app-card-header">
                 <div>
                     <h2>Gửi yêu cầu mới</h2>
-                    <p class="sub">Chọn ngày và khung giờ</p>
+                    <p class="sub">Chọn ngày, khung giờ và môn dạy</p>
                 </div>
                 <span class="stat-icon ms-auto"><?= icon('calendar-plus') ?></span>
             </div>
@@ -172,9 +187,16 @@ require $partials . '/head.php';
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="av-note">Ghi chú</label>
-                        <textarea class="form-control" id="av-note" name="ghi_chu" rows="3" placeholder="VD: Có thể nhận lớp Yoga bổ sung…"></textarea>
-                        <div class="form-text">Tối đa 255 ký tự.</div>
+                        <label class="form-label" for="av-specialty">Môn dạy <span class="req">*</span></label>
+                        <select class="form-select" id="av-specialty" name="ghi_chu" required <?= $specialties === [] ? 'disabled' : '' ?>>
+                            <option value="">-- Chọn môn dạy --</option>
+                            <?php foreach ($specialties as $specialty): ?>
+                                <option value="<?= e($specialty['name']) ?>"><?= e($specialty['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if ($specialties === []): ?>
+                            <div class="form-text text-danger">Tài khoản chưa có chuyên môn. Vui lòng liên hệ quản trị viên.</div>
+                        <?php endif; ?>
                     </div>
                     <div class="alert alert-warning d-flex gap-2 py-2 mb-3">
                         <?= icon('exclamation-triangle') ?>
@@ -193,13 +215,6 @@ require $partials . '/head.php';
                     <h2>Yêu cầu của tôi</h2>
                     <p class="sub"><?= count($requests) ?> yêu cầu gần đây</p>
                 </div>
-                <select class="form-select form-select-sm ms-auto" aria-label="Lọc trạng thái" style="width:auto;">
-                    <option>Tất cả trạng thái</option>
-                    <option>Chờ duyệt</option>
-                    <option>Đã duyệt</option>
-                    <option>Từ chối</option>
-                    <option>Đã hủy</option>
-                </select>
             </div>
             <div class="app-table-wrap">
                 <table class="app-table">
@@ -207,7 +222,7 @@ require $partials . '/head.php';
                         <tr>
                             <th>Ngày</th>
                             <th>Khung giờ</th>
-                            <th>Ghi chú</th>
+                            <th>Môn dạy</th>
                             <th>Trạng thái</th>
                             <th>Người duyệt</th>
                             <th class="cell-actions">Thao tác</th>
@@ -246,5 +261,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/instructor/availability.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/instructor/availability.js')) ?>?v=2"></script>
 <?php require $partials . '/foot.php'; ?>

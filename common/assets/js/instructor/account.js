@@ -19,6 +19,25 @@
         return json;
     }
 
+    var specialtyPicker = document.getElementById('ins-specialty-picker');
+    var specialtyInputs = Array.from(specialtyPicker.querySelectorAll('input[name="chuyen_mon_ids[]"]'));
+    var specialtySummary = document.getElementById('ins-specialty-summary');
+
+    function selectedSpecialties() {
+        return specialtyInputs.filter(function (input) { return input.checked; });
+    }
+
+    function updateSpecialtySummary() {
+        specialtySummary.textContent = selectedSpecialties()
+            .map(function (input) { return input.nextElementSibling.textContent; })
+            .join(' · ') || '—';
+    }
+
+    specialtyPicker.addEventListener('change', updateSpecialtySummary);
+    document.getElementById('profile-form').addEventListener('reset', function () {
+        window.setTimeout(updateSpecialtySummary, 0);
+    });
+
     document.getElementById('profile-form').addEventListener('submit', async function (event) {
         event.preventDefault();
 
@@ -26,7 +45,7 @@
             ho_ten: document.getElementById('ins-name').value.trim(),
             sdt: document.getElementById('ins-phone').value.trim(),
             email: document.getElementById('ins-email').value.trim(),
-            chuyen_mon_ids: Array.from(document.querySelectorAll('#ins-specialties input[name="chuyen_mon_ids[]"]:checked')).map(function (input) {
+            chuyen_mon_ids: selectedSpecialties().map(function (input) {
                 return input.value;
             })
         };
@@ -34,6 +53,11 @@
         try {
             var json = await send('profile', data);
             document.getElementById('account-name').textContent = data.ho_ten;
+            var specialty = selectedSpecialties().map(function (input) {
+                return input.nextElementSibling.textContent;
+            }).join(' · ') || '—';
+            document.querySelector('#account-specialty-badge .badge-status').textContent = specialty;
+            document.getElementById('account-specialty-value').textContent = specialty;
             alert(json.message);
         } catch (error) {
             alert(error.message);

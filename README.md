@@ -58,7 +58,7 @@ fitness/
     │   └── user.php          # app_user(), app_notifications()
     ├── menus/                # dữ liệu menu theo vai trò
     ├── partials/             # head, sidebar, topbar, flash, foot
-    ├── mysql/                # config, connect, schema, seed_data, setup
+    ├── mysql/                # config, connect, schema, seed_accounts, setup
     └── assets/               # css, js, vendor
 ```
 

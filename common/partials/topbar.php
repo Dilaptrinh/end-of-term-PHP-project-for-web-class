@@ -5,6 +5,11 @@ require_once __DIR__ . '/../data/user.php';
 $user = app_user($appRole);
 $notifications = app_notifications($appRole);
 
+$searchAction = match ($appRole) {
+    'admin' => '/admin/search',
+    'instructor' => '/instructor/search',
+    default => '/customer/class-registration',
+};
 $accountHref = $appRole === 'admin' ? '/admin/accounts' : '/' . $appRole . '/account';
 $profileHref = $accountHref;
 ?>
@@ -12,6 +17,12 @@ $profileHref = $accountHref;
     <button type="button" class="app-icon-btn d-lg-none" data-sidebar-open aria-label="Mở menu" aria-controls="app-sidebar">
         <?= icon('list') ?>
     </button>
+
+    <form class="app-topbar-search" role="search" action="<?= e(url($searchAction)) ?>" method="get">
+        <label class="sr-only" for="topbar-search">Tìm kiếm nhanh</label>
+        <?= icon('search') ?>
+        <input id="topbar-search" name="q" type="search" placeholder="Tìm kiếm nhanh…" autocomplete="off">
+    </form>
 
     <div class="dropdown">
         <button class="app-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo">

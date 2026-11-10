@@ -12,9 +12,8 @@ function admin_username_exists(string $username): bool
 
 function admin_availability_update(int $id, string $status, string $approver): bool
 {
-    $accountId = (int) ($_SESSION['tai_khoan_id'] ?? 0);
-    $stmt = common_db()->prepare('UPDATE lich_ranh SET trang_thai = ?, nguoi_duyet_id = NULLIF(?, 0) WHERE id = ?');
-    $stmt->bind_param('sii', $status, $accountId, $id);
+    $stmt = common_db()->prepare('UPDATE lich_ranh SET trang_thai = ?, nguoi_duyet = ? WHERE id = ?');
+    $stmt->bind_param('ssi', $status, $approver, $id);
     $stmt->execute();
     $changed = $stmt->affected_rows;
     $stmt->close();
@@ -151,7 +150,7 @@ function admin_package_delete(int $id): bool
 function admin_instructor_find(int $id): ?array
 {
     $stmt = common_db()->prepare('SELECT gv.id, gv.ho_ten, gv.sdt, gv.email,
-                                         COALESCE(GROUP_CONCAT(DISTINCT cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR " · "), "Chưa cập nhật") AS chuyen_mon,
+                                         COALESCE(GROUP_CONCAT(DISTINCT cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR " · "), gv.chuyen_mon) AS chuyen_mon,
                                          COALESCE(GROUP_CONCAT(DISTINCT cm.id ORDER BY cm.id), "") AS chuyen_mon_ids,
                                          gv.gioi_thieu, gv.trang_thai, tk.ten_dang_nhap
                                     FROM giao_vien gv JOIN tai_khoan tk ON tk.id = gv.tai_khoan_id
