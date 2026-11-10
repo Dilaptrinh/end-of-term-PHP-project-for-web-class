@@ -9,7 +9,21 @@ $activeMenu = 'classes';
 $pageTitle = 'Lớp tôi đang dạy';
 $pageScripts = [];
 
-$classes = array_values(array_filter(data_classes(), static fn ($c) => $c['instructor'] === data_current_instructor_name()));
+$instructorId = (int) (data_current_instructor()['id'] ?? 0);
+$classes = array_values(array_filter(
+    data_classes(),
+    static fn (array $class): bool => $instructorId > 0 && (int) $class['giao_vien_id'] === $instructorId
+));
+$today = new DateTimeImmutable('today');
+foreach ($classes as &$class) {
+    if ($class['status'] === 'dang_mo') {
+        $startDate = DateTimeImmutable::createFromFormat('!d/m/Y', $class['from']);
+        if ($startDate && $startDate > $today) {
+            $class['status'] = 'sap_mo';
+        }
+    }
+}
+unset($class);
 
 $classStudents = [];
 foreach ($classes as $class) {
@@ -121,6 +135,9 @@ require $partials . '/head.php';
                         <td><?= status_badge($class['status']) ?></td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if (!$classes): ?>
+                    <tr><td colspan="6" class="text-center text-muted-2 py-4">Chưa có lớp học được phân công.</td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>

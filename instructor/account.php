@@ -140,9 +140,7 @@ require $partials . '/head.php';
                     <?= badge(($instructor['status'] ?? '') === 'dang_lam' ? 'Đang hoạt động' : 'Ngừng hoạt động', ($instructor['status'] ?? '') === 'dang_lam' ? 'success' : 'secondary') ?>
                     <span id="account-specialty-badge"><?= badge($instructor['specialty'] ?? '—', 'primary') ?></span>
                 </div>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-toast="Tính năng tải ảnh sẽ được nối API." data-toast-title="Đổi ảnh đại diện">
-                    <?= icon('camera') ?> Đổi ảnh đại diện
-                </button>
+
             </div>
         </div>
 
@@ -184,9 +182,9 @@ require $partials . '/head.php';
                             <input class="form-control" id="ins-email" name="email" type="email" value="<?= e($instructor['email'] ?? '') ?>" required>
                         </div>
                         <div class="col-md-6">
-                            <span class="form-label d-block">Chuyên môn</span>
-                            <details class="specialty-picker" id="ins-specialty-picker">
-                                <summary id="ins-specialty-summary"><?= e($instructor['specialty'] ?? '—') ?></summary>
+                            <span class="form-label d-block" id="ins-specialty-label">Chuyên môn</span>
+                            <details class="specialty-picker" id="ins-specialty-picker" aria-labelledby="ins-specialty-label">
+                                <summary class="form-control" id="ins-specialty-summary"><?= e($instructor['specialty'] ?? '—') ?></summary>
                                 <div class="specialty-picker-options" role="group" aria-label="Chọn chuyên môn">
                                     <?php foreach ($specialties as $specialty): ?>
                                         <label class="form-check specialty-picker-option">

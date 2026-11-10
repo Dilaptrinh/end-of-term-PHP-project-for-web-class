@@ -93,7 +93,7 @@ function data_availability(): array
                COALESCE(tk.ten_dang_nhap, '—') AS approved_by
         FROM lich_ranh lr
         JOIN giao_vien gv ON gv.id = lr.giao_vien_id
-        LEFT JOIN tai_khoan tk ON tk.id = lr.nguoi_duyet_id
+        LEFT JOIN tai_khoan tk ON tk.id = lr.nguoi_duyet
         ORDER BY lr.ngay DESC, lr.id DESC
     ";
     $rows = view_db()->query($sql)->fetch_all(MYSQLI_ASSOC);

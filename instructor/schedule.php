@@ -92,6 +92,7 @@ for ($date = $monthStart; $date <= $monthEnd; $date = $date->modify('+1 day')) {
             $events[] = ['start' => $request['start'], 'end' => $request['end'], 'name' => 'Lịch đã duyệt', 'room' => '', 'tone' => 'success', 'status' => $request['note'] !== '' ? $request['note'] : 'Đã duyệt', 'students' => null];
         }
     }
+    usort($events, static fn (array $first, array $second): int => strcmp($first['start'], $second['start']));
     $monthDays[] = ['date' => $date, 'weekday' => $weekdayNames[(int) $date->format('N')], 'events' => $events];
 }
 
@@ -242,6 +243,7 @@ require $partials . '/head.php';
             <div class="app-card-body">
                 <div class="day-column">
                     <?php foreach ($monthDays as $day): ?>
+                        <?php if ($day['events'] === []) continue; ?>
                         <div class="day-block">
                             <div class="day-head">
                                 <span class="date"><?= e($day['date']->format('d/m')) ?></span>
@@ -249,20 +251,16 @@ require $partials . '/head.php';
                                 <span class="ms-auto text-tiny text-muted-2"><?= count($day['events']) ?> hoạt động</span>
                             </div>
                             <div class="day-body">
-                                <?php if ($day['events'] === []): ?>
-                                    <div class="text-tiny text-muted-2">Không có lịch dạy.</div>
-                                <?php else: ?>
-                                    <?php foreach ($day['events'] as $event): ?>
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <span class="badge-soft"><?= e($event['start'] . ' – ' . $event['end']) ?></span>
-                                            <span class="fw-700 text-small"><?= e($event['name']) ?></span>
-                                            <?php if ($event['room'] !== '' || $event['students'] !== null): ?>
-                                                <span class="text-tiny text-muted-2"><?= icon('geo-alt') ?><?= $event['room'] !== '' ? ' ' . e($event['room']) : '' ?><?= $event['students'] !== null ? ' · ' . (int) $event['students'] . ' học viên' : '' ?></span>
-                                            <?php endif; ?>
-                                            <span class="ms-auto"><?= badge($event['status'] === 'Lớp dạy' ? 'Lớp dạy' : 'Đã duyệt', $event['tone']) ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
+                                <?php foreach ($day['events'] as $event): ?>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="badge-soft"><?= e($event['start'] . ' – ' . $event['end']) ?></span>
+                                        <span class="fw-700 text-small"><?= e($event['name']) ?></span>
+                                        <?php if ($event['room'] !== '' || $event['students'] !== null): ?>
+                                            <span class="text-tiny text-muted-2"><?= icon('geo-alt') ?><?= $event['room'] !== '' ? ' ' . e($event['room']) : '' ?><?= $event['students'] !== null ? ' · ' . (int) $event['students'] . ' học viên' : '' ?></span>
+                                        <?php endif; ?>
+                                        <span class="ms-auto"><?= badge($event['status'] === 'Lớp dạy' ? 'Lớp dạy' : 'Đã duyệt', $event['tone']) ?></span>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>

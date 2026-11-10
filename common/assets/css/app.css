@@ -516,18 +516,13 @@ input, select, textarea { cursor: text; }
   align-items: center;
   justify-content: space-between;
   gap: .75rem;
-  padding: .48rem .75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: #fff;
-  color: var(--text);
-  font-size: .84rem;
   cursor: pointer;
   list-style: none;
 }
 .specialty-picker summary::-webkit-details-marker { display: none; }
 .specialty-picker summary::after { content: ''; width: .5rem; height: .5rem; flex: 0 0 .5rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); }
-.specialty-picker[open] summary { border-color: var(--brand-700); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.specialty-picker summary:focus { border-color: var(--brand-700); box-shadow: 0 0 0 3px rgba(15, 82, 186, .14); }
+.specialty-picker[open] summary { border-color: var(--brand-700); border-bottom-left-radius: 0; border-bottom-right-radius: 0; box-shadow: none; }
 .specialty-picker-options {
   position: absolute;
   z-index: 20;

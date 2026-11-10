@@ -80,6 +80,7 @@ if (!function_exists('status_badge')) {
             'hoat_dong' => ['Đang hoạt động', 'success'],
             'ngung_hoat_dong' => ['Ngừng hoạt động', 'muted'],
             'dang_mo' => ['Đang mở', 'success'],
+            'sap_mo' => ['Sắp mở', 'warning'],
             'da_dong' => ['Đã đóng', 'muted'],
             'dang_ban' => ['Đang bán', 'success'],
             'ngung_ban' => ['Ngừng bán', 'muted'],
