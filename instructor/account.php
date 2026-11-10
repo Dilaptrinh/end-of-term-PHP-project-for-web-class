@@ -36,21 +36,23 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
         }
 
+        $stmt = $db->prepare('SELECT id FROM giao_vien WHERE tai_khoan_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->bind_param('i', $accountId);
+        $stmt->execute();
+        $instructorRow = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$instructorRow) {
+            json_response(['success' => false, 'message' => 'Không tìm thấy hồ sơ giáo viên của tài khoản này.'], 404);
+        }
+
         $stmt = $db->prepare('UPDATE tai_khoan SET ho_ten = ? WHERE id = ?');
         $stmt->bind_param('si', $name, $accountId);
         $stmt->execute();
         $stmt->close();
 
-        $stmt = $db->prepare('SELECT id FROM giao_vien WHERE tai_khoan_id = ? LIMIT 1');
-        $stmt->bind_param('i', $accountId);
-        $stmt->execute();
-        $instructorRow = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        if ($instructorRow) {
-            admin_instructor_sync_specialties((int) $instructorRow['id'], $specialtyIds);
-        }
+        admin_instructor_sync_specialties((int) $instructorRow['id'], $specialtyIds);
 
-        $stmt = $db->prepare('UPDATE giao_vien SET ho_ten = ?, sdt = ?, email = ? WHERE tai_khoan_id = ?');
+        $stmt = $db->prepare('UPDATE giao_vien SET ho_ten = ?, sdt = ?, email = ? WHERE tai_khoan_id = ? AND deleted_at IS NULL');
         $stmt->bind_param('sssi', $name, $phone, $email, $accountId);
         $stmt->execute();
         $stmt->close();
@@ -135,7 +137,7 @@ require $partials . '/head.php';
                 <p class="text-muted-2 text-small mb-2">Giáo viên · Mã <?= e($instructorCode) ?></p>
                 <div class="d-flex justify-content-center gap-2 mb-3">
                     <?= badge(($instructor['status'] ?? '') === 'dang_lam' ? 'Đang hoạt động' : 'Ngừng hoạt động', ($instructor['status'] ?? '') === 'dang_lam' ? 'success' : 'secondary') ?>
-                    <?= badge($instructor['specialty'] ?? '—', 'primary') ?>
+                    <span id="account-specialty-badge"><?= badge($instructor['specialty'] ?? '—', 'primary') ?></span>
                 </div>
                 <button class="btn btn-outline-primary btn-sm" type="button" data-toast="Tính năng tải ảnh sẽ được nối API." data-toast-title="Đổi ảnh đại diện">
                     <?= icon('camera') ?> Đổi ảnh đại diện
@@ -148,7 +150,7 @@ require $partials . '/head.php';
             <div class="app-card-body">
                 <div class="kv-list">
                     <div class="kv"><span>Mã giáo viên</span><span><?= e($instructorCode) ?></span></div>
-                    <div class="kv"><span>Chuyên môn</span><span><?= e($instructor['specialty'] ?? '—') ?></span></div>
+                    <div class="kv"><span>Chuyên môn</span><span id="account-specialty-value"><?= e($instructor['specialty'] ?? '—') ?></span></div>
                     <div class="kv"><span>Số lớp phụ trách</span><span><?= e((string) ($instructor['classes'] ?? 0)) ?></span></div>
                     <div class="kv"><span>Tổng học viên</span><span><?= e((string) ($instructor['students'] ?? 0)) ?></span></div>
                 </div>
@@ -180,19 +182,19 @@ require $partials . '/head.php';
                             <label class="form-label" for="ins-email">Email <span class="req">*</span></label>
                             <input class="form-control" id="ins-email" name="email" type="email" value="<?= e($instructor['email'] ?? '') ?>" required>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label">Chuyên môn</label>
-                            <div class="row row-cols-2 row-cols-md-3 g-2" id="ins-specialties">
-                                <?php foreach ($specialties as $specialty): ?>
-                                    <div class="col">
-                                        <label class="form-check border rounded p-2 h-100">
+                        <div class="col-md-6">
+                            <span class="form-label d-block">Chuyên môn</span>
+                            <details class="specialty-picker" id="ins-specialty-picker">
+                                <summary id="ins-specialty-summary"><?= e($instructor['specialty'] ?? '—') ?></summary>
+                                <div class="specialty-picker-options" role="group" aria-label="Chọn chuyên môn">
+                                    <?php foreach ($specialties as $specialty): ?>
+                                        <label class="form-check specialty-picker-option">
                                             <input class="form-check-input" type="checkbox" name="chuyen_mon_ids[]" value="<?= (int) $specialty['id'] ?>" <?= in_array((int) $specialty['id'], $instructor['specialty_ids'] ?? [], true) ? 'checked' : '' ?>>
                                             <span class="form-check-label"><?= e($specialty['name']) ?></span>
                                         </label>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <div class="form-text">Có thể chọn nhiều chuyên môn.</div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </details>
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="ins-desc">Giới thiệu</label>
@@ -251,5 +253,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/instructor/account.js')) ?>?v=2"></script>
+<script src="<?= e(url('/common/assets/js/instructor/account.js')) ?>?v=3"></script>
 <?php require $partials . '/foot.php'; ?>

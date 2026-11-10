@@ -60,6 +60,10 @@ foreach ($requests as $r) {
         $cancelled++;
     }
 }
+$pending = count(array_filter($requests, static fn ($r) => $r['status'] === 'cho_duyet'));
+$approved = count(array_filter($requests, static fn ($r) => $r['status'] === 'da_duyet'));
+$rejected = count(array_filter($requests, static fn ($r) => $r['status'] === 'tu_choi'));
+$cancelled = count(array_filter($requests, static fn ($r) => $r['status'] === 'da_huy'));
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -139,7 +143,7 @@ require $partials . '/head.php';
                     <th>Giáo viên</th>
                     <th>Ngày dạy</th>
                     <th>Khung giờ</th>
-                    <th>Ghi chú</th>
+                    <th>Môn dạy</th>
                     <th>Trạng thái</th>
                     <th>Người duyệt</th>
                     <th class="cell-actions">Thao tác</th>

@@ -10,7 +10,7 @@ function data_instructors(): array
 {
     $sql = "
         SELECT gv.id, gv.ho_ten AS name, gv.sdt AS phone, gv.email,
-               COALESCE(GROUP_CONCAT(DISTINCT cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR ' · '), 'Chưa cập nhật') AS specialty,
+               COALESCE(GROUP_CONCAT(DISTINCT cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR ' · '), gv.chuyen_mon) AS specialty,
                (SELECT COUNT(*) FROM lop_hoc lh WHERE lh.giao_vien_id = gv.id AND lh.deleted_at IS NULL) AS classes,
                (SELECT COUNT(DISTINCT dkl.hoi_vien_id)
                   FROM dang_ky_lop dkl
@@ -90,10 +90,9 @@ function data_availability(): array
                TIME_FORMAT(lr.gio_bat_dau, '%H:%i') AS start,
                TIME_FORMAT(lr.gio_ket_thuc, '%H:%i') AS end,
                lr.trang_thai AS status, COALESCE(lr.ghi_chu, '') AS note,
-               COALESCE(tk.ten_dang_nhap, '—') AS approved_by
+               COALESCE(lr.nguoi_duyet, '—') AS approved_by
         FROM lich_ranh lr
         JOIN giao_vien gv ON gv.id = lr.giao_vien_id
-        LEFT JOIN tai_khoan tk ON tk.id = lr.nguoi_duyet_id
         ORDER BY lr.ngay DESC, lr.id DESC
     ";
     $rows = view_db()->query($sql)->fetch_all(MYSQLI_ASSOC);

@@ -79,31 +79,26 @@ function data_current_instructor(): array
         $stmt->close();
     }
     if (!$row) {
-        $row = $conn->query('SELECT * FROM giao_vien WHERE deleted_at IS NULL ORDER BY id LIMIT 1')->fetch_assoc();
-    }
-    if (!$row) {
         return [];
     }
 
     $id = (int) $row['id'];
+    $specialtyIds = [];
+    $specialtyNames = [];
     $specialtyStmt = $conn->prepare(
-        'SELECT GROUP_CONCAT(cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR " · ") AS specialty
+        'SELECT cm.id, cm.ten_chuyen_mon
            FROM giao_vien_chuyen_mon gvcm
            JOIN chuyen_mon cm ON cm.id = gvcm.chuyen_mon_id AND cm.trang_thai = 1
-          WHERE gvcm.giao_vien_id = ?'
+          WHERE gvcm.giao_vien_id = ?
+          ORDER BY cm.ten_chuyen_mon'
     );
     $specialtyStmt->bind_param('i', $id);
     $specialtyStmt->execute();
-    $specialty = $specialtyStmt->get_result()->fetch_assoc();
-    $specialtyStmt->close();
-    $specialtyIds = [];
-    $specialtyIdStmt = $conn->prepare('SELECT chuyen_mon_id FROM giao_vien_chuyen_mon WHERE giao_vien_id = ?');
-    $specialtyIdStmt->bind_param('i', $id);
-    $specialtyIdStmt->execute();
-    foreach ($specialtyIdStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $specialtyRow) {
-        $specialtyIds[] = (int) $specialtyRow['chuyen_mon_id'];
+    foreach ($specialtyStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $specialtyRow) {
+        $specialtyIds[] = (int) $specialtyRow['id'];
+        $specialtyNames[] = (string) $specialtyRow['ten_chuyen_mon'];
     }
-    $specialtyIdStmt->close();
+    $specialtyStmt->close();
     $classes = (int) $conn->query("SELECT COUNT(*) AS c FROM lop_hoc WHERE giao_vien_id = $id AND deleted_at IS NULL")->fetch_assoc()['c'];
     $students = (int) $conn->query("
         SELECT COUNT(DISTINCT dkl.hoi_vien_id) AS c
@@ -117,7 +112,7 @@ function data_current_instructor(): array
         'name'      => $row['ho_ten'],
         'phone'     => $row['sdt'],
         'email'     => $row['email'],
-        'specialty' => (string) ($specialty['specialty'] ?? 'Chưa cập nhật'),
+        'specialty' => $specialtyNames ? implode(' · ', $specialtyNames) : '—',
         'specialty_ids' => $specialtyIds,
         'status'    => $row['trang_thai'],
         'classes'   => $classes,

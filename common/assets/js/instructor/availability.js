@@ -11,7 +11,7 @@
             ngay_day: document.getElementById('av-date').value,
             gio_bat_dau: document.getElementById('av-start').value,
             gio_ket_thuc: document.getElementById('av-end').value,
-            ghi_chu: document.getElementById('av-note').value.trim()
+            ghi_chu: document.getElementById('av-specialty').value
         };
 
         try {

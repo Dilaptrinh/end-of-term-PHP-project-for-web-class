@@ -11,14 +11,60 @@ $pageScripts = [];
 $instructor = data_current_instructor();
 $classes = array_values(array_filter(
     data_classes(),
-    static fn (array $class): bool => (int) $class['giao_vien_id'] === (int) ($instructor['id'] ?? 0)
+    function (array $class) use ($instructor): bool {
+        $id_giao_vien_cua_lop = (int) $class['giao_vien_id'];
+        $id_giao_vien_dang_dang_nhap = (int) ($instructor['id'] ?? 0);
+
+        if ($id_giao_vien_cua_lop === $id_giao_vien_dang_dang_nhap) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 ));
 $requests = array_values(array_filter(
     data_availability(),
-    static fn (array $request): bool => $request['instructor'] === ($instructor['name'] ?? '')
+    function (array $request) use ($instructor): bool {
+        // Bước 1: Lấy tên giảng viên từ request gửi lên
+        $ten_giang_vien_trong_request = $request['instructor'];
+
+        // Bước 2: Lấy tên của giảng viên đang đăng nhập (nếu không có thì để chuỗi rỗng)
+        $ten_giang_vien_dang_nhap = $instructor['name'] ?? '';
+
+        // Bước 3: So sánh xem hai tên này có khớp nhau tuyệt đối hay không
+        if ($ten_giang_vien_trong_request === $ten_giang_vien_dang_nhap) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 ));
-$pending = count(array_filter($requests, static fn (array $request): bool => $request['status'] === 'cho_duyet'));
-$approved = count(array_filter($requests, static fn (array $request): bool => $request['status'] === 'da_duyet'));
+
+$danh_sach_cho_duyet = array_filter(
+    $requests,
+    function (array $request): bool {
+        if ($request['status'] === 'cho_duyet') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+);
+$pending = count($danh_sach_cho_duyet);
+
+$danh_sach_da_duyet = array_filter(
+    $requests,
+    function (array $request): bool {
+        if ($request['status'] === 'da_duyet') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+);
+
+$approved = count($danh_sach_da_duyet);
+
 $students = (int) ($instructor['students'] ?? 0);
 
 $partials = __DIR__ . '/../common/partials';

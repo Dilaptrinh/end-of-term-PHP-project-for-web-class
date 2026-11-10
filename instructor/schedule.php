@@ -9,19 +9,99 @@ $activeMenu = 'schedule';
 $pageTitle = 'Lịch dạy';
 $pageScripts = [];
 
-$classes = array_values(array_filter(data_classes(), static fn ($c) => $c['instructor'] === data_current_instructor_name()));
-$availability = array_values(array_filter(data_availability(), static fn ($a) => $a['instructor'] === data_current_instructor_name() && $a['status'] === 'da_duyet'));
+$instructorName = data_current_instructor_name();
+$classes = array_values(array_filter(data_classes(), static fn ($c) => $c['instructor'] === $instructorName));
+$requests = array_values(array_filter(data_availability(), static fn ($a) => $a['instructor'] === $instructorName));
 
-$weekDates = [
-    1 => ['19', 'T2'],
-    2 => ['20', 'T3'],
-    3 => ['21', 'T4'],
-    4 => ['22', 'T5'],
-    5 => ['23', 'T6'],
-    6 => ['24', 'T7'],
-    7 => ['25', 'CN'],
-];
-$slots = ['07:00', '08:00', '09:30', '17:30', '18:00', '19:00'];
+$timezone = new DateTimeZone('Asia/Ho_Chi_Minh');
+$today = new DateTimeImmutable('today', $timezone);
+$weekStart = $today->modify('-' . ((int) $today->format('N') - 1) . ' days');
+$weekEnd = $weekStart->modify('+6 days');
+$monthStart = $today->modify('first day of this month');
+$monthEnd = $today->modify('last day of this month');
+$weekdayNames = [1 => 'T2', 2 => 'T3', 3 => 'T4', 4 => 'T5', 5 => 'T6', 6 => 'T7', 7 => 'CN'];
+$dateFromDisplay = static function (string $date) use ($timezone): ?DateTimeImmutable {
+    $parsed = DateTimeImmutable::createFromFormat('!d/m/Y', $date, $timezone);
+    return $parsed instanceof DateTimeImmutable ? $parsed : null;
+};
+$classIsActiveOn = static function (array $class, DateTimeImmutable $date) use ($dateFromDisplay): bool {
+    $from = $dateFromDisplay($class['from']);
+    $to = $dateFromDisplay($class['to']);
+    return $from !== null && $to !== null && $date >= $from && $date <= $to;
+};
+
+$weekDates = [];
+$weekClasses = [];
+$weekRequests = [];
+$slots = [];
+for ($offset = 0; $offset < 7; $offset++) {
+    $date = $weekStart->modify('+' . $offset . ' days');
+    $weekDates[(int) $date->format('N')] = ['date' => $date, 'label' => $weekdayNames[(int) $date->format('N')]];
+    $weekClasses[$date->format('Y-m-d')] = [];
+    $weekRequests[$date->format('Y-m-d')] = [];
+}
+
+$weekClassCount = 0;
+$weekTeachingMinutes = 0;
+$weekStudentCount = 0;
+foreach ($weekDates as $info) {
+    $date = $info['date'];
+    $dateKey = $date->format('Y-m-d');
+    foreach ($classes as $class) {
+        if ((int) $class['weekday'] !== (int) $date->format('N') || !$classIsActiveOn($class, $date)) {
+            continue;
+        }
+        $weekClasses[$dateKey][] = $class;
+        $weekClassCount++;
+        $weekTeachingMinutes += max(0, (strtotime($class['end']) - strtotime($class['start'])) / 60);
+        $weekStudentCount += (int) $class['enrolled'];
+        $slots[$class['start']] = true;
+    }
+}
+
+$weekApprovedCount = 0;
+$weekPendingCount = 0;
+foreach ($requests as $request) {
+    $requestDate = $dateFromDisplay($request['date']);
+    if ($requestDate === null || $requestDate < $weekStart || $requestDate > $weekEnd) {
+        continue;
+    }
+    $weekRequests[$requestDate->format('Y-m-d')][] = $request;
+    $slots[$request['start']] = true;
+    if ($request['status'] === 'da_duyet') {
+        $weekApprovedCount++;
+    } elseif ($request['status'] === 'cho_duyet') {
+        $weekPendingCount++;
+    }
+}
+ksort($slots);
+$slots = array_keys($slots);
+$weekTeachingHours = (int) round($weekTeachingMinutes / 60);
+
+$monthDays = [];
+for ($date = $monthStart; $date <= $monthEnd; $date = $date->modify('+1 day')) {
+    $events = [];
+    foreach ($classes as $class) {
+        if ((int) $class['weekday'] === (int) $date->format('N') && $classIsActiveOn($class, $date)) {
+            $events[] = ['start' => $class['start'], 'end' => $class['end'], 'name' => $class['name'], 'room' => $class['room'], 'tone' => 'primary', 'status' => 'Lớp dạy', 'students' => $class['enrolled']];
+        }
+    }
+    foreach ($requests as $request) {
+        $requestDate = $dateFromDisplay($request['date']);
+        if ($requestDate !== null && $requestDate->format('Y-m-d') === $date->format('Y-m-d') && $request['status'] === 'da_duyet') {
+            $events[] = ['start' => $request['start'], 'end' => $request['end'], 'name' => 'Lịch đã duyệt', 'room' => '', 'tone' => 'success', 'status' => $request['note'] !== '' ? $request['note'] : 'Đã duyệt', 'students' => null];
+        }
+    }
+    $monthDays[] = ['date' => $date, 'weekday' => $weekdayNames[(int) $date->format('N')], 'events' => $events];
+}
+
+$availability = [];
+foreach ($requests as $request) {
+    $requestDate = $dateFromDisplay($request['date']);
+    if ($request['status'] === 'da_duyet' && $requestDate !== null && $requestDate >= $weekStart && $requestDate <= $weekEnd) {
+        $availability[] = $request;
+    }
+}
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -41,11 +121,6 @@ require $partials . '/head.php';
         <p>Lịch lớp được phân công và các khung giờ đã được admin duyệt.</p>
     </div>
     <div class="page-head-actions">
-        <div class="btn-group" role="group" aria-label="Điều hướng tuần">
-            <button class="btn btn-outline-primary btn-sm" type="button" aria-label="Tuần trước"><?= icon('chevron-left') ?></button>
-            <button class="btn btn-outline-primary btn-sm" type="button">Tuần này</button>
-            <button class="btn btn-outline-primary btn-sm" type="button" aria-label="Tuần sau"><?= icon('chevron-right') ?></button>
-        </div>
         <a class="btn btn-primary" href="<?= e(url('/instructor/availability')) ?>"><?= icon('calendar-plus') ?> Đăng ký lịch</a>
     </div>
 </div>
@@ -66,8 +141,8 @@ require $partials . '/head.php';
                 <div class="app-card">
                     <div class="app-card-header">
                         <div>
-                            <h2>Tuần 19/10 – 25/10/2026</h2>
-                            <p class="sub">3 lớp dạy · 1 khung giờ đã duyệt</p>
+                            <h2>Tuần <?= e($weekStart->format('d/m')) ?> – <?= e($weekEnd->format('d/m/Y')) ?></h2>
+                            <p class="sub"><?= $weekClassCount ?> buổi dạy · <?= $weekApprovedCount ?> khung giờ đã duyệt</p>
                         </div>
                         <div class="ms-auto chart-legend">
                             <span class="lg"><span class="sw"></span> Lớp dạy</span>
@@ -79,27 +154,30 @@ require $partials . '/head.php';
                             <div class="schedule-grid">
                                 <div class="sg-head">Giờ</div>
                                 <?php foreach ($weekDates as $d => $info): ?>
-                                    <div class="sg-head"><?= e($info[1]) ?><span class="d"><?= e($info[0]) ?>/10</span></div>
+                                    <div class="sg-head"><?= e($info['label']) ?><span class="d"><?= e($info['date']->format('d/m')) ?></span></div>
                                 <?php endforeach; ?>
 
                                 <?php foreach ($slots as $slot): ?>
                                     <div class="sg-time"><?= e($slot) ?></div>
                                     <?php foreach ($weekDates as $d => $info): ?>
                                         <div class="sg-cell">
-                                            <?php foreach ($classes as $class): ?>
-                                                <?php if ((int) $class['weekday'] === $d && $class['start'] === $slot): ?>
+                                            <?php $dateKey = $info['date']->format('Y-m-d'); ?>
+                                            <?php foreach ($weekClasses[$dateKey] as $class): ?>
+                                                <?php if ($class['start'] === $slot): ?>
                                                     <span class="schedule-event">
                                                         <strong><?= e($class['name']) ?></strong>
                                                         <span class="t"><?= e($class['start'] . ' – ' . $class['end']) ?> · <?= e($class['room']) ?></span>
                                                     </span>
                                                 <?php endif; ?>
                                             <?php endforeach; ?>
-                                            <?php if ($d === 6 && $slot === '09:30'): ?>
-                                                <span class="schedule-event green">
-                                                    <strong>Lịch đã duyệt</strong>
-                                                    <span class="t">09:00 – 11:00 · Yoga bổ sung</span>
-                                                </span>
-                                            <?php endif; ?>
+                                            <?php foreach ($weekRequests[$dateKey] as $request): ?>
+                                                <?php if ($request['status'] === 'da_duyet' && $request['start'] === $slot): ?>
+                                                    <span class="schedule-event green">
+                                                        <strong>Lịch đã duyệt</strong>
+                                                        <span class="t"><?= e($request['start'] . ' – ' . $request['end']) ?><?= $request['note'] !== '' ? ' · ' . e($request['note']) : '' ?></span>
+                                                    </span>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php endforeach; ?>
@@ -114,11 +192,11 @@ require $partials . '/head.php';
                     <div class="app-card-header"><h2>Tóm tắt tuần</h2></div>
                     <div class="app-card-body">
                         <div class="kv-list">
-                            <div class="kv"><span>Số lớp dạy</span><span>3 lớp</span></div>
-                            <div class="kv"><span>Tổng giờ dạy</span><span>3 giờ</span></div>
-                            <div class="kv"><span>Tổng học viên</span><span>62</span></div>
-                            <div class="kv"><span>Lịch đã duyệt</span><span class="text-success">1</span></div>
-                            <div class="kv"><span>Chờ duyệt</span><span class="text-warning">1</span></div>
+                            <div class="kv"><span>Số buổi dạy</span><span><?= $weekClassCount ?></span></div>
+                            <div class="kv"><span>Tổng giờ dạy</span><span><?= $weekTeachingHours ?> giờ</span></div>
+                            <div class="kv"><span>Tổng lượt học viên</span><span><?= $weekStudentCount ?></span></div>
+                            <div class="kv"><span>Lịch đã duyệt</span><span class="text-success"><?= $weekApprovedCount ?></span></div>
+                            <div class="kv"><span>Chờ duyệt</span><span class="text-warning"><?= $weekPendingCount ?></span></div>
                         </div>
                     </div>
                 </div>
@@ -134,11 +212,18 @@ require $partials . '/head.php';
                                     <div class="tl-meta"><?= e($request['note']) ?></div>
                                 </li>
                             <?php endforeach; ?>
-                            <li>
-                                <span class="tl-dot warning"><?= icon('clock') ?></span>
-                                <div class="tl-title">26/10/2026 · 07:00 – 09:00</div>
-                                <div class="tl-meta">Đang chờ admin duyệt</div>
-                            </li>
+                            <?php foreach ($requests as $request): ?>
+                                <?php if ($request['status'] === 'cho_duyet' && ($requestDate = $dateFromDisplay($request['date'])) !== null && $requestDate >= $weekStart && $requestDate <= $weekEnd): ?>
+                                    <li>
+                                        <span class="tl-dot warning"><?= icon('clock') ?></span>
+                                        <div class="tl-title"><?= e($request['date']) ?> · <?= e($request['start'] . ' – ' . $request['end']) ?></div>
+                                        <div class="tl-meta"><?= e($request['note'] !== '' ? $request['note'] : 'Đang chờ admin duyệt') ?></div>
+                                    </li>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                            <?php if ($availability === [] && $weekPendingCount === 0): ?>
+                                <li><div class="text-tiny text-muted-2">Chưa có khung giờ đã duyệt hoặc chờ duyệt trong tuần này.</div></li>
+                            <?php endif; ?>
                         </ul>
                     </div>
                 </div>
@@ -150,45 +235,31 @@ require $partials . '/head.php';
         <div class="app-card">
             <div class="app-card-header">
                 <div>
-                    <h2>Tháng 10/2026</h2>
+                    <h2>Tháng <?= e($today->format('m/Y')) ?></h2>
                     <p class="sub">Tổng hợp lớp dạy và lịch đã duyệt theo ngày</p>
-                </div>
-                <div class="btn-group ms-auto">
-                    <button class="btn btn-outline-primary btn-sm" type="button"><?= icon('chevron-left') ?></button>
-                    <button class="btn btn-outline-primary btn-sm" type="button">Tháng 10</button>
-                    <button class="btn btn-outline-primary btn-sm" type="button"><?= icon('chevron-right') ?></button>
                 </div>
             </div>
             <div class="app-card-body">
                 <div class="day-column">
-                    <?php
-                    $days = [
-                        ['19/10', 'Thứ 2', [['18:00 – 19:00', 'Yoga cơ bản', 'P.101', 'primary', '18 học viên']]],
-                        ['20/10', 'Thứ 3', []],
-                        ['21/10', 'Thứ 4', [['19:00 – 20:00', 'Zumba Dance', 'P.101', 'primary', '22 học viên']]],
-                        ['22/10', 'Thứ 5', []],
-                        ['23/10', 'Thứ 6', [['07:00 – 09:00', 'Lịch đã duyệt', 'P.101', 'success', 'Yoga bổ sung']]],
-                        ['24/10', 'Thứ 7', [['09:30 – 10:30', 'Yoga nâng cao', 'P.101', 'primary', '16 học viên']]],
-                        ['25/10', 'Chủ nhật', []],
-                    ];
-                    foreach ($days as $day):
-                    ?>
+                    <?php foreach ($monthDays as $day): ?>
                         <div class="day-block">
                             <div class="day-head">
-                                <span class="date"><?= e($day[0]) ?></span>
-                                <span class="text-muted-2"><?= e($day[1]) ?></span>
-                                <span class="ms-auto text-tiny text-muted-2"><?= count($day[2]) ?> hoạt động</span>
+                                <span class="date"><?= e($day['date']->format('d/m')) ?></span>
+                                <span class="text-muted-2"><?= e($day['weekday']) ?></span>
+                                <span class="ms-auto text-tiny text-muted-2"><?= count($day['events']) ?> hoạt động</span>
                             </div>
                             <div class="day-body">
-                                <?php if ($day[2] === []): ?>
+                                <?php if ($day['events'] === []): ?>
                                     <div class="text-tiny text-muted-2">Không có lịch dạy.</div>
                                 <?php else: ?>
-                                    <?php foreach ($day[2] as $event): ?>
+                                    <?php foreach ($day['events'] as $event): ?>
                                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <span class="badge-soft"><?= e($event[0]) ?></span>
-                                            <span class="fw-700 text-small"><?= e($event[1]) ?></span>
-                                            <span class="text-tiny text-muted-2"><?= icon('geo-alt') ?> <?= e($event[2]) ?> · <?= e($event[4]) ?></span>
-                                            <span class="ms-auto"><?= badge($event[3] === 'success' ? 'Đã duyệt' : 'Lớp dạy', $event[3] === 'success' ? 'success' : 'primary') ?></span>
+                                            <span class="badge-soft"><?= e($event['start'] . ' – ' . $event['end']) ?></span>
+                                            <span class="fw-700 text-small"><?= e($event['name']) ?></span>
+                                            <?php if ($event['room'] !== '' || $event['students'] !== null): ?>
+                                                <span class="text-tiny text-muted-2"><?= icon('geo-alt') ?><?= $event['room'] !== '' ? ' ' . e($event['room']) : '' ?><?= $event['students'] !== null ? ' · ' . (int) $event['students'] . ' học viên' : '' ?></span>
+                                            <?php endif; ?>
+                                            <span class="ms-auto"><?= badge($event['status'] === 'Lớp dạy' ? 'Lớp dạy' : 'Đã duyệt', $event['tone']) ?></span>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
