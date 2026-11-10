@@ -139,6 +139,48 @@ if (!function_exists('seed_core_data')) {
                 $link->execute();
             }
         }
+
+        if (!function_exists('seed_customer_accounts')) {
+            function seed_customer_accounts(mysqli $conn): void
+            {
+                $members = $conn->query('SELECT id, tai_khoan_id, ho_ten FROM hoi_vien ORDER BY id')->fetch_all(MYSQLI_ASSOC);
+                $findUsername = $conn->prepare('SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
+                $insertAccount = $conn->prepare(
+                    'INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, ho_ten, vai_tro, trang_thai)
+                     VALUES (?, ?, ?, "customer", 1)'
+                );
+                $linkMember = $conn->prepare('UPDATE hoi_vien SET tai_khoan_id = ? WHERE id = ?');
+                $hash = password_hash('123456', PASSWORD_DEFAULT);
+
+                foreach ($members as $member) {
+                    if ((int) ($member['tai_khoan_id'] ?? 0) > 0) {
+                        continue;
+                    }
+
+                    $username = 'hoivien' . str_pad((string) $member['id'], 2, '0', STR_PAD_LEFT);
+                    $findUsername->bind_param('s', $username);
+                    $findUsername->execute();
+                    $existing = $findUsername->get_result()->fetch_assoc();
+
+                    if ($existing) {
+                        $accountId = (int) $existing['id'];
+                    } else {
+                        $name = (string) $member['ho_ten'];
+                        $insertAccount->bind_param('sss', $username, $hash, $name);
+                        $insertAccount->execute();
+                        $accountId = (int) $insertAccount->insert_id;
+                    }
+
+                    $memberId = (int) $member['id'];
+                    $linkMember->bind_param('ii', $accountId, $memberId);
+                    $linkMember->execute();
+                }
+
+                $findUsername->close();
+                $insertAccount->close();
+                $linkMember->close();
+            }
+        }
         $find->close();
         $link->close();
 
@@ -251,24 +293,6 @@ if (!function_exists('seed_core_data')) {
             $stmt = $conn->prepare('INSERT INTO dang_ky_lop (hoi_vien_id, lop_hoc_id, ngay_dang_ky, trang_thai) VALUES (?, ?, ?, ?)');
             foreach ($registrations as [$memberId, $classId, $registered, $status]) {
                 $stmt->bind_param('iiss', $memberId, $classId, $registered, $status);
-                $stmt->execute();
-            }
-            $stmt->close();
-        }
-
-        if ((int) $conn->query('SELECT COUNT(*) AS c FROM lich_ranh')->fetch_assoc()['c'] === 0) {
-            $rows = [
-                [1, '2026-10-26', '07:00', '09:00', 'cho_duyet', 'Có thể nhận lớp Yoga bổ sung', null],
-                [1, '2026-10-27', '18:00', '20:00', 'da_duyet', 'Lịch dạy Yoga cơ bản', 'admin'],
-                [2, '2026-10-27', '06:00', '07:30', 'cho_duyet', 'HIIT sáng sớm', null],
-                [3, '2026-10-28', '17:00', '19:00', 'cho_duyet', 'Pilates bổ sung', null],
-                [1, '2026-10-24', '09:00', '11:00', 'da_duyet', 'Yoga nâng cao', 'admin'],
-                [4, '2026-10-23', '18:00', '19:30', 'tu_choi', 'Trùng lịch lớp Gym nâng cao', 'admin'],
-                [1, '2026-10-29', '19:00', '20:00', 'da_huy', 'Giáo viên đã hủy yêu cầu', null],
-            ];
-            $stmt = $conn->prepare('INSERT INTO lich_ranh (giao_vien_id, ngay, gio_bat_dau, gio_ket_thuc, trang_thai, ghi_chu, nguoi_duyet_id) VALUES (?, ?, ?, ?, ?, ?, (SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1))');
-            foreach ($rows as [$instructorId, $date, $start, $end, $status, $note, $approver]) {
-                $stmt->bind_param('issssss', $instructorId, $date, $start, $end, $status, $note, $approver);
                 $stmt->execute();
             }
             $stmt->close();

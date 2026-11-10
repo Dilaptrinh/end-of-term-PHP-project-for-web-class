@@ -4,7 +4,7 @@ return [
     ['group' => 'Giảng dạy'],
     ['label' => 'Lịch dạy', 'icon' => 'calendar-week', 'href' => '/instructor/schedule', 'key' => 'schedule'],
     ['label' => 'Lịch sử đã dạy', 'icon' => 'clock-history', 'href' => '/instructor/history', 'key' => 'history'],
-    ['label' => 'Đăng ký lịch dạy', 'icon' => 'calendar-plus', 'href' => '/instructor/availability', 'key' => 'availability'],
+    ['label' => 'Đề xuất lớp học', 'icon' => 'calendar-plus', 'href' => '/instructor/availability', 'key' => 'availability'],
     ['label' => 'Lớp của tôi', 'icon' => 'journal-bookmark', 'href' => '/instructor/classes', 'key' => 'classes'],
     ['label' => 'Tra cứu học viên', 'icon' => 'person-lines-fill', 'href' => '/instructor/search', 'key' => 'search'],
     ['group' => 'Tài khoản'],

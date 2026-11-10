@@ -11,7 +11,6 @@ $pageScripts = [];
 
 $instructorName = data_current_instructor_name();
 $classes = array_values(array_filter(data_classes(), static fn ($c) => $c['instructor'] === $instructorName));
-$requests = array_values(array_filter(data_availability(), static fn ($a) => $a['instructor'] === $instructorName));
 
 $timezone = new DateTimeZone('Asia/Ho_Chi_Minh');
 $today = new DateTimeImmutable('today', $timezone);
@@ -32,13 +31,11 @@ $classIsActiveOn = static function (array $class, DateTimeImmutable $date) use (
 
 $weekDates = [];
 $weekClasses = [];
-$weekRequests = [];
 $slots = [];
 for ($offset = 0; $offset < 7; $offset++) {
     $date = $weekStart->modify('+' . $offset . ' days');
     $weekDates[(int) $date->format('N')] = ['date' => $date, 'label' => $weekdayNames[(int) $date->format('N')]];
     $weekClasses[$date->format('Y-m-d')] = [];
-    $weekRequests[$date->format('Y-m-d')] = [];
 }
 
 $weekClassCount = 0;
@@ -59,21 +56,6 @@ foreach ($weekDates as $info) {
     }
 }
 
-$weekApprovedCount = 0;
-$weekPendingCount = 0;
-foreach ($requests as $request) {
-    $requestDate = $dateFromDisplay($request['date']);
-    if ($requestDate === null || $requestDate < $weekStart || $requestDate > $weekEnd) {
-        continue;
-    }
-    $weekRequests[$requestDate->format('Y-m-d')][] = $request;
-    $slots[$request['start']] = true;
-    if ($request['status'] === 'da_duyet') {
-        $weekApprovedCount++;
-    } elseif ($request['status'] === 'cho_duyet') {
-        $weekPendingCount++;
-    }
-}
 ksort($slots);
 $slots = array_keys($slots);
 $weekTeachingHours = (int) round($weekTeachingMinutes / 60);
@@ -86,22 +68,8 @@ for ($date = $monthStart; $date <= $monthEnd; $date = $date->modify('+1 day')) {
             $events[] = ['start' => $class['start'], 'end' => $class['end'], 'name' => $class['name'], 'room' => $class['room'], 'tone' => 'primary', 'status' => 'Lớp dạy', 'students' => $class['enrolled']];
         }
     }
-    foreach ($requests as $request) {
-        $requestDate = $dateFromDisplay($request['date']);
-        if ($requestDate !== null && $requestDate->format('Y-m-d') === $date->format('Y-m-d') && $request['status'] === 'da_duyet') {
-            $events[] = ['start' => $request['start'], 'end' => $request['end'], 'name' => 'Lịch đã duyệt', 'room' => '', 'tone' => 'success', 'status' => $request['note'] !== '' ? $request['note'] : 'Đã duyệt', 'students' => null];
-        }
-    }
     usort($events, static fn (array $first, array $second): int => strcmp($first['start'], $second['start']));
     $monthDays[] = ['date' => $date, 'weekday' => $weekdayNames[(int) $date->format('N')], 'events' => $events];
-}
-
-$availability = [];
-foreach ($requests as $request) {
-    $requestDate = $dateFromDisplay($request['date']);
-    if ($request['status'] === 'da_duyet' && $requestDate !== null && $requestDate >= $weekStart && $requestDate <= $weekEnd) {
-        $availability[] = $request;
-    }
 }
 
 $partials = __DIR__ . '/../common/partials';
@@ -119,10 +87,10 @@ require $partials . '/head.php';
 <div class="page-head">
     <div>
         <h1>Lịch dạy của tôi</h1>
-        <p>Lịch lớp được phân công và các khung giờ đã được admin duyệt.</p>
+        <p>Lịch các lớp đã được admin duyệt và mở đăng ký.</p>
     </div>
     <div class="page-head-actions">
-        <a class="btn btn-primary" href="<?= e(url('/instructor/availability')) ?>"><?= icon('calendar-plus') ?> Đăng ký lịch</a>
+        <a class="btn btn-primary" href="<?= e(url('/instructor/availability')) ?>"><?= icon('calendar-plus') ?> Đề xuất lớp</a>
     </div>
 </div>
 
@@ -143,11 +111,10 @@ require $partials . '/head.php';
                     <div class="app-card-header">
                         <div>
                             <h2>Tuần <?= e($weekStart->format('d/m')) ?> – <?= e($weekEnd->format('d/m/Y')) ?></h2>
-                            <p class="sub"><?= $weekClassCount ?> buổi dạy · <?= $weekApprovedCount ?> khung giờ đã duyệt</p>
+                            <p class="sub"><?= $weekClassCount ?> buổi dạy · Chỉ hiển thị lớp đã mở</p>
                         </div>
                         <div class="ms-auto chart-legend">
                             <span class="lg"><span class="sw"></span> Lớp dạy</span>
-                            <span class="lg"><span class="sw" style="background:var(--success)"></span> Lịch đã duyệt</span>
                         </div>
                     </div>
                     <div class="app-card-body">
@@ -171,14 +138,6 @@ require $partials . '/head.php';
                                                     </span>
                                                 <?php endif; ?>
                                             <?php endforeach; ?>
-                                            <?php foreach ($weekRequests[$dateKey] as $request): ?>
-                                                <?php if ($request['status'] === 'da_duyet' && $request['start'] === $slot): ?>
-                                                    <span class="schedule-event green">
-                                                        <strong>Lịch đã duyệt</strong>
-                                                        <span class="t"><?= e($request['start'] . ' – ' . $request['end']) ?><?= $request['note'] !== '' ? ' · ' . e($request['note']) : '' ?></span>
-                                                    </span>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php endforeach; ?>
@@ -196,34 +155,25 @@ require $partials . '/head.php';
                             <div class="kv"><span>Số buổi dạy</span><span><?= $weekClassCount ?></span></div>
                             <div class="kv"><span>Tổng giờ dạy</span><span><?= $weekTeachingHours ?> giờ</span></div>
                             <div class="kv"><span>Tổng lượt học viên</span><span><?= $weekStudentCount ?></span></div>
-                            <div class="kv"><span>Lịch đã duyệt</span><span class="text-success"><?= $weekApprovedCount ?></span></div>
-                            <div class="kv"><span>Chờ duyệt</span><span class="text-warning"><?= $weekPendingCount ?></span></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="app-card">
-                    <div class="app-card-header"><h2>Khung giờ đã duyệt</h2></div>
+                    <div class="app-card-header"><h2>Lớp trong tuần</h2></div>
                     <div class="app-card-body">
                         <ul class="app-timeline">
-                            <?php foreach ($availability as $request): ?>
+                            <?php foreach ($weekClasses as $dateKey => $dayClasses): ?>
+                                <?php foreach ($dayClasses as $class): ?>
                                 <li>
                                     <span class="tl-dot success"><?= icon('check-lg') ?></span>
-                                    <div class="tl-title"><?= e($request['date']) ?> · <?= e($request['start'] . ' – ' . $request['end']) ?></div>
-                                    <div class="tl-meta"><?= e($request['note']) ?></div>
+                                    <div class="tl-title"><?= e($class['name']) ?></div>
+                                    <div class="tl-meta"><?= e($class['start'] . ' – ' . $class['end']) ?> · <?= e($class['room']) ?></div>
                                 </li>
+                                <?php endforeach; ?>
                             <?php endforeach; ?>
-                            <?php foreach ($requests as $request): ?>
-                                <?php if ($request['status'] === 'cho_duyet' && ($requestDate = $dateFromDisplay($request['date'])) !== null && $requestDate >= $weekStart && $requestDate <= $weekEnd): ?>
-                                    <li>
-                                        <span class="tl-dot warning"><?= icon('clock') ?></span>
-                                        <div class="tl-title"><?= e($request['date']) ?> · <?= e($request['start'] . ' – ' . $request['end']) ?></div>
-                                        <div class="tl-meta"><?= e($request['note'] !== '' ? $request['note'] : 'Đang chờ admin duyệt') ?></div>
-                                    </li>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                            <?php if ($availability === [] && $weekPendingCount === 0): ?>
-                                <li><div class="text-tiny text-muted-2">Chưa có khung giờ đã duyệt hoặc chờ duyệt trong tuần này.</div></li>
+                            <?php if ($weekClassCount === 0): ?>
+                                <li><div class="text-tiny text-muted-2">Chưa có lớp trong tuần này.</div></li>
                             <?php endif; ?>
                         </ul>
                     </div>

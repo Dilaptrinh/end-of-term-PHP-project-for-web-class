@@ -151,22 +151,6 @@ if (!function_exists('ensure_schema')) {
         ");
 
         $conn->query("
-            CREATE TABLE IF NOT EXISTS `lich_ranh` (
-                id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                giao_vien_id INT UNSIGNED NOT NULL,
-                ngay         DATE NOT NULL,
-                gio_bat_dau  TIME NOT NULL,
-                gio_ket_thuc TIME NOT NULL,
-                trang_thai   VARCHAR(20) NOT NULL DEFAULT 'cho_duyet',
-                ghi_chu      VARCHAR(255) NULL,
-                nguoi_duyet_id INT UNSIGNED NULL,
-                created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                ,CONSTRAINT fk_lich_ranh_giao_vien FOREIGN KEY (giao_vien_id) REFERENCES giao_vien(id)
-                ,CONSTRAINT fk_lich_ranh_nguoi_duyet FOREIGN KEY (nguoi_duyet_id) REFERENCES tai_khoan(id) ON DELETE SET NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
-
-        $conn->query("
             CREATE TABLE IF NOT EXISTS `doanh_thu` (
                 id     INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 thang  TINYINT NOT NULL,

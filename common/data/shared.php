@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Dữ liệu dùng chung giữa nhiều role:
- * giáo viên, lớp học, gói tập, đăng ký lớp, lịch rảnh.
+ * giáo viên, lớp học, gói tập và đăng ký lớp.
  */
 
 function data_instructors(): array
@@ -81,27 +81,4 @@ function data_class_registrations(): array
         ORDER BY d.id
     ";
     return view_cast_ints(view_db()->query($sql)->fetch_all(MYSQLI_ASSOC), ['id', 'class_id']);
-}
-
-function data_availability(): array
-{
-    $sql = "
-        SELECT lr.id, gv.id AS instructor_id, gv.ho_ten AS instructor, lr.ngay,
-               TIME_FORMAT(lr.gio_bat_dau, '%H:%i') AS start,
-               TIME_FORMAT(lr.gio_ket_thuc, '%H:%i') AS end,
-               lr.trang_thai AS status, COALESCE(lr.ghi_chu, '') AS note,
-               COALESCE(tk.ten_dang_nhap, '—') AS approved_by
-        FROM lich_ranh lr
-        JOIN giao_vien gv ON gv.id = lr.giao_vien_id
-        LEFT JOIN tai_khoan tk ON tk.id = lr.nguoi_duyet
-        ORDER BY lr.ngay DESC, lr.id DESC
-    ";
-    $rows = view_db()->query($sql)->fetch_all(MYSQLI_ASSOC);
-    foreach ($rows as &$row) {
-        $row['date'] = date('d/m/Y', strtotime($row['ngay']));
-        $row['weekday'] = view_weekday_name($row['ngay']);
-        unset($row['ngay']);
-    }
-    unset($row);
-    return view_cast_ints($rows, ['id', 'instructor_id']);
 }

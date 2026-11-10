@@ -53,7 +53,7 @@ function data_package_registrations(): array
         FROM dang_ky_goi d
         JOIN hoi_vien hv ON hv.id = d.hoi_vien_id
         JOIN goi_tap gt ON gt.id = d.goi_tap_id
-        LEFT JOIN tai_khoan tk ON tk.id = d.nhan_vien
+        LEFT JOIN tai_khoan tk ON tk.id = d.nhan_vien_id
         ORDER BY d.id
     ";
     return view_cast_ints(view_db()->query($sql)->fetch_all(MYSQLI_ASSOC), ['id', 'price']);

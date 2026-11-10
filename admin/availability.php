@@ -10,207 +10,71 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     $action = (string) ($_GET['action'] ?? '');
     $id = (int) ($_GET['id'] ?? 0);
-    if ($id <= 0) {
-        json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
-    }
-    if ($action !== 'approve' && $action !== 'reject') {
-        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    if ($id <= 0 || !in_array($action, ['approve', 'reject'], true)) {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 422);
     }
 
-    $status = $action === 'approve' ? 'da_duyet' : 'tu_choi';
-    $changed = admin_availability_update($id, $status, (string) $user['ho_ten']);
-
+    $status = $action === 'approve' ? 'dang_mo' : 'tu_choi';
+    $changed = admin_class_proposal_update($id, $status);
     json_response([
         'success' => $changed,
-        'message' => $changed ? 'Đã cập nhật lịch dạy.' : 'Không tìm thấy lịch dạy.',
+        'message' => $changed ? ($action === 'approve' ? 'Đã duyệt đề xuất lớp.' : 'Đã từ chối đề xuất lớp.') : 'Không tìm thấy đề xuất đang chờ duyệt.',
     ], $changed ? 200 : 404);
 }
 
 require_role('admin');
-
 $menu = require __DIR__ . '/../common/menus/admin.php';
-
 $appRole = 'admin';
 $activeMenu = 'availability';
-$pageTitle = 'Duyệt lịch dạy';
+$pageTitle = 'Duyệt đề xuất lớp';
 $pageScripts = [];
-
-$requests = data_availability(); // lấy danh sách lịch rảnh từ bảng lich_ranh trong database trong shared.php
-$instructorId = trim((string) ($_GET['instructor_id'] ?? ''));
-if ($instructorId !== '' && ctype_digit($instructorId)) {
-    $requests = array_values(array_filter($requests, static function (array $request) use ($instructorId): bool {
-        return (string) $request['instructor_id'] === $instructorId;
-    }));
-}
-
-$pending = 0;
-$approved = 0;
-$rejected = 0;
-$cancelled = 0;
-
-// Duyệt qua từng yêu cầu để đếm
-foreach ($requests as $r) {
-    if ($r['status'] === 'cho_duyet') {
-        $pending++;
-    } elseif ($r['status'] === 'da_duyet') {
-        $approved++;
-    } elseif ($r['status'] === 'tu_choi') {
-        $rejected++;
-    } elseif ($r['status'] === 'da_huy') {
-        $cancelled++;
-    }
-}
-$pending = count(array_filter($requests, static fn ($r) => $r['status'] === 'cho_duyet'));
-$approved = count(array_filter($requests, static fn ($r) => $r['status'] === 'da_duyet'));
-$rejected = count(array_filter($requests, static fn ($r) => $r['status'] === 'tu_choi'));
-$cancelled = count(array_filter($requests, static fn ($r) => $r['status'] === 'da_huy'));
-
+$proposals = array_values(array_filter(data_classes(), static fn ($class) => $class['status'] === 'cho_duyet'));
 $partials = __DIR__ . '/../common/partials';
-
 require $partials . '/head.php';
 ?>
 <div class="app-shell">
     <?php require $partials . '/sidebar.php'; ?>
-
     <div class="app-main">
         <?php require $partials . '/topbar.php'; ?>
-
         <main class="app-content" id="main-content">
             <?php require $partials . '/flash.php'; ?>
-<div class="page-head">
-    <div>
-        <h1>Duyệt lịch dạy giáo viên</h1>
-        <p>Xem xét các khung giờ giáo viên đăng ký và phản hồi kịp thời.</p>
-    </div>
-    <div class="page-head-actions">
-    </div>
-</div>
-
-<div class="row g-3 mb-3">
-    <div class="col-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Chờ duyệt</div>
-            <div class="stat-value" style="color:var(--warning);"><?= $pending ?></div>
-            <div class="stat-foot">Cần xử lý sớm</div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Đã duyệt</div>
-            <div class="stat-value text-success"><?= $approved ?></div>
-            <div class="stat-foot">Trong 30 ngày gần đây</div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Từ chối</div>
-            <div class="stat-value" style="color:var(--danger);"><?= $rejected ?></div>
-            <div class="stat-foot">Do trùng lịch</div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Đã hủy</div>
-            <div class="stat-value text-muted-2"><?= $cancelled ?></div>
-            <div class="stat-foot">Giáo viên tự hủy</div>
-        </div>
-    </div>
-</div>
-
-<form class="filter-bar" method="get" action="<?= e(url('/admin/availability')) ?>">
-    <div class="filter-field">
-        <label class="form-label" for="av-teacher">Giáo viên</label>
-        <input class="form-control" id="av-teacher" name="instructor_id" type="number" min="1" value="<?= e($instructorId) ?>" placeholder="Nhập mã GV...">
-    </div>
-    <div class="filter-field" style="min-width:auto;">
-        <label class="form-label">&nbsp;</label>
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary" type="submit"><?= icon('funnel') ?> Lọc</button>
-            <a class="btn btn-ghost" href="<?= e(url('/admin/availability')) ?>">Xóa lọc</a>
-        </div>
-    </div>
-</form>
-
-<div class="app-card">
-    <div class="app-card-header">
-        <h2>Yêu cầu lịch dạy</h2>
-        <span class="badge-soft ms-auto"><?= $pending ?> yêu cầu mới</span>
-    </div>
-    <div class="app-table-wrap">
-        <table class="app-table">
-            <thead>
-                <tr>
-                    <th>Giáo viên</th>
-                    <th>Ngày dạy</th>
-                    <th>Khung giờ</th>
-                    <th>Môn dạy</th>
-                    <th>Trạng thái</th>
-                    <th>Người duyệt</th>
-                    <th class="cell-actions">Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($requests as $request): ?>
-                    <tr data-row>
-                        <td><div class="user-inline"><?= avatar($request['instructor'], 'avatar-sm') ?><span class="user-name">Mã GV: <?= (int) $request['instructor_id'] ?></span></div></td>
-                        <td class="cell-strong"><?= e($request['date']) ?><div class="cell-sub"><?= e($request['weekday']) ?></div></td>
-                        <td><?= e($request['start'] . ' – ' . $request['end']) ?></td>
-                        <td class="text-muted-2" style="max-width:220px;"><?= e($request['note']) ?></td>
-                        <td><?= status_badge($request['status']) ?></td>
-                        <td class="text-muted-2 text-tiny"><?= e($request['approved_by']) ?></td>
+            <div class="page-head"><div><h1>Duyệt đề xuất lớp</h1><p>Kiểm tra thông tin lớp trước khi mở cho học viên đăng ký.</p></div></div>
+            <div class="app-card">
+                <div class="app-card-header"><h2>Đề xuất đang chờ duyệt</h2><span class="badge-soft ms-auto"><?= count($proposals) ?> đề xuất</span></div>
+                <div class="app-table-wrap"><table class="app-table"><thead><tr><th>Lớp học</th><th>Giáo viên</th><th>Lịch học</th><th>Phòng</th><th>Sức chứa</th><th>Thao tác</th></tr></thead><tbody>
+                <?php if (!$proposals): ?><tr><td colspan="6" class="text-center text-muted-2 py-4">Không có đề xuất đang chờ duyệt.</td></tr>
+                <?php else: foreach ($proposals as $proposal): ?>
+                    <tr>
+                        <td class="cell-strong"><?= e($proposal['name']) ?><div class="cell-sub"><?= e($proposal['level']) ?></div></td>
+                        <td><?= e($proposal['instructor']) ?></td>
+                        <td><?= e(weekday($proposal['weekday'])) ?><div class="cell-sub"><?= e($proposal['start'] . ' – ' . $proposal['end']) ?><br><?= e($proposal['from'] . ' - ' . $proposal['to']) ?></div></td>
+                        <td><?= e($proposal['room']) ?></td>
+                        <td><?= (int) $proposal['capacity'] ?></td>
                         <td class="cell-actions">
-                            <?php if ($request['status'] === 'cho_duyet'): ?>
-                                        <button class="btn btn-primary btn-sm" type="button"
-                                                data-approve-id="<?= (int) $request['id'] ?>"
-                                                data-approve-instructor="<?= e($request['instructor']) ?>"
-                                                data-approve-date="<?= e($request['date']) ?>"><?= icon('check-lg') ?> Duyệt</button>
-                                        <button class="btn btn-danger-soft btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#rejectModal"
-                                                data-request-id="<?= (int) $request['id'] ?>"
-                                                data-instructor="<?= e($request['instructor']) ?>" data-date="<?= e($request['date']) ?>"><?= icon('x-lg') ?> Từ chối</button>
-                            <?php else: ?>
-                                <button class="btn btn-ghost btn-sm" type="button" data-detail="<?= e($request['instructor'] . ' · ' . $request['date'] . ' · ' . $request['start'] . '–' . $request['end']) ?>"><?= icon('eye') ?> Xem</button>
-                            <?php endif; ?>
+                            <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>">Duyệt</button>
+                            <button class="btn btn-danger-soft btn-sm" type="button" data-proposal-action="reject" data-proposal-id="<?= (int) $proposal['id'] ?>">Từ chối</button>
                         </td>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-    <?= pagination(count($requests), 1, 10, 'yêu cầu') ?>
-</div>
-
-<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="reject-form">
-                <div class="modal-header">
-                    <div>
-                        <h2 class="modal-title" id="rejectModalTitle">Từ chối lịch dạy</h2>
-                        <p class="text-tiny text-muted-2 mb-0">Cho giáo viên biết lý do từ chối</p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning d-flex gap-2 align-items-start">
-                        <?= icon('exclamation-triangle') ?>
-                        <span class="text-small">Yêu cầu của <strong data-reject-instructor>Trần Thu Hà</strong> ngày <strong data-reject-date>26/10/2026</strong> sẽ bị từ chối.</span>
-                    </div>
-                    <label class="form-label" for="reject-reason">Lý do <span class="req">*</span></label>
-                    <textarea class="form-control" id="reject-reason" name="ly_do" rows="3" required placeholder="VD: Trùng lịch dạy lớp Yoga cơ bản…"></textarea>
-                    <div class="form-text">Lý do sẽ được gửi tới giáo viên.</div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-danger"><?= icon('x-lg') ?> Từ chối yêu cầu</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+                <?php endforeach; endif; ?>
+                </tbody></table></div>
+            </div>
         </main>
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
-
-<script src="<?= e(url('/common/assets/js/admin/availability.js')) ?>?v=1"></script>
+<script>
+document.addEventListener('click', async function (event) {
+    var button = event.target.closest('[data-proposal-action]');
+    if (!button) return;
+    var action = button.dataset.proposalAction;
+    if (!confirm(action === 'approve' ? 'Duyệt đề xuất lớp này?' : 'Từ chối đề xuất lớp này?')) return;
+    try {
+        var response = await fetch(window.location.pathname + '?action=' + action + '&id=' + button.dataset.proposalId, {method: 'POST', headers: {'Accept': 'application/json'}, credentials: 'same-origin'});
+        var result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Không thể cập nhật đề xuất.');
+        alert(result.message);
+        window.location.reload();
+    } catch (error) { alert(error.message); }
+});
+</script>
 <?php require $partials . '/foot.php'; ?>

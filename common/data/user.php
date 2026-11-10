@@ -71,23 +71,23 @@ if (!function_exists('app_notifications')) {
         $conn = view_db();
 
         if ($role === 'admin') {
-            $pending = (int) $conn->query("SELECT COUNT(*) AS c FROM lich_ranh WHERE trang_thai = 'cho_duyet'")->fetch_assoc()['c'];
+            $pending = (int) $conn->query("SELECT COUNT(*) AS c FROM lop_hoc WHERE trang_thai = 'cho_duyet' AND deleted_at IS NULL")->fetch_assoc()['c'];
             $unpaid = (int) $conn->query("SELECT COUNT(*) AS c FROM dang_ky_goi WHERE trang_thai = 'chua_thanh_toan'")->fetch_assoc()['c'];
             $latest = $conn->query('SELECT ho_ten FROM hoi_vien ORDER BY id DESC LIMIT 1')->fetch_assoc();
 
             return [
-                ['icon' => 'calendar-check', 'title' => $pending . ' lịch dạy chờ duyệt', 'time' => 'Cập nhật từ CSDL', 'tone' => 'warning'],
+                ['icon' => 'calendar-check', 'title' => $pending . ' đề xuất lớp chờ duyệt', 'time' => 'Cập nhật từ CSDL', 'tone' => 'warning'],
                 ['icon' => 'receipt', 'title' => $unpaid . ' đăng ký gói chưa thanh toán', 'time' => 'Cập nhật từ CSDL', 'tone' => 'primary'],
                 ['icon' => 'person-plus', 'title' => 'Hội viên mới nhất: ' . ($latest['ho_ten'] ?? '—'), 'time' => 'Cập nhật từ CSDL', 'tone' => 'success'],
             ];
         }
 
         if ($role === 'instructor') {
-            $pending = (int) $conn->query("SELECT COUNT(*) AS c FROM lich_ranh WHERE trang_thai = 'cho_duyet'")->fetch_assoc()['c'];
+            $pending = (int) $conn->query("SELECT COUNT(*) AS c FROM lop_hoc WHERE trang_thai = 'cho_duyet' AND deleted_at IS NULL")->fetch_assoc()['c'];
             $classes = (int) $conn->query('SELECT COUNT(*) AS c FROM lop_hoc')->fetch_assoc()['c'];
 
             return [
-                ['icon' => 'calendar-check', 'title' => $pending . ' yêu cầu lịch dạy đang chờ duyệt', 'time' => 'Cập nhật từ CSDL', 'tone' => 'warning'],
+                ['icon' => 'calendar-check', 'title' => $pending . ' đề xuất lớp đang chờ duyệt', 'time' => 'Cập nhật từ CSDL', 'tone' => 'warning'],
                 ['icon' => 'journal-bookmark', 'title' => $classes . ' lớp học trong hệ thống', 'time' => 'Cập nhật từ CSDL', 'tone' => 'primary'],
             ];
         }

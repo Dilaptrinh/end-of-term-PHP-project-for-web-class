@@ -221,7 +221,6 @@ require $partials . '/head.php';
                                            data-member-gender="<?= e($member['gender_raw'] ?? 'khac') ?>"
                                            data-member-address="<?= e($member['dia_chi'] ?? '') ?>"
                                            data-member-note="<?= e($member['ghi_chu'] ?? '') ?>"><?= icon('pencil') ?> Sửa hồ sơ</a></li>
-                                    <li><a class="dropdown-item" href="<?= e(url('/admin/accounts')) ?>"><?= icon('person-gear') ?> Quản lý tài khoản</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" type="button"
                                                 data-delete-id="<?= (int) $member['id'] ?>"

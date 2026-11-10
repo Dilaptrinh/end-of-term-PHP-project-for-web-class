@@ -17,6 +17,7 @@ require __DIR__ . '/seed_data.php';
 ensure_schema($conn);
 seed_initial_accounts($conn);
 seed_core_data($conn);
+seed_customer_accounts($conn);
 
 echo 'Đã khởi tạo cấu trúc và dữ liệu nền.' . PHP_EOL;
 echo 'Tài khoản: admin / thuha / ducanh / ngocmai / quocbao / hongnhung / hoangnam (mật khẩu 123456).' . PHP_EOL;

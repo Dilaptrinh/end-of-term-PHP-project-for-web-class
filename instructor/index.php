@@ -22,48 +22,11 @@ $classes = array_values(array_filter(
         }
     }
 ));
-$requests = array_values(array_filter(
-    data_availability(),
-    function (array $request) use ($instructor): bool {
-        // Bước 1: Lấy tên giảng viên từ request gửi lên
-        $ten_giang_vien_trong_request = $request['instructor'];
-
-        // Bước 2: Lấy tên của giảng viên đang đăng nhập (nếu không có thì để chuỗi rỗng)
-        $ten_giang_vien_dang_nhap = $instructor['name'] ?? '';
-
-        // Bước 3: So sánh xem hai tên này có khớp nhau tuyệt đối hay không
-        if ($ten_giang_vien_trong_request === $ten_giang_vien_dang_nhap) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-));
-
-$danh_sach_cho_duyet = array_filter(
-    $requests,
-    function (array $request): bool {
-        if ($request['status'] === 'cho_duyet') {
-            return true;
-        } else {
-            return false;
-        }
-    }
-);
+$requests = array_values(array_filter($classes, static fn (array $class): bool => $class['status'] === 'cho_duyet'));
+$danh_sach_cho_duyet = $requests;
 $pending = count($danh_sach_cho_duyet);
 
-$danh_sach_da_duyet = array_filter(
-    $requests,
-    function (array $request): bool {
-        if ($request['status'] === 'da_duyet') {
-            return true;
-        } else {
-            return false;
-        }
-    }
-);
-
-$approved = count($danh_sach_da_duyet);
+$approved = count(array_filter($classes, static fn (array $class): bool => $class['status'] === 'dang_mo'));
 
 $students = (int) ($instructor['students'] ?? 0);
 
@@ -82,14 +45,14 @@ require $partials . '/head.php';
                     <p>Tổng quan lớp học, học viên và lịch dạy của bạn.</p>
                 </div>
                 <div class="page-head-actions">
-                    <a class="btn btn-primary" href="<?= e(url('/instructor/availability')) ?>"><?= icon('calendar-plus') ?> Đăng ký lịch dạy</a>
+                    <a class="btn btn-primary" href="<?= e(url('/instructor/availability')) ?>"><?= icon('calendar-plus') ?> Đề xuất lớp</a>
                 </div>
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Lớp đang dạy</div><div class="stat-value"><?= count($classes) ?></div><div class="stat-foot">Theo phân công hiện tại</div></div></div>
                 <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Học viên</div><div class="stat-value"><?= $students ?></div><div class="stat-foot">Đang đăng ký lớp</div></div></div>
-                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Lịch đã duyệt</div><div class="stat-value text-success"><?= $approved ?></div><div class="stat-foot">Khung giờ khả dụng</div></div></div>
-                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Chờ duyệt</div><div class="stat-value" style="color:var(--warning);"><?= $pending ?></div><div class="stat-foot">Yêu cầu đang chờ admin</div></div></div>
+                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Lớp đã mở</div><div class="stat-value text-success"><?= $approved ?></div><div class="stat-foot">Học viên có thể đăng ký</div></div></div>
+                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Đề xuất chờ duyệt</div><div class="stat-value" style="color:var(--warning);"><?= $pending ?></div><div class="stat-foot">Đang chờ admin xử lý</div></div></div>
             </div>
             <div class="app-card">
                 <div class="app-card-header">

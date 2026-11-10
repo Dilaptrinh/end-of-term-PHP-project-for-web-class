@@ -10,11 +10,10 @@ function admin_username_exists(string $username): bool
     return (bool) $row;
 }
 
-function admin_availability_update(int $id, string $status, string $approver): bool
+function admin_class_proposal_update(int $id, string $status): bool
 {
-    $accountId = (int) ($_SESSION['tai_khoan_id'] ?? 0);
-    $stmt = common_db()->prepare('UPDATE lich_ranh SET trang_thai = ?, nguoi_duyet_id = NULLIF(?, 0) WHERE id = ?');
-    $stmt->bind_param('sii', $status, $accountId, $id);
+    $stmt = common_db()->prepare('UPDATE lop_hoc SET trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
+    $stmt->bind_param('si', $status, $id);
     $stmt->execute();
     $changed = $stmt->affected_rows;
     $stmt->close();

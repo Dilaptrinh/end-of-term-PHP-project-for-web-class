@@ -44,15 +44,8 @@ foreach ($registrations as $registration) {
 $classes = data_classes();
 $packages = data_packages();
 $members = data_members();
-$availability = data_availability();
-$pendingSlots = 0;
-$pendingSlotsList = [];
-foreach ($availability as $request) {
-    if ($request['status'] === 'cho_duyet') {
-        $pendingSlots++;
-        $pendingSlotsList[] = $request;
-    }
-}
+$pendingSlots = count(array_filter($classes, static fn (array $class): bool => $class['status'] === 'cho_duyet'));
+$pendingSlotsList = array_values(array_filter($classes, static fn (array $class): bool => $class['status'] === 'cho_duyet'));
 $pendingTotal = $pendingSlots + count($pendingPackages);
 $openClasses = 0;
 foreach ($classes as $class) {
@@ -126,7 +119,7 @@ require $partials . '/head.php';
                 <div>
                     <div class="stat-label">Yêu cầu chờ duyệt</div>
                     <div class="stat-value" style="color:var(--warning);"><?= $pendingTotal ?></div>
-                    <div class="stat-foot"><?= $pendingSlots ?> lịch dạy · <?= count($pendingPackages) ?> thanh toán</div>
+                    <div class="stat-foot"><?= $pendingSlots ?> đề xuất lớp · <?= count($pendingPackages) ?> thanh toán</div>
                 </div>
                 <div class="stat-icon amber ms-auto"><?= icon('bell') ?></div>
             </div>
@@ -188,7 +181,7 @@ require $partials . '/head.php';
                     <?php foreach (array_slice($pendingSlotsList, 0, 2) as $slot): ?>
                         <li>
                             <span class="tl-dot warning"><?= icon('calendar-plus') ?></span>
-                            <div class="tl-title"><?= e($slot['instructor']) ?> · <?= e($slot['date']) ?></div>
+                            <div class="tl-title"><?= e($slot['instructor']) ?> · <?= e($slot['name']) ?></div>
                             <div class="tl-meta"><?= e($slot['start'] . ' – ' . $slot['end']) ?> · Chờ duyệt</div>
                         </li>
                     <?php endforeach; ?>

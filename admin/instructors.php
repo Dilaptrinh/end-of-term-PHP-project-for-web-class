@@ -124,12 +124,7 @@ foreach (data_class_registrations() as $registration) {
     $studentNames[$registration['member']] = true;
 }
 $studentCount = count($studentNames);
-$pendingSlots = 0;
-foreach (data_availability() as $request) {
-    if ($request['status'] === 'cho_duyet') {
-        $pendingSlots++;
-    }
-}
+$pendingSlots = count(array_filter($classes, static fn (array $class): bool => $class['status'] === 'cho_duyet'));
 $specialties = data_specialties();
 
 $partials = __DIR__ . '/../common/partials';
@@ -178,7 +173,7 @@ require $partials . '/head.php';
     </div>
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-label">Chờ duyệt lịch dạy</div>
+            <div class="stat-label">Chờ duyệt đề xuất lớp</div>
             <div class="stat-value" style="color:var(--warning);"><?= $pendingSlots ?></div>
             <div class="stat-foot"><a href="<?= e(url('/admin/availability')) ?>">Đi tới duyệt <?= icon('arrow-right') ?></a></div>
         </div>
