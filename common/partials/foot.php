@@ -109,8 +109,11 @@
         const table = document.querySelector(input.dataset.tableFilter);
         if (!table) return;
         const query = input.value.trim().toLowerCase();
+        const columnIndex = input.dataset.tableFilterColumn;
         table.querySelectorAll('tbody tr[data-row]').forEach(function (row) {
-            row.hidden = query !== '' && !row.textContent.toLowerCase().includes(query);
+            const cell = columnIndex === undefined ? null : row.cells[Number(columnIndex)];
+            const value = cell ? cell.textContent : row.textContent;
+            row.hidden = query !== '' && !value.toLowerCase().includes(query);
         });
     });
 

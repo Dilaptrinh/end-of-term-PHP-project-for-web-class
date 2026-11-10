@@ -22,7 +22,7 @@ function view_current_account_id(): int
     return (int) ($_SESSION['tai_khoan_id'] ?? 0);
 }
 
-function view_cast_ints(array $rows, array $keys): array
+function view_cast_ints(array $rows, array $keys): array //Chức năng: ép các cột chỉ định sang kiểu
 {
     foreach ($rows as &$row) {
         foreach ($keys as $key) {

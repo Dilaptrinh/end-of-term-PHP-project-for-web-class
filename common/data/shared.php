@@ -86,7 +86,7 @@ function data_class_registrations(): array
 function data_availability(): array
 {
     $sql = "
-        SELECT lr.id, gv.ho_ten AS instructor, lr.ngay,
+        SELECT lr.id, gv.id AS instructor_id, gv.ho_ten AS instructor, lr.ngay,
                TIME_FORMAT(lr.gio_bat_dau, '%H:%i') AS start,
                TIME_FORMAT(lr.gio_ket_thuc, '%H:%i') AS end,
                lr.trang_thai AS status, COALESCE(lr.ghi_chu, '') AS note,
@@ -103,5 +103,5 @@ function data_availability(): array
         unset($row['ngay']);
     }
     unset($row);
-    return view_cast_ints($rows, ['id']);
+    return view_cast_ints($rows, ['id', 'instructor_id']);
 }

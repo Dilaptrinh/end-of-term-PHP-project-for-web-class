@@ -1,11 +1,5 @@
 <?php
-/**
- * mysql/setup.php
- * ------------------------------------------------------------------
- * Khởi tạo CSDL và dữ liệu nền cho dự án.
- *
- * Chạy:  C:\xampp\php\php.exe common\mysql\setup.php
- */
+
 
 error_reporting(E_ALL);
 ini_set('display_errors', '1');

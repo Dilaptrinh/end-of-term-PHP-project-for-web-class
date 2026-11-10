@@ -70,6 +70,20 @@ $pageScripts = [];
 
 $packageRegs = data_package_registrations();
 $classRegs = data_class_registrations();
+$packageId = trim((string) ($_GET['package_id'] ?? ''));
+$classId = trim((string) ($_GET['class_id'] ?? ''));
+$packageFilterId = preg_match('/^(?:DK-)?(\d+)$/i', $packageId, $packageMatch) ? $packageMatch[1] : '';
+$classFilterId = preg_match('/^(?:DL-)?(\d+)$/i', $classId, $classMatch) ? $classMatch[1] : '';
+if ($packageFilterId !== '') {
+    $packageRegs = array_values(array_filter($packageRegs, static function (array $registration) use ($packageFilterId): bool {
+        return (string) $registration['id'] === $packageFilterId;
+    }));
+}
+if ($classFilterId !== '') {
+    $classRegs = array_values(array_filter($classRegs, static function (array $registration) use ($classFilterId): bool {
+        return (string) $registration['id'] === $classFilterId;
+    }));
+}
 $members = data_members();
 $packages = data_packages();
 $pending = 0;
@@ -154,21 +168,11 @@ require $partials . '/head.php';
 
     <div class="tab-content">
         <div class="tab-pane fade show active" id="reg-packages" role="tabpanel" tabindex="0">
-            <div class="table-toolbar">
-                <input class="form-control toolbar-search" type="search" placeholder="Tìm hội viên…" data-table-filter="#package-regs-table" aria-label="Tìm hội viên">
-                <select class="form-select" aria-label="Trạng thái thanh toán">
-                    <option>Tất cả thanh toán</option>
-                    <option>Chưa thanh toán</option>
-                    <option>Đã thanh toán</option>
-                    <option>Đã hủy</option>
-                </select>
-                <select class="form-select" aria-label="Phương thức">
-                    <option>Tất cả phương thức</option>
-                    <option>Tiền mặt</option>
-                    <option>Chuyển khoản</option>
-                    <option>Thẻ</option>
-                </select>
-            </div>
+            <form class="table-toolbar" method="get" action="<?= e(url('/admin/registrations')) ?>">
+                <input class="form-control toolbar-search" name="package_id" type="search" inputmode="numeric" value="<?= e($packageId) ?>" placeholder="Nhập mã đăng ký, VD: 1" aria-label="Tìm theo mã đăng ký">
+                <button class="btn btn-primary" type="submit"><?= icon('funnel') ?> Lọc</button>
+                <a class="btn btn-ghost" href="<?= e(url('/admin/registrations')) ?>">Xóa lọc</a>
+            </form>
             <div class="app-table-wrap">
                 <table class="app-table" id="package-regs-table">
                     <thead>
@@ -216,14 +220,11 @@ require $partials . '/head.php';
         </div>
 
         <div class="tab-pane fade" id="reg-classes" role="tabpanel" tabindex="0">
-            <div class="table-toolbar">
-                <input class="form-control toolbar-search" type="search" placeholder="Tìm hội viên / lớp…" data-table-filter="#class-regs-table" aria-label="Tìm đăng ký lớp">
-                <select class="form-select" aria-label="Trạng thái">
-                    <option>Tất cả trạng thái</option>
-                    <option>Đã đăng ký</option>
-                    <option>Đã hủy</option>
-                </select>
-            </div>
+            <form class="table-toolbar" method="get" action="<?= e(url('/admin/registrations')) ?>">
+                <input class="form-control toolbar-search" name="class_id" type="search" inputmode="numeric" value="<?= e($classId) ?>" placeholder="Nhập mã đăng ký, VD: 1" aria-label="Tìm theo mã đăng ký">
+                <button class="btn btn-primary" type="submit"><?= icon('funnel') ?> Lọc</button>
+                <a class="btn btn-ghost" href="<?= e(url('/admin/registrations')) ?>">Xóa lọc</a>
+            </form>
             <div class="app-table-wrap">
                 <table class="app-table" id="class-regs-table">
                     <thead>

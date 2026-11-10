@@ -36,6 +36,12 @@ $pageTitle = 'Duyệt lịch dạy';
 $pageScripts = [];
 
 $requests = data_availability(); // lấy danh sách lịch rảnh từ bảng lich_ranh trong database trong shared.php
+$instructorId = trim((string) ($_GET['instructor_id'] ?? ''));
+if ($instructorId !== '' && ctype_digit($instructorId)) {
+    $requests = array_values(array_filter($requests, static function (array $request) use ($instructorId): bool {
+        return (string) $request['instructor_id'] === $instructorId;
+    }));
+}
 
 $pending = 0;
 $approved = 0;
@@ -107,37 +113,19 @@ require $partials . '/head.php';
     </div>
 </div>
 
-<div class="filter-bar">
-    <div class="filter-field">
-        <label class="form-label" for="av-status">Trạng thái</label>
-        <select class="form-select" id="av-status">
-            <option>Tất cả trạng thái</option>
-            <option>Chờ duyệt</option>
-            <option>Đã duyệt</option>
-            <option>Từ chối</option>
-            <option>Đã hủy</option>
-        </select>
-    </div>
+<form class="filter-bar" method="get" action="<?= e(url('/admin/availability')) ?>">
     <div class="filter-field">
         <label class="form-label" for="av-teacher">Giáo viên</label>
-        <select class="form-select" id="av-teacher">
-            <option>Tất cả giáo viên</option>
-            <?php foreach (data_instructors() as $instructor): ?><option><?= e($instructor['name']) ?></option><?php endforeach; ?>
-        </select>
-    </div>
-    <div class="filter-field">
-        <label class="form-label" for="av-from">Từ ngày</label>
-        <input class="form-control" id="av-from" type="date" value="2026-10-20">
-    </div>
-    <div class="filter-field">
-        <label class="form-label" for="av-to">Đến ngày</label>
-        <input class="form-control" id="av-to" type="date" value="2026-10-31">
+        <input class="form-control" id="av-teacher" name="instructor_id" type="number" min="1" value="<?= e($instructorId) ?>" placeholder="Nhập mã GV...">
     </div>
     <div class="filter-field" style="min-width:auto;">
         <label class="form-label">&nbsp;</label>
-        <button class="btn btn-primary" type="button" data-reload-page><?= icon('funnel') ?> Lọc</button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit"><?= icon('funnel') ?> Lọc</button>
+            <a class="btn btn-ghost" href="<?= e(url('/admin/availability')) ?>">Xóa lọc</a>
+        </div>
     </div>
-</div>
+</form>
 
 <div class="app-card">
     <div class="app-card-header">
@@ -160,7 +148,7 @@ require $partials . '/head.php';
             <tbody>
                 <?php foreach ($requests as $request): ?>
                     <tr data-row>
-                        <td><div class="user-inline"><?= avatar($request['instructor'], 'avatar-sm') ?><span class="user-name"><?= e($request['instructor']) ?></span></div></td>
+                        <td><div class="user-inline"><?= avatar($request['instructor'], 'avatar-sm') ?><span class="user-name">Mã GV: <?= (int) $request['instructor_id'] ?></span></div></td>
                         <td class="cell-strong"><?= e($request['date']) ?><div class="cell-sub"><?= e($request['weekday']) ?></div></td>
                         <td><?= e($request['start'] . ' – ' . $request['end']) ?></td>
                         <td class="text-muted-2" style="max-width:220px;"><?= e($request['note']) ?></td>

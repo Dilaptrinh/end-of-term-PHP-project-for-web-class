@@ -169,13 +169,6 @@ require $partials . '/head.php';
             <option value="ngung_hoat_dong">Ngừng hoạt động</option>
         </select>
     </div>
-    <div class="filter-field">
-        <label class="form-label" for="mb-package">Gói tập</label>
-        <select class="form-select" id="mb-package" name="package">
-            <option value="">Tất cả</option>
-            <?php foreach ($packages as $package): ?><option><?= e($package['name']) ?></option><?php endforeach; ?>
-        </select>
-    </div>
     <div class="filter-field" style="min-width:auto;">
         <label class="form-label">&nbsp;</label>
         <div class="d-flex gap-2">

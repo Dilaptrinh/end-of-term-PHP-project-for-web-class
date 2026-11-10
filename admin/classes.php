@@ -83,11 +83,18 @@ $activeMenu = 'classes';
 $pageTitle = 'Quản lý lớp học';
 $pageScripts = [];
 
-$classes = data_classes();
+$allClasses = data_classes();
+$classId = trim((string) ($_GET['class_id'] ?? ''));
+$classes = $allClasses;
+if ($classId !== '' && ctype_digit($classId)) {
+    $classes = array_values(array_filter($allClasses, static function (array $class) use ($classId): bool {
+        return (string) $class['id'] === $classId;
+    }));
+}
 $instructors = data_instructors();
 $openCount = 0;
 $fullCount = 0;
-foreach ($classes as $class) {
+foreach ($allClasses as $class) {
     if ($class['status'] === 'dang_mo') {
         $openCount++;
     }
@@ -144,32 +151,8 @@ require $partials . '/head.php';
 
 <form class="filter-bar" method="get" action="<?= e(url('/admin/classes')) ?>">
     <div class="filter-field filter-search">
-        <label class="form-label" for="cl-q">Tìm lớp</label>
-        <input class="form-control" id="cl-q" name="q" type="search" placeholder="Tên lớp, phòng…">
-    </div>
-    <div class="filter-field">
-        <label class="form-label" for="cl-teacher">Giáo viên</label>
-        <select class="form-select" id="cl-teacher" name="instructor_id">
-            <option value="">Tất cả</option>
-            <?php foreach ($instructors as $instructor): ?>
-                <option value="<?= $instructor['id'] ?>"><?= e($instructor['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="filter-field">
-        <label class="form-label" for="cl-day">Thứ</label>
-        <select class="form-select" id="cl-day" name="weekday">
-            <option value="">Tất cả</option>
-            <?php for ($d = 1; $d <= 7; $d++): ?><option value="<?= $d ?>"><?= e(weekday($d)) ?></option><?php endfor; ?>
-        </select>
-    </div>
-    <div class="filter-field">
-        <label class="form-label" for="cl-status">Trạng thái</label>
-        <select class="form-select" id="cl-status" name="status">
-            <option value="">Tất cả</option>
-            <option value="dang_mo">Đang mở</option>
-            <option value="da_dong">Đã đóng</option>
-        </select>
+        <label class="form-label" for="cl-id">Tìm theo mã lớp</label>
+        <input class="form-control" id="cl-id" name="class_id" type="search" inputmode="numeric" value="<?= e($classId) ?>" placeholder="Nhập mã lớp...">
     </div>
     <div class="filter-field" style="min-width:auto;">
         <label class="form-label">&nbsp;</label>
@@ -200,7 +183,7 @@ require $partials . '/head.php';
                     $percent = (int) round($class['enrolled'] / max(1, $class['capacity']) * 100);
                 ?>
                     <tr data-row>
-                        <td class="cell-strong"><?= e($class['name']) ?><div class="cell-sub"><?= e($class['level']) ?></div></td>
+                        <td class="cell-strong"><?= e($class['name']) ?><div class="cell-sub">Mã lớp: <?= (int) $class['id'] ?> · <?= e($class['level']) ?></div></td>
                         <td><?= e($class['instructor']) ?></td>
                         <td><?= e(weekday($class['weekday'])) ?><div class="cell-sub"><?= e($class['start'] . ' – ' . $class['end']) ?></div></td>
                         <td><?= e($class['room']) ?></td>
