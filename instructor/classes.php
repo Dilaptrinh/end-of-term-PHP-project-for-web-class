@@ -12,7 +12,9 @@ $pageScripts = [];
 $instructorId = (int) (data_current_instructor()['id'] ?? 0);
 $classes = array_values(array_filter(
     data_classes(),
-    static fn (array $class): bool => $instructorId > 0 && (int) $class['giao_vien_id'] === $instructorId
+    static fn (array $class): bool => $instructorId > 0
+        && (int) $class['giao_vien_id'] === $instructorId
+        && $class['status'] === 'dang_mo'
 ));
 $today = new DateTimeImmutable('today');
 foreach ($classes as &$class) {
@@ -96,51 +98,6 @@ require $partials . '/head.php';
             </article>
         </div>
     <?php endforeach; ?>
-</div>
-
-<div class="app-card mt-3">
-    <div class="app-card-header">
-        <div>
-            <h2>Tổng quan lớp học</h2>
-            <p class="sub">Sức chứa và tỷ lệ lấp đầy</p>
-        </div>
-    </div>
-    <div class="app-table-wrap">
-        <table class="app-table">
-            <thead>
-                <tr>
-                    <th>Lớp học</th>
-                    <th>Lịch</th>
-                    <th>Phòng</th>
-                    <th>Sĩ số</th>
-                    <th>Tỷ lệ lấp đầy</th>
-                    <th>Trạng thái</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($classes as $class):
-                    $percent = (int) round($class['enrolled'] / max(1, $class['capacity']) * 100);
-                ?>
-                    <tr data-row>
-                        <td class="cell-strong"><?= e($class['name']) ?><div class="cell-sub"><?= e($class['level']) ?></div></td>
-                        <td><?= e(weekday($class['weekday'])) ?><div class="cell-sub"><?= e($class['start'] . ' – ' . $class['end']) ?></div></td>
-                        <td><?= e($class['room']) ?></td>
-                        <td><?= e((string) $class['enrolled'] . '/' . (string) $class['capacity']) ?></td>
-                        <td style="min-width:160px;">
-                            <div class="d-flex align-items-center gap-2">
-                                <?= progress_bar($percent, $percent >= 90 ? 'amber' : '') ?>
-                                <span class="text-tiny fw-700"><?= $percent ?>%</span>
-                            </div>
-                        </td>
-                        <td><?= status_badge($class['status']) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                <?php if (!$classes): ?>
-                    <tr><td colspan="6" class="text-center text-muted-2 py-4">Chưa có lớp học được phân công.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
 </div>
 
 <div class="modal fade" id="classStudentsModal" tabindex="-1" aria-labelledby="classStudentsTitle" aria-hidden="true">

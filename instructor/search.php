@@ -75,9 +75,7 @@ require $partials . '/head.php';
 </div>
 
 <div class="app-card">
-    <div class="table-toolbar">
-        <input class="form-control toolbar-search" type="search" placeholder="Lọc nhanh trong kết quả…" data-table-filter="#student-results" aria-label="Lọc nhanh học viên">
-    </div>
+
     <div class="app-table-wrap">
         <table class="app-table" id="student-results">
             <thead>

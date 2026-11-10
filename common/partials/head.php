@@ -12,7 +12,7 @@ $pageTitle = $pageTitle ?? 'FitZone';
     <link rel="stylesheet" href="<?= e(url('/common/assets/vendor/bootstrap/bootstrap.min.css')) ?>">
     <link rel="stylesheet" href="<?= e(url('/common/assets/vendor/bootstrap-icons/bootstrap-icons.css')) ?>">
     <link rel="stylesheet" href="<?= e(url('/common/assets/css/tokens.css')) ?>">
-    <link rel="stylesheet" href="<?= e(url('/common/assets/css/app.css')) ?>?v=2">
+    <link rel="stylesheet" href="<?= e(url('/common/assets/css/app.css')) ?>?v=3">
     <link rel="stylesheet" href="<?= e(url('/common/assets/css/pages.css')) ?>">
 </head>
 <body>

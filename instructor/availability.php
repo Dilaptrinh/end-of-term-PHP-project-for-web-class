@@ -30,18 +30,36 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $from = trim((string) ($input['ngay_bat_dau'] ?? ''));
     $to = trim((string) ($input['ngay_ket_thuc'] ?? ''));
     $capacity = (int) ($input['suc_chua'] ?? 0);
-    $room = trim((string) ($input['phong_hoc'] ?? ''));
     $level = trim((string) ($input['trinh_do'] ?? ''));
-    $description = trim((string) ($input['mo_ta'] ?? ''));
 
     if ($name === '' || $weekday < 1 || $weekday > 7 || $start === '' || $end === '' || $from === '' || $to === '' || $capacity < 1) {
         json_response(['success' => false, 'message' => 'Vui lòng nhập đầy đủ thông tin đề xuất lớp.'], 422);
+    }
+    if (!in_array($level, ['Cơ bản', 'Mọi trình độ', 'Nâng cao'], true)) {
+        json_response(['success' => false, 'message' => 'Trình độ lớp không hợp lệ.'], 422);
     }
     if ($start >= $end || $from > $to) {
         json_response(['success' => false, 'message' => 'Thời gian lớp học không hợp lệ.'], 422);
     }
 
     $instructorId = (int) $instructor['id'];
+    $specialtyStmt = $db->prepare(
+        'SELECT cm.id
+           FROM giao_vien_chuyen_mon gvcm
+           JOIN chuyen_mon cm ON cm.id = gvcm.chuyen_mon_id AND cm.trang_thai = 1
+          WHERE gvcm.giao_vien_id = ? AND cm.ten_chuyen_mon = ?
+          LIMIT 1'
+    );
+    $specialtyStmt->bind_param('is', $instructorId, $name);
+    $specialtyStmt->execute();
+    $specialty = $specialtyStmt->get_result()->fetch_assoc();
+    $specialtyStmt->close();
+    if (!$specialty) {
+        json_response(['success' => false, 'message' => 'Môn học không hợp lệ hoặc không thuộc chuyên môn của bạn.'], 422);
+    }
+
+    $room = null;
+    $description = null;
     $stmt = $db->prepare(
         'INSERT INTO lop_hoc
             (ten_lop, giao_vien_id, thu_trong_tuan, gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc, suc_chua, phong_hoc, mo_ta, trinh_do, trang_thai)
@@ -61,6 +79,11 @@ $activeMenu = 'availability';
 $pageTitle = 'Đề xuất lớp học';
 $pageScripts = [];
 $instructorName = data_current_instructor_name();
+$instructorSpecialtyIds = data_current_instructor()['specialty_ids'] ?? [];
+$specialties = array_values(array_filter(
+    data_specialties(),
+    static fn (array $specialty): bool => in_array($specialty['id'], $instructorSpecialtyIds, true)
+));
 $classes = array_values(array_filter(data_classes(), static fn ($class) => $class['instructor'] === $instructorName));
 $pending = count(array_filter($classes, static fn ($class) => $class['status'] === 'cho_duyet'));
 $approved = count(array_filter($classes, static fn ($class) => $class['status'] === 'dang_mo'));
@@ -94,7 +117,18 @@ require $partials . '/head.php';
                         <div class="app-card-header"><div><h2>Đề xuất lớp mới</h2><p class="sub">Thông tin lớp sẽ hiển thị cho học viên sau khi được duyệt</p></div></div>
                         <div class="app-card-body">
                             <form id="class-proposal-form">
-                                <div class="mb-3"><label class="form-label" for="proposal-name">Tên lớp <span class="req">*</span></label><input class="form-control" id="proposal-name" required></div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="proposal-name">Môn học <span class="req">*</span></label>
+                                    <select class="form-select" id="proposal-name" required <?= $specialties === [] ? 'disabled' : '' ?>>
+                                        <option value="">-- Chọn môn học --</option>
+                                        <?php foreach ($specialties as $specialty): ?>
+                                            <option value="<?= e($specialty['name']) ?>"><?= e($specialty['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <?php if ($specialties === []): ?>
+                                        <div class="form-text text-danger">Tài khoản chưa có chuyên môn. Vui lòng liên hệ quản trị viên.</div>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="row g-2 mb-3">
                                     <div class="col-6"><label class="form-label" for="proposal-weekday">Thứ <span class="req">*</span></label><select class="form-select" id="proposal-weekday" required><option value="1">Thứ 2</option><option value="2">Thứ 3</option><option value="3">Thứ 4</option><option value="4">Thứ 5</option><option value="5">Thứ 6</option><option value="6">Thứ 7</option><option value="7">Chủ nhật</option></select></div>
                                     <div class="col-6"><label class="form-label" for="proposal-capacity">Sức chứa <span class="req">*</span></label><input class="form-control" id="proposal-capacity" type="number" min="1" value="15" required></div>
@@ -107,9 +141,14 @@ require $partials . '/head.php';
                                     <div class="col-6"><label class="form-label" for="proposal-from">Bắt đầu từ <span class="req">*</span></label><input class="form-control" id="proposal-from" type="date" required></div>
                                     <div class="col-6"><label class="form-label" for="proposal-to">Đến ngày <span class="req">*</span></label><input class="form-control" id="proposal-to" type="date" required></div>
                                 </div>
-                                <div class="mb-3"><label class="form-label" for="proposal-room">Phòng học</label><input class="form-control" id="proposal-room" maxlength="50"></div>
-                                <div class="mb-3"><label class="form-label" for="proposal-level">Trình độ</label><input class="form-control" id="proposal-level" placeholder="Ví dụ: Cơ bản"></div>
-                                <div class="mb-3"><label class="form-label" for="proposal-description">Mô tả</label><textarea class="form-control" id="proposal-description" rows="3"></textarea></div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="proposal-level">Trình độ <span class="req">*</span></label>
+                                    <select class="form-select" id="proposal-level" required>
+                                        <option value="Cơ bản">Cơ bản</option>
+                                        <option value="Mọi trình độ">Mọi trình độ</option>
+                                        <option value="Nâng cao">Nâng cao</option>
+                                    </select>
+                                </div>
                                 <button class="btn btn-primary" type="submit"><?= icon('send') ?> Gửi đề xuất</button>
                             </form>
                         </div>
@@ -138,9 +177,7 @@ document.getElementById('class-proposal-form').addEventListener('submit', async 
         ngay_bat_dau: document.getElementById('proposal-from').value,
         ngay_ket_thuc: document.getElementById('proposal-to').value,
         suc_chua: document.getElementById('proposal-capacity').value,
-        phong_hoc: document.getElementById('proposal-room').value.trim(),
-        trinh_do: document.getElementById('proposal-level').value.trim(),
-        mo_ta: document.getElementById('proposal-description').value.trim()
+        trinh_do: document.getElementById('proposal-level').value
     };
     try {
         var response = await fetch(window.location.pathname, { method: 'POST', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: JSON.stringify(data), credentials: 'same-origin' });
