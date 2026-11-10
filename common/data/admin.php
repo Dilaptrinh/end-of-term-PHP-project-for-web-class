@@ -49,10 +49,11 @@ function data_package_registrations(): array
                d.gia_tai_thoi_diem AS price, d.trang_thai AS payment,
                COALESCE(d.phuong_thuc, '—') AS method,
                COALESCE(DATE_FORMAT(d.ngay_thanh_toan, '%d/%m/%Y %H:%i'), '—') AS paid_at,
-               COALESCE(d.nhan_vien, '—') AS staff
+               COALESCE(tk.ten_dang_nhap, '—') AS staff
         FROM dang_ky_goi d
         JOIN hoi_vien hv ON hv.id = d.hoi_vien_id
         JOIN goi_tap gt ON gt.id = d.goi_tap_id
+        LEFT JOIN tai_khoan tk ON tk.id = d.nhan_vien_id
         ORDER BY d.id
     ";
     return view_cast_ints(view_db()->query($sql)->fetch_all(MYSQLI_ASSOC), ['id', 'price']);

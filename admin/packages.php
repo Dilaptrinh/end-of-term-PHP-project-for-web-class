@@ -149,8 +149,8 @@ require $partials . '/head.php';
 
 <div class="filter-bar" id="package-filters">
     <div class="filter-field filter-search">
-        <label class="form-label" for="pk-q">Tìm gói tập</label>
-        <input class="form-control" id="pk-q" type="search" placeholder="Tên gói…">
+        <label class="form-label" for="pk-q">Tìm theo mã gói</label>
+        <input class="form-control" id="pk-q" type="number" min="1" inputmode="numeric" placeholder="Nhập mã gói...">
     </div>
     <div class="filter-field">
         <label class="form-label" for="pk-status">Trạng thái</label>
@@ -176,7 +176,7 @@ require $partials . '/head.php';
             <thead><tr><th>Gói tập</th><th>Thời hạn</th><th>Giá bán</th><th>Đã bán</th><th>Doanh thu</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr></thead>
             <tbody>
             <?php foreach ($packages as $package): ?>
-                <tr data-row data-package-status="<?= e($package['status']) ?>">
+                <tr data-row data-package-id="<?= (int) $package['id'] ?>" data-package-status="<?= e($package['status']) ?>">
                     <td class="cell-strong"><?= e($package['name']) ?><div class="cell-sub"><?= e(truncate($package['desc'], 46)) ?></div></td>
                     <td><?= e((string) $package['days']) ?> ngày</td>
                     <td class="cell-strong"><?= e(money($package['price'])) ?></td>

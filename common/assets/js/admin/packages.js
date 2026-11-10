@@ -15,7 +15,7 @@
         var text = (query.value || '').trim().toLowerCase();
         var selected = status.value;
         document.querySelectorAll('#packages-table [data-row]').forEach(function (card) {
-            var matchesText = !text || card.textContent.toLowerCase().indexOf(text) !== -1;
+            var matchesText = !text || card.dataset.packageId === text;
             var matchesStatus = selected === 'Tất cả' || (selected === 'Đang bán' && card.dataset.packageStatus === 'dang_ban') || (selected === 'Ngừng bán' && card.dataset.packageStatus === 'ngung_ban');
             card.hidden = !matchesText || !matchesStatus;
         });
