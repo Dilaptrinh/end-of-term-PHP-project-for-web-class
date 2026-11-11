@@ -49,16 +49,13 @@
     form.addEventListener('submit', async function (event) {
         event.preventDefault();
 
-        var data = {};
-        new FormData(form).forEach(function (value, key) {
-            data[key] = value;
-        });
+        var formData = new FormData(form);
 
         try {
             var res = await fetch(endpoint + '?action=save&id=' + (form.dataset.id || '0'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(data),
+                headers: { 'Accept': 'application/json' },
+                body: formData,
                 credentials: 'same-origin'
             });
             var json = await res.json();

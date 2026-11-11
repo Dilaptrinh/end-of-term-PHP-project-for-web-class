@@ -90,30 +90,29 @@
     form.addEventListener('submit', async function (event) {
         event.preventDefault();
 
-        var data = {
-            ho_ten: fields.ho_ten.value.trim(),
-            sdt: fields.sdt.value.trim(),
-            email: fields.email.value.trim(),
-            chuyen_mon_ids: Array.from(specialty.selectedOptions).map(function (option) {
-                return option.value;
-            }),
-            mo_ta: fields.mo_ta.value.trim(),
-            trang_thai: 'dang_lam'
-        };
+        var formData = new FormData();
+        formData.append('ho_ten', fields.ho_ten.value.trim());
+        formData.append('sdt', fields.sdt.value.trim());
+        formData.append('email', fields.email.value.trim());
+        formData.append('mo_ta', fields.mo_ta.value.trim());
+        formData.append('trang_thai', 'dang_lam');
+        Array.from(specialty.selectedOptions).forEach(function (option) {
+            formData.append('chuyen_mon_ids[]', option.value);
+        });
         var id = idInput.value.trim();
 
         if (id) {
-            if (password.value) data.mat_khau = password.value;
+            if (password.value) formData.append('mat_khau', password.value);
         } else {
-            data.ten_dang_nhap = username.value.trim();
-            data.mat_khau = password.value;
+            formData.append('ten_dang_nhap', username.value.trim());
+            formData.append('mat_khau', password.value);
         }
 
         try {
             var res = await fetch(endpoint + '?action=save&id=' + (id || '0'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(data),
+                headers: { 'Accept': 'application/json' },
+                body: formData,
                 credentials: 'same-origin'
             });
             var json = await res.json();

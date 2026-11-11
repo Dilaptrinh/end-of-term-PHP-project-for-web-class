@@ -7,10 +7,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
     }
 
-    $input = json_decode(file_get_contents('php://input') ?: '', true);
-    if (!is_array($input)) {
-        $input = $_POST;
-    }
+    $input = $_POST;
 
     $db = common_db();
     $accountId = (int) $user['id'];

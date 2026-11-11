@@ -10,10 +10,15 @@ function admin_username_exists(string $username): bool
     return (bool) $row;
 }
 
-function admin_class_proposal_update(int $id, string $status): bool
+function admin_class_proposal_update(int $id, string $status, string $room = ''): bool
 {
-    $stmt = common_db()->prepare('UPDATE lop_hoc SET trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
-    $stmt->bind_param('si', $status, $id);
+    if ($status === 'dang_mo') {
+        $stmt = common_db()->prepare('UPDATE lop_hoc SET phong_hoc = ?, trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
+        $stmt->bind_param('ssi', $room, $status, $id);
+    } else {
+        $stmt = common_db()->prepare('UPDATE lop_hoc SET trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
+        $stmt->bind_param('si', $status, $id);
+    }
     $stmt->execute();
     $changed = $stmt->affected_rows;
     $stmt->close();

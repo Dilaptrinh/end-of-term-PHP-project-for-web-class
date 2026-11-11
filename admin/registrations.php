@@ -13,10 +13,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $db = common_db();
 
     if ($action === 'create-package') {
-        $input = json_decode(file_get_contents('php://input') ?: '', true);
-        if (!is_array($input)) {
-            $input = $_POST;
-        }
+        $input = $_POST;
         $memberId = (int) ($input['hoi_vien_id'] ?? 0);
         $packageId = (int) ($input['goi_tap_id'] ?? 0);
         $from = trim((string) ($input['ngay_bat_dau'] ?? ''));

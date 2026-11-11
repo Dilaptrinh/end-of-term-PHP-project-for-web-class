@@ -15,7 +15,12 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $status = $action === 'approve' ? 'dang_mo' : 'tu_choi';
-    $changed = admin_class_proposal_update($id, $status);
+    $room = trim((string) ($_POST['phong_hoc'] ?? ''));
+    if ($action === 'approve' && $room === '') {
+        json_response(['success' => false, 'message' => 'Vui lòng nhập phòng học trước khi duyệt.'], 422);
+    }
+
+    $changed = admin_class_proposal_update($id, $status, $room);
     json_response([
         'success' => $changed,
         'message' => $changed ? ($action === 'approve' ? 'Đã duyệt đề xuất lớp.' : 'Đã từ chối đề xuất lớp.') : 'Không tìm thấy đề xuất đang chờ duyệt.',
@@ -51,7 +56,7 @@ require $partials . '/head.php';
                         <td><?= e($proposal['room']) ?></td>
                         <td><?= (int) $proposal['capacity'] ?></td>
                         <td class="cell-actions">
-                            <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>">Duyệt</button>
+                            <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>" data-proposal-room="<?= e($proposal['room']) ?>">Duyệt</button>
                             <button class="btn btn-danger-soft btn-sm" type="button" data-proposal-action="reject" data-proposal-id="<?= (int) $proposal['id'] ?>">Từ chối</button>
                         </td>
                     </tr>
@@ -67,9 +72,26 @@ document.addEventListener('click', async function (event) {
     var button = event.target.closest('[data-proposal-action]');
     if (!button) return;
     var action = button.dataset.proposalAction;
+    var room = '';
+    if (action === 'approve') {
+        room = window.prompt('Nhập phòng học trước khi duyệt:', button.dataset.proposalRoom || '');
+        if (room === null || room.trim() === '') {
+            alert('Vui lòng nhập phòng học để duyệt đề xuất.');
+            return;
+        }
+    }
     if (!confirm(action === 'approve' ? 'Duyệt đề xuất lớp này?' : 'Từ chối đề xuất lớp này?')) return;
     try {
-        var response = await fetch(window.location.pathname + '?action=' + action + '&id=' + button.dataset.proposalId, {method: 'POST', headers: {'Accept': 'application/json'}, credentials: 'same-origin'});
+        var formData = new FormData();
+        if (action === 'approve') {
+            formData.append('phong_hoc', room.trim());
+        }
+        var response = await fetch(window.location.pathname + '?action=' + action + '&id=' + button.dataset.proposalId, {
+            method: 'POST',
+            headers: {'Accept': 'application/json'},
+            body: formData,
+            credentials: 'same-origin'
+        });
         var result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'Không thể cập nhật đề xuất.');
         alert(result.message);

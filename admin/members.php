@@ -27,10 +27,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
     }
 
-    $input = json_decode(file_get_contents('php://input') ?: '', true);
-    if (!is_array($input)) {
-        $input = $_POST;
-    }
+    $input = $_POST;
 
     $name = trim((string) ($input['ho_ten'] ?? ''));
     $phone = trim((string) ($input['sdt'] ?? ''));
