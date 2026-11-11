@@ -7,17 +7,21 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
     }
 
-    $raw = file_get_contents('php://input') ?: '';
-    $input = json_decode($raw, true);
-    if (!is_array($input)) {
-        $input = $_POST;
+    if (($_GET['action'] ?? '') !== 'register') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 422);
     }
+
+    $input = $_POST;
 
     $classId = (int) ($input['lop_hoc_id'] ?? 0);
     $db = common_db();
     $accountId = (int) $user['id'];
 
-    $stmt = $db->prepare('SELECT id FROM hoi_vien WHERE tai_khoan_id = ? LIMIT 1');
+    $stmt = $db->prepare(
+        'SELECT id FROM hoi_vien
+          WHERE tai_khoan_id = ? AND trang_thai = "hoat_dong" AND deleted_at IS NULL
+          LIMIT 1'
+    );
     $stmt->bind_param('i', $accountId);
     $stmt->execute();
     $member = $stmt->get_result()->fetch_assoc();
@@ -28,6 +32,58 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $memberId = (int) $member['id'];
+
+    $stmt = $db->prepare(
+        'SELECT id FROM dang_ky_goi
+          WHERE hoi_vien_id = ? AND trang_thai = "da_thanh_toan"
+            AND ngay_bat_dau <= CURDATE() AND ngay_ket_thuc >= CURDATE()
+          LIMIT 1'
+    );
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $activePackage = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$activePackage) {
+        json_response(['success' => false, 'message' => 'Bạn cần có gói tập còn hạn để đăng ký lớp.'], 422);
+    }
+
+    $stmt = $db->prepare(
+        'SELECT id, suc_chua,
+                (SELECT COUNT(*) FROM dang_ky_lop
+                  WHERE lop_hoc_id = lop_hoc.id AND trang_thai = "dang_ky") AS da_dang_ky
+           FROM lop_hoc
+          WHERE id = ? AND trang_thai = "dang_mo" AND deleted_at IS NULL
+            AND ngay_bat_dau <= CURDATE() AND ngay_ket_thuc >= CURDATE()
+          LIMIT 1'
+    );
+    $stmt->bind_param('i', $classId);
+    $stmt->execute();
+    $class = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$class) {
+        json_response(['success' => false, 'message' => 'Lớp không tồn tại hoặc chưa mở đăng ký.'], 422);
+    }
+
+    if ((int) $class['da_dang_ky'] >= (int) $class['suc_chua']) {
+        json_response(['success' => false, 'message' => 'Lớp đã đủ số lượng.'], 422);
+    }
+
+    $stmt = $db->prepare(
+        'SELECT id FROM dang_ky_lop
+          WHERE hoi_vien_id = ? AND lop_hoc_id = ? AND trang_thai = "dang_ky"
+          LIMIT 1'
+    );
+    $stmt->bind_param('ii', $memberId, $classId);
+    $stmt->execute();
+    $existing = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($existing) {
+        json_response(['success' => false, 'message' => 'Bạn đã đăng ký lớp này rồi.'], 422);
+    }
+
     $stmt = $db->prepare('INSERT INTO dang_ky_lop (hoi_vien_id, lop_hoc_id, trang_thai, ngay_dang_ky) VALUES (?, ?, "dang_ky", NOW())');
     $stmt->bind_param('ii', $memberId, $classId);
     $stmt->execute();
@@ -46,6 +102,9 @@ $pageTitle = 'Đăng ký lớp học';
 $pageScripts = [];
 
 $classes = data_classes();
+$member = data_current_member();
+$currentPackage = $member['package'] ?? 'Chưa có gói';
+$packageExpiry = $member['package_expiry'] ?? '—';
 $open = array_values(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo'));
 $instructors = array_values(array_unique(array_map(static fn ($c) => $c['instructor'], $open)));
 
@@ -64,7 +123,7 @@ require $partials . '/head.php';
 <div class="page-head">
     <div>
         <h1>Đăng ký lớp học</h1>
-        <p>Chọn lớp phù hợp với lịch của bạn. Gói Premium còn hiệu lực đến 12/02/2027.</p>
+        <p>Chọn lớp phù hợp với lịch của bạn.</p>
     </div>
     <div class="page-head-actions">
         <a class="btn btn-outline-primary" href="<?= e(url('/customer/schedule')) ?>"><?= icon('calendar-week') ?> Lịch của tôi</a>
@@ -73,7 +132,7 @@ require $partials . '/head.php';
 
 <div class="alert alert-info d-flex align-items-center gap-2 mb-3" role="note">
     <?= icon('info-circle') ?>
-    <div class="flex-grow-1">Bạn đang dùng <strong>Premium 6 tháng</strong> — được đăng ký không giới hạn lớp nhóm.</div>
+    <div class="flex-grow-1">Bạn đang dùng <strong><?= e($currentPackage) ?></strong> — hết hạn <?= e($packageExpiry) ?>.</div>
     <a class="btn btn-sm btn-outline-primary" href="<?= e(url('/customer/history')) ?>">Xem gói</a>
 </div>
 
@@ -209,7 +268,7 @@ require $partials . '/head.php';
                 </div>
                 <div class="kv-list mb-3">
                     <div class="kv"><span>Giáo viên</span><span data-modal-class-teacher></span></div>
-                    <div class="kv"><span>Gói đang dùng</span><span>Premium 6 tháng</span></div>
+                    <div class="kv"><span>Gói đang dùng</span><span><?= e($currentPackage) ?></span></div>
                     <div class="kv"><span>Học phí lớp</span><span class="text-success">Đã bao gồm trong gói</span></div>
                 </div>
                 <div class="alert alert-warning mb-0 d-flex gap-2">

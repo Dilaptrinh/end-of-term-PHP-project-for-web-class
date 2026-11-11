@@ -7,10 +7,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
     }
 
-    $input = json_decode(file_get_contents('php://input') ?: '', true);
-    if (!is_array($input)) {
-        $input = $_POST;
-    }
+    $input = $_POST;
 
     $db = common_db();
     $accountId = (int) $user['id'];
@@ -169,18 +166,17 @@ require $partials . '/head.php';
 document.getElementById('class-proposal-form').addEventListener('submit', async function (event) {
     event.preventDefault();
     var form = event.currentTarget;
-    var data = {
-        ten_lop: document.getElementById('proposal-name').value.trim(),
-        thu_trong_tuan: document.getElementById('proposal-weekday').value,
-        gio_bat_dau: document.getElementById('proposal-start').value,
-        gio_ket_thuc: document.getElementById('proposal-end').value,
-        ngay_bat_dau: document.getElementById('proposal-from').value,
-        ngay_ket_thuc: document.getElementById('proposal-to').value,
-        suc_chua: document.getElementById('proposal-capacity').value,
-        trinh_do: document.getElementById('proposal-level').value
-    };
+    var formData = new FormData();
+    formData.append('ten_lop', document.getElementById('proposal-name').value.trim());
+    formData.append('thu_trong_tuan', document.getElementById('proposal-weekday').value);
+    formData.append('gio_bat_dau', document.getElementById('proposal-start').value);
+    formData.append('gio_ket_thuc', document.getElementById('proposal-end').value);
+    formData.append('ngay_bat_dau', document.getElementById('proposal-from').value);
+    formData.append('ngay_ket_thuc', document.getElementById('proposal-to').value);
+    formData.append('suc_chua', document.getElementById('proposal-capacity').value);
+    formData.append('trinh_do', document.getElementById('proposal-level').value);
     try {
-        var response = await fetch(window.location.pathname, { method: 'POST', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: JSON.stringify(data), credentials: 'same-origin' });
+        var response = await fetch(window.location.pathname, { method: 'POST', headers: {'Accept': 'application/json'}, body: formData, credentials: 'same-origin' });
         var result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'Không thể gửi đề xuất.');
         alert(result.message);

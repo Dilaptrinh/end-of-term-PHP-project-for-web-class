@@ -4,10 +4,15 @@
     var endpoint = window.location.pathname;
 
     async function send(action, data) {
+        var formData = new FormData();
+        Object.keys(data).forEach(function (key) {
+            formData.append(key, data[key]);
+        });
+
         var res = await fetch(endpoint + '?action=' + action, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(data),
+            headers: { 'Accept': 'application/json' },
+            body: formData,
             credentials: 'same-origin'
         });
         var json = await res.json().catch(function () {

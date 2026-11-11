@@ -7,16 +7,17 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
     }
 
-    $input = json_decode(file_get_contents('php://input') ?: '', true);
-    if (!is_array($input)) {
-        $input = $_POST;
-    }
+    $input = $_POST;
 
     $packageId = (int) ($input['goi_tap_id'] ?? 0);
     $db = common_db();
     $accountId = (int) $user['id'];
 
-    $stmt = $db->prepare('SELECT id FROM hoi_vien WHERE tai_khoan_id = ? AND deleted_at IS NULL LIMIT 1');
+    $stmt = $db->prepare(
+        'SELECT id FROM hoi_vien
+          WHERE tai_khoan_id = ? AND trang_thai = "hoat_dong" AND deleted_at IS NULL
+          LIMIT 1'
+    );
     $stmt->bind_param('i', $accountId);
     $stmt->execute();
     $member = $stmt->get_result()->fetch_assoc();
@@ -39,9 +40,23 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Gói tập không còn được bán.'], 422);
     }
 
+    $memberId = (int) $member['id'];
+    $stmt = $db->prepare(
+        'SELECT id FROM dang_ky_goi
+          WHERE hoi_vien_id = ? AND goi_tap_id = ? AND trang_thai = "chua_thanh_toan"
+          LIMIT 1'
+    );
+    $stmt->bind_param('ii', $memberId, $packageId);
+    $stmt->execute();
+    $pending = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($pending) {
+        json_response(['success' => false, 'message' => 'Bạn đã gửi yêu cầu cho gói này và đang chờ thanh toán.'], 422);
+    }
+
     $from = new DateTimeImmutable('today');
     $to = $from->modify('+' . ((int) $package['thoi_han_ngay'] - 1) . ' days');
-    $memberId = (int) $member['id'];
     $fromValue = $from->format('Y-m-d');
     $toValue = $to->format('Y-m-d');
 
@@ -82,7 +97,7 @@ require $partials . '/head.php';
             <div class="page-head">
                 <div>
                     <h1>Đăng ký gói tập</h1>
-                    <p>Chọn gói phù hợp. Bạn thanh toán và nhận kích hoạt tại quầy.</p>
+                    <p>Chọn gói phù hợp. Yêu cầu sẽ ở trạng thái chờ thanh toán.</p>
                 </div>
                 <div class="page-head-actions">
                     <a class="btn btn-ghost" href="<?= e(url('/customer/history')) ?>"><?= icon('clock-history') ?> Lịch sử gói</a>
@@ -96,16 +111,18 @@ require $partials . '/head.php';
                             <div class="app-card-header">
                                 <div>
                                     <h2><?= e($package['name']) ?></h2>
-                                    <p class="sub"><?= (int) $package['days'] ?> ngày</p>
+                                    <p class="sub"><?= e($package['desc']) ?></p>
                                 </div>
                             </div>
-                            <div class="app-card-body d-flex flex-column">
-                                <div class="fs-4 fw-700 text-brand mb-2"><?= e(money($package['price'])) ?></div>
-                                <p class="text-muted-2 flex-grow-1"><?= e($package['desc'] ?? '') ?></p>
+                            <div class="app-card-body">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <strong><?= e(money($package['price'])) ?></strong>
+                                    <span><?= (int) $package['days'] ?> ngày</span>
+                                </div>
                                 <button class="btn btn-primary w-100" type="button"
                                         data-package-register="<?= (int) $package['id'] ?>"
                                         data-package-name="<?= e($package['name']) ?>">
-                                    <?= icon('check-lg') ?> Đăng ký gói này
+                                    <?= icon('check-lg') ?> Đăng ký gói
                                 </button>
                             </div>
                         </article>
@@ -125,12 +142,13 @@ document.addEventListener('click', async function (event) {
     if (!button) return;
     if (!confirm('Đăng ký gói "' + button.dataset.packageName + '"?')) return;
 
-    button.disabled = true;
     try {
+        var formData = new FormData();
+        formData.append('goi_tap_id', button.dataset.packageRegister);
         var response = await fetch(window.location.pathname, {
             method: 'POST',
-            headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
-            body: JSON.stringify({goi_tap_id: button.dataset.packageRegister}),
+            headers: {'Accept': 'application/json'},
+            body: formData,
             credentials: 'same-origin'
         });
         var result = await response.json();
@@ -139,7 +157,6 @@ document.addEventListener('click', async function (event) {
         window.location.href = <?= json_encode(url('/customer/history')) ?>;
     } catch (error) {
         alert(error.message);
-        button.disabled = false;
     }
 });
 </script>

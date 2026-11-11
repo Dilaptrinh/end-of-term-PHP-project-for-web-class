@@ -7,18 +7,17 @@
         event.preventDefault();
 
         var form = event.currentTarget;
-        var data = {
-            ngay_day: document.getElementById('av-date').value,
-            gio_bat_dau: document.getElementById('av-start').value,
-            gio_ket_thuc: document.getElementById('av-end').value,
-            ghi_chu: document.getElementById('av-specialty').value
-        };
+        var formData = new FormData();
+        formData.append('ngay_day', document.getElementById('av-date').value);
+        formData.append('gio_bat_dau', document.getElementById('av-start').value);
+        formData.append('gio_ket_thuc', document.getElementById('av-end').value);
+        formData.append('ghi_chu', document.getElementById('av-specialty').value);
 
         try {
             var res = await fetch(endpoint + '?action=create', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(data),
+                headers: { 'Accept': 'application/json' },
+                body: formData,
                 credentials: 'same-origin'
             });
             var json = await res.json().catch(function () {

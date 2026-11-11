@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require __DIR__ . '/../common/bootstrap.php';
 require_role('customer');
 
@@ -9,23 +9,59 @@ $activeMenu = 'schedule';
 $pageTitle = 'Lịch tập';
 $pageScripts = [];
 
-$classes = data_classes();
-$myClassIds = [1, 2, 4];
-$mine = array_values(array_filter($classes, static fn ($c) => in_array($c['id'], $myClassIds, true)));
+$classes = data_customer_classes();
 
-$weekDates = [
-    1 => ['19', 'T2'],
-    2 => ['20', 'T3'],
-    3 => ['21', 'T4'],
-    4 => ['22', 'T5'],
-    5 => ['23', 'T6'],
-    6 => ['24', 'T7'],
-    7 => ['25', 'CN'],
+$timezone = new DateTimeZone('Asia/Ho_Chi_Minh');
+$today = new DateTimeImmutable('today', $timezone);
+$monthStart = $today->modify('first day of this month');
+$monthEnd = $today->modify('last day of this month');
+$weekdayNames = [
+    1 => 'Thứ 2',
+    2 => 'Thứ 3',
+    3 => 'Thứ 4',
+    4 => 'Thứ 5',
+    5 => 'Thứ 6',
+    6 => 'Thứ 7',
+    7 => 'Chủ nhật',
 ];
-$slots = ['06:00', '07:00', '08:00', '09:30', '16:00', '17:30', '18:00', '19:00'];
+
+$schedule = [];
+foreach ($classes as $class) {
+    $from = DateTimeImmutable::createFromFormat('!d/m/Y', $class['from'], $timezone);
+    $to = DateTimeImmutable::createFromFormat('!d/m/Y', $class['to'], $timezone);
+
+    if (!$from || !$to) {
+        continue;
+    }
+
+    for ($date = $monthStart; $date <= $monthEnd; $date = $date->modify('+1 day')) {
+        if ((int) $class['weekday'] !== (int) $date->format('N')) {
+            continue;
+        }
+        if ($date < $from || $date > $to) {
+            continue;
+        }
+
+        $key = $date->format('Y-m-d');
+        if (!isset($schedule[$key])) {
+            $schedule[$key] = [
+                'date' => $date,
+                'weekday' => $weekdayNames[(int) $date->format('N')],
+                'classes' => [],
+            ];
+        }
+        $schedule[$key]['classes'][] = $class;
+    }
+}
+
+foreach ($schedule as &$day) {
+    usort($day['classes'], static function (array $first, array $second): int {
+        return strcmp($first['start'], $second['start']);
+    });
+}
+unset($day);
 
 $partials = __DIR__ . '/../common/partials';
-
 require $partials . '/head.php';
 ?>
 <div class="app-shell">
@@ -34,165 +70,62 @@ require $partials . '/head.php';
     <div class="app-main">
         <?php require $partials . '/topbar.php'; ?>
 
-        <main class="app-content" id="main-content">
+        <main class="app-content instructor-schedule" id="main-content">
             <?php require $partials . '/flash.php'; ?>
-<div class="page-head">
-    <div>
-        <h1>Lịch tập của tôi</h1>
-        <p>Các lớp bạn đã đăng ký trong tuần 19/10 – 25/10/2026.</p>
-    </div>
-    <div class="page-head-actions">
-        <div class="btn-group" role="group" aria-label="Điều hướng tuần">
-            <button class="btn btn-outline-primary btn-sm" type="button" aria-label="Tuần trước"><?= icon('chevron-left') ?></button>
-            <button class="btn btn-outline-primary btn-sm" type="button">Tuần này</button>
-            <button class="btn btn-outline-primary btn-sm" type="button" aria-label="Tuần sau"><?= icon('chevron-right') ?></button>
-        </div>
-        <a class="btn btn-primary" href="<?= e(url('/customer/class-registration')) ?>"><?= icon('plus-lg') ?> Thêm lớp</a>
-    </div>
-</div>
 
-<ul class="nav nav-tabs app-tabs mb-3" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="tab-week" data-bs-toggle="tab" data-bs-target="#pane-week" type="button" role="tab" aria-controls="pane-week" aria-selected="true">
-            <?= icon('calendar-week') ?> Tuần
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-month" data-bs-toggle="tab" data-bs-target="#pane-month" type="button" role="tab" aria-controls="pane-month" aria-selected="false">
-            <?= icon('calendar-month') ?> Tháng
-        </button>
-    </li>
-</ul>
-
-<div class="tab-content">
-    <div class="tab-pane fade show active" id="pane-week" role="tabpanel" aria-labelledby="tab-week" tabindex="0">
-        <div class="row g-3">
-            <div class="col-xl-9">
-                <div class="app-card">
-                    <div class="app-card-header">
-                        <div>
-                            <h2>Tuần 19/10 – 25/10</h2>
-                            <p class="sub">3 lớp · 4 buổi tập</p>
-                        </div>
-                        <div class="ms-auto chart-legend">
-                            <span class="lg"><span class="sw"></span> Đã đăng ký</span>
-                            <span class="lg"><span class="sw" style="background:var(--warning)"></span> Sắp tới</span>
-                        </div>
-                    </div>
-                    <div class="app-card-body">
-                        <div class="schedule-shell">
-                            <div class="schedule-grid">
-                                <div class="sg-head">Giờ</div>
-                                <?php foreach ($weekDates as $d => $info): ?>
-                                    <div class="sg-head"><?= e($info[1]) ?><span class="d"><?= e($info[0]) ?>/10</span></div>
-                                <?php endforeach; ?>
-
-                                <?php foreach ($slots as $slot): ?>
-                                    <div class="sg-time"><?= e($slot) ?></div>
-                                    <?php foreach ($weekDates as $d => $info): ?>
-                                        <div class="sg-cell">
-                                            <?php foreach ($mine as $class): ?>
-                                                <?php if ((int) $class['weekday'] === $d && $class['start'] === $slot): ?>
-                                                    <span class="schedule-event <?= $d === 5 ? 'amber' : '' ?>">
-                                                        <strong><?= e($class['name']) ?></strong>
-                                                        <span class="t"><?= e($class['start'] . ' – ' . $class['end']) ?> · <?= e($class['room']) ?></span>
-                                                    </span>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-3">
-                <div class="app-card mb-3">
-                    <div class="app-card-header"><h2>Buổi tập sắp tới</h2></div>
-                    <div class="app-card-body">
-                        <ul class="app-timeline">
-                            <li>
-                                <span class="tl-dot warning"><?= icon('clock') ?></span>
-                                <div class="tl-title">HIIT đốt mỡ</div>
-                                <div class="tl-meta">Thứ 3, 20/10 · 06:00 – 07:00</div>
-                                <div class="tl-meta">Nguyễn Đức Anh · P.202</div>
-                            </li>
-                            <li>
-                                <span class="tl-dot"><?= icon('calendar-event') ?></span>
-                                <div class="tl-title">Zumba Dance</div>
-                                <div class="tl-meta">Thứ 5, 22/10 · 19:00 – 20:00</div>
-                                <div class="tl-meta">Trần Thu Hà · P.101</div>
-                            </li>
-                            <li>
-                                <span class="tl-dot"><?= icon('calendar-event') ?></span>
-                                <div class="tl-title">Yoga cơ bản</div>
-                                <div class="tl-meta">Thứ 2, 19/10 · 18:00 – 19:00</div>
-                                <div class="tl-meta">Trần Thu Hà · P.101</div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-pane fade" id="pane-month" role="tabpanel" aria-labelledby="tab-month" tabindex="0">
-        <div class="app-card">
-            <div class="app-card-header">
+            <div class="page-head">
                 <div>
-                    <h2>Tháng 10/2026</h2>
-                    <p class="sub">Các lớp đã đăng ký và sắp diễn ra</p>
-                </div>
-                <div class="btn-group ms-auto">
-                    <button class="btn btn-outline-primary btn-sm" type="button"><?= icon('chevron-left') ?></button>
-                    <button class="btn btn-outline-primary btn-sm" type="button">Tháng 10</button>
-                    <button class="btn btn-outline-primary btn-sm" type="button"><?= icon('chevron-right') ?></button>
+                    <h1>Lịch tập của tôi</h1>
+                    <p>Xem nhanh các lớp bạn đã đăng ký trong tháng này.</p>
                 </div>
             </div>
-            <div class="app-card-body">
-                <div class="day-column">
-                    <?php
-                    $monthDays = [
-                        ['19/10', 'Thứ 2', [['18:00', 'Yoga cơ bản', 'Trần Thu Hà', 'P.101', '']]],
-                        ['20/10', 'Thứ 3', [['06:00', 'HIIT đốt mỡ', 'Nguyễn Đức Anh', 'P.202', 'green'], ['18:00', 'Gym & Strength', 'Phạm Quốc Bảo', 'Khu A', '']]],
-                        ['21/10', 'Thứ 4', []],
-                        ['22/10', 'Thứ 5', [['19:00', 'Zumba Dance', 'Trần Thu Hà', 'P.101', 'amber']]],
-                        ['23/10', 'Thứ 6', [['06:00', 'HIIT đốt mỡ', 'Nguyễn Đức Anh', 'P.202', 'green']]],
-                        ['24/10', 'Thứ 7', []],
-                        ['25/10', 'Chủ nhật', [['16:00', 'Cardio & Core', 'Lê Ngọc Mai', 'P.202', '']]],
-                    ];
-                    foreach ($monthDays as $day):
-                    ?>
-                        <div class="day-block">
-                            <div class="day-head">
-                                <span class="date"><?= e($day[0]) ?></span>
-                                <span class="text-muted-2"><?= e($day[1]) ?></span>
-                                <span class="ms-auto text-tiny text-muted-2"><?= count($day[2]) ?> buổi</span>
-                            </div>
-                            <div class="day-body">
-                                <?php if ($day[2] === []): ?>
-                                    <div class="text-tiny text-muted-2">Không có lớp.</div>
-                                <?php else: ?>
-                                    <?php foreach ($day[2] as $event): ?>
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <span class="badge-soft"><?= e($event[0]) ?></span>
-                                            <span class="fw-700 text-small"><?= e($event[1]) ?></span>
-                                            <span class="text-tiny text-muted-2"><?= icon('person') ?> <?= e($event[2]) ?> · <?= icon('geo-alt') ?> <?= e($event[3]) ?></span>
-                                            <span class="ms-auto"><?= badge($event[4] === 'green' ? 'Đã diễn ra' : 'Sắp tới', $event[4] === 'green' ? 'muted' : 'warning') ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
+
+            <div class="app-card">
+                <div class="app-card-header schedule-heading">
+                    <div>
+                        <h2>Lịch trong tháng</h2>
+                        <p class="sub">Chỉ hiển thị những ngày có buổi tập.</p>
+                    </div>
+                    <span class="schedule-month"><?= icon('calendar-month') ?> Tháng <?= e($today->format('m/Y')) ?></span>
+                </div>
+                <div class="app-card-body">
+                    <?php if (!$schedule): ?>
+                        <div class="schedule-empty">
+                            <span class="schedule-empty-icon"><?= icon('calendar-x') ?></span>
+                            <strong>Chưa có lịch tập trong tháng này</strong>
+                            <span class="text-tiny">Các lớp bạn đăng ký sẽ xuất hiện tại đây.</span>
                         </div>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="schedule-list">
+                            <?php foreach ($schedule as $day): ?>
+                                <section class="schedule-day">
+                                    <div class="schedule-day-head">
+                                        <span class="schedule-date"><?= e($day['date']->format('d')) ?></span>
+                                        <span class="schedule-weekday"><?= e($day['weekday']) ?></span>
+                                        <span class="schedule-count"><?= count($day['classes']) ?> buổi</span>
+                                    </div>
+                                    <div class="schedule-events">
+                                        <?php foreach ($day['classes'] as $class): ?>
+                                            <div class="schedule-event-row">
+                                                <span class="schedule-time"><?= e($class['start'] . ' – ' . $class['end']) ?></span>
+                                                <div>
+                                                    <div class="schedule-class-name"><?= e($class['name']) ?></div>
+                                                    <div class="schedule-details">
+                                                        <span><?= icon('person') ?> <?= e($class['instructor']) ?></span>
+                                                        <?php if ($class['room'] !== ''): ?>
+                                                            <span><?= icon('geo-alt') ?> <?= e($class['room']) ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </section>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
         </main>
     </div>
 </div>

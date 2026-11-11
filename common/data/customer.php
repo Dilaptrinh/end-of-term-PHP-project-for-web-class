@@ -11,7 +11,11 @@ function view_member_id(): int
     $conn = view_db();
     $accountId = view_current_account_id();
     if ($accountId > 0) {
-        $stmt = $conn->prepare('SELECT id FROM hoi_vien WHERE tai_khoan_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt = $conn->prepare(
+            'SELECT id FROM hoi_vien
+              WHERE tai_khoan_id = ? AND trang_thai = "hoat_dong" AND deleted_at IS NULL
+              LIMIT 1'
+        );
         $stmt->bind_param('i', $accountId);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -20,8 +24,7 @@ function view_member_id(): int
             return (int) $row['id'];
         }
     }
-    $row = $conn->query('SELECT id FROM hoi_vien WHERE deleted_at IS NULL ORDER BY id LIMIT 1')->fetch_assoc();
-    return $row ? (int) $row['id'] : 0;
+    return 0;
 }
 
 function data_current_member(): array
@@ -46,6 +49,7 @@ function data_current_member(): array
         'SELECT gt.ten_goi, DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS het_han
            FROM dang_ky_goi d JOIN goi_tap gt ON gt.id = d.goi_tap_id
           WHERE d.hoi_vien_id = ? AND d.trang_thai = "da_thanh_toan"
+            AND d.ngay_bat_dau <= CURDATE() AND d.ngay_ket_thuc >= CURDATE()
           ORDER BY d.ngay_ket_thuc DESC LIMIT 1'
     );
     $package->bind_param('i', $id);
@@ -129,20 +133,19 @@ function data_customer_profile(): array
     $id = view_current_account_id();
     $row = null;
     if ($id > 0) {
-        $stmt = $conn->prepare('SELECT * FROM hoi_vien WHERE tai_khoan_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt = $conn->prepare(
+            'SELECT * FROM hoi_vien
+              WHERE tai_khoan_id = ? AND trang_thai = "hoat_dong" AND deleted_at IS NULL
+              LIMIT 1'
+        );
         $stmt->bind_param('i', $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
     }
-    if (!$row) {
-        $row = $conn->query('SELECT * FROM hoi_vien WHERE deleted_at IS NULL ORDER BY id LIMIT 1')->fetch_assoc();
-    }
-
     return [
         'weight' => $row ? (string) ($row['can_nang'] ?? '') : '',
         'height' => $row ? (string) ($row['chieu_cao'] ?? '') : '',
         'goal'   => $row ? (string) ($row['muc_tieu'] ?? '') : '',
     ];
 }
-

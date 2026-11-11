@@ -28,15 +28,14 @@
     document.getElementById('register-form').addEventListener('submit', async function (event) {
         event.preventDefault();
 
-        var data = {
-            lop_hoc_id: document.getElementById('register-class-id').value
-        };
+        var formData = new FormData();
+        formData.append('lop_hoc_id', document.getElementById('register-class-id').value);
 
         try {
             var res = await fetch(endpoint + '?action=register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(data),
+                headers: { 'Accept': 'application/json' },
+                body: formData,
                 credentials: 'same-origin'
             });
             var json = await res.json().catch(function () {

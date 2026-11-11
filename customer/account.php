@@ -1,19 +1,14 @@
 ﻿<?php
 require __DIR__ . '/../common/bootstrap.php';
 
-$requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-if ($requestMethod === 'PUT' || $requestMethod === 'POST') {
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = (string) ($_GET['action'] ?? '');
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'customer') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
     }
 
-    $raw = file_get_contents('php://input') ?: '';
-    $input = json_decode($raw, true);
-    if (!is_array($input)) {
-        $input = $_POST;
-    }
+    $input = $_POST;
 
     $db = common_db();
     $accountId = (int) $user['id'];
@@ -49,7 +44,7 @@ if ($requestMethod === 'PUT' || $requestMethod === 'POST') {
         json_response(['success' => true, 'message' => 'Đã cập nhật hồ sơ.']);
     }
 
-    if ($action === 'password' && $requestMethod === 'POST') {
+    if ($action === 'password') {
         $old = (string) ($input['mat_khau_cu'] ?? '');
         $new = (string) ($input['mat_khau_moi'] ?? '');
         $confirm = (string) ($input['mat_khau_xac_nhan'] ?? '');
@@ -128,7 +123,7 @@ require $partials . '/head.php';
                 <p class="text-muted-2 text-small mb-2">Hội viên · Mã <?= e($memberCode) ?></p>
                 <div class="d-flex justify-content-center gap-2 mb-3">
                     <?= badge('Đang hoạt động', 'success') ?>
-                    <?= badge('Premium', 'primary') ?>
+                    <?= badge($member['package'] ?? 'Chưa có gói', 'primary') ?>
                 </div>
                 <button class="btn btn-outline-primary btn-sm" type="button" data-toast="Tính năng tải ảnh sẽ được nối API." data-toast-title="Đổi ảnh đại diện">
                     <?= icon('camera') ?> Đổi ảnh đại diện
