@@ -235,6 +235,11 @@ if (!function_exists('seed_core_data')) {
             ['Premium 6 tháng', 180, 2100000, 'Bao gồm Standard + 1 buổi PT/tháng và tư vấn dinh dưỡng.', 'dang_ban'],
             ['PT 1-1 (10 buổi)', 30, 3000000, '10 buổi tập cá nhân cùng huấn luyện viên chuyên trách.', 'dang_ban'],
             ['Basic 1 tháng (cũ)', 30, 450000, 'Gói đã ngừng bán, giữ lại cho lịch sử.', 'ngung_ban'],
+            ['Student 1 tháng', 30, 350000, 'Gói tiết kiệm dành cho học sinh, sinh viên.', 'dang_ban'],
+            ['Family 3 tháng', 90, 1800000, 'Gói tập phù hợp cho hai thành viên trong gia đình.', 'dang_ban'],
+            ['Yoga chuyên sâu 2 tháng', 60, 900000, 'Tập trung vào yoga, giãn cơ và cải thiện tư thế.', 'dang_ban'],
+            ['Gói trải nghiệm 7 ngày', 7, 150000, 'Làm quen phòng tập và các lớp nhóm trong 7 ngày.', 'dang_ban'],
+            ['PT 1-1 (cũ)', 30, 2500000, 'Gói PT cũ, chỉ dùng cho dữ liệu lịch sử.', 'ngung_ban'],
         ];
         if ((int) $conn->query('SELECT COUNT(*) AS c FROM goi_tap')->fetch_assoc()['c'] === 0) {
             $stmt = $conn->prepare('INSERT INTO goi_tap (ten_goi, thoi_han_ngay, gia, mo_ta, trang_thai) VALUES (?, ?, ?, ?, ?)');
@@ -255,6 +260,15 @@ if (!function_exists('seed_core_data')) {
             ['Yoga nâng cao', 6, 1, '09:30', '10:30', '2026-09-01', '2026-11-30', 20, 'P.101', 'Nâng cao', 'Chuỗi tư thế nâng cao, giữ thăng bằng và kiểm soát hơi thở.', 'dang_mo'],
             ['Cardio & Core', 7, 3, '16:00', '17:00', '2026-09-01', '2026-12-31', 25, 'P.202', 'Mọi trình độ', 'Cardio nhẹ nhàng kết hợp bài tập săn chắc vùng bụng.', 'dang_mo'],
             ['Gym nâng cao', 5, 4, '18:00', '19:30', '2026-10-01', '2026-12-31', 12, 'Khu A', 'Nâng cao', 'Chương trình sức mạnh chuyên sâu cho hội viên lâu năm.', 'da_dong'],
+            ['Mobility & Stretching', 1, 3, '07:30', '08:30', '2026-11-01', '2027-01-31', 20, 'P.103', 'Cơ bản', 'Giãn cơ và cải thiện khả năng vận động mỗi ngày.', 'dang_mo'],
+            ['Kickboxing Fitness', 2, 2, '18:30', '19:30', '2026-11-01', '2027-01-31', 18, 'Khu B', 'Trung cấp', 'Kết hợp kỹ thuật kickboxing với bài tập thể lực.', 'dang_mo'],
+            ['Pilates phục hồi', 3, 3, '09:00', '10:00', '2026-11-01', '2027-01-31', 16, 'P.103', 'Cơ bản', 'Bài tập nhẹ giúp phục hồi và tăng sức mạnh vùng core.', 'dang_mo'],
+            ['Dance Cardio', 4, 1, '17:30', '18:30', '2026-11-01', '2027-01-31', 28, 'P.101', 'Mọi trình độ', 'Vận động theo nhạc, phù hợp với người mới bắt đầu.', 'dang_mo'],
+            ['Functional Training', 5, 4, '19:00', '20:00', '2026-11-01', '2027-01-31', 15, 'Khu A', 'Trung cấp', 'Rèn sức mạnh và khả năng vận động trong đời sống.', 'dang_mo'],
+            ['Boxing nâng cao', 6, 2, '17:00', '18:30', '2026-11-01', '2027-01-31', 12, 'Khu B', 'Nâng cao', 'Nâng cao kỹ thuật boxing và sức bền thi đấu.', 'dang_mo'],
+            ['Thiền và hít thở', 7, 5, '08:00', '09:00', '2026-11-01', '2027-01-31', 20, 'P.102', 'Cơ bản', 'Thư giãn tinh thần, điều hòa hơi thở và giảm căng thẳng.', 'dang_mo'],
+            ['Yoga trị liệu', 2, 1, '09:00', '10:00', '2026-11-15', '2027-02-15', 10, 'P.101', 'Nâng cao', 'Lớp chuyên sâu đang chờ quản trị viên duyệt.', 'cho_duyet'],
+            ['Bootcamp cuối tuần', 7, 4, '16:00', '17:30', '2026-11-15', '2027-02-15', 25, 'Sân ngoài trời', 'Trung cấp', 'Luyện tập theo nhóm ngoài trời vào cuối tuần.', 'cho_duyet'],
         ];
         if ((int) $conn->query('SELECT COUNT(*) AS c FROM lop_hoc')->fetch_assoc()['c'] === 0) {
             $stmt = $conn->prepare('INSERT INTO lop_hoc (ten_lop, thu_trong_tuan, giao_vien_id, gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc, suc_chua, phong_hoc, trinh_do, mo_ta, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
@@ -274,6 +288,12 @@ if (!function_exists('seed_core_data')) {
                 [7, 3, '2026-09-22', '2027-03-22', 2100000, 'da_thanh_toan', 'Thẻ', '2026-09-22 10:05:00', 'admin'],
                 [8, 4, '2026-10-02', '2026-11-02', 3000000, 'da_thanh_toan', 'Chuyển khoản', '2026-10-02 14:22:00', 'admin'],
                 [6, 1, '2026-06-10', '2026-07-10', 500000, 'da_huy', null, null, null],
+                [9, 6, '2026-10-15', '2026-11-14', 350000, 'da_thanh_toan', 'Tiền mặt', '2026-10-15 08:30:00', 'admin'],
+                [10, 7, '2026-10-20', '2027-01-18', 1800000, 'da_thanh_toan', 'Chuyển khoản', '2026-10-20 11:10:00', 'admin'],
+                [11, 8, '2026-11-01', '2026-12-30', 900000, 'da_thanh_toan', 'Tiền mặt', '2026-11-01 09:00:00', 'admin'],
+                [12, 9, '2026-11-10', '2026-11-16', 150000, 'chua_thanh_toan', null, null, null],
+                [13, 2, '2026-08-01', '2026-10-30', 1200000, 'da_huy', null, null, null],
+                [14, 4, '2026-11-05', '2026-12-04', 3000000, 'chua_thanh_toan', null, null, null],
             ];
             $stmt = $conn->prepare('INSERT INTO dang_ky_goi (hoi_vien_id, goi_tap_id, ngay_bat_dau, ngay_ket_thuc, gia_tai_thoi_diem, trang_thai, phuong_thuc, ngay_thanh_toan, nhan_vien_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1))');
             foreach ($registrations as [$memberId, $packageId, $from, $to, $price, $status, $method, $paidAt, $staff]) {
@@ -289,6 +309,11 @@ if (!function_exists('seed_core_data')) {
                 [3, 1, '2026-09-03', 'dang_ky'], [4, 4, '2026-09-06', 'dang_ky'],
                 [2, 6, '2026-09-14', 'dang_ky'], [5, 3, '2026-09-08', 'da_huy'],
                 [7, 5, '2026-09-01', 'dang_ky'], [8, 3, '2026-09-10', 'dang_ky'],
+                [9, 10, '2026-11-02', 'dang_ky'], [9, 12, '2026-11-03', 'dang_ky'],
+                [10, 11, '2026-11-04', 'dang_ky'], [11, 13, '2026-11-05', 'dang_ky'],
+                [12, 14, '2026-11-06', 'dang_ky'], [13, 15, '2026-11-07', 'dang_ky'],
+                [14, 16, '2026-11-08', 'dang_ky'], [15, 17, '2026-11-09', 'dang_ky'],
+                [16, 1, '2026-11-01', 'da_huy'], [17, 3, '2026-11-02', 'da_huy'],
             ];
             $stmt = $conn->prepare('INSERT INTO dang_ky_lop (hoi_vien_id, lop_hoc_id, ngay_dang_ky, trang_thai) VALUES (?, ?, ?, ?)');
             foreach ($registrations as [$memberId, $classId, $registered, $status]) {
