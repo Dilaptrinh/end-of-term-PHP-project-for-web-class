@@ -34,7 +34,8 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $memberId = (int) $member['id'];
 
     $stmt = $db->prepare(
-        'SELECT id FROM dang_ky_goi
+        'SELECT gt.cap_do FROM dang_ky_goi d
+           JOIN goi_tap gt ON gt.id = d.goi_tap_id
           WHERE hoi_vien_id = ? AND trang_thai = "da_thanh_toan"
             AND ngay_bat_dau <= CURDATE() AND ngay_ket_thuc >= CURDATE()
           LIMIT 1'
@@ -49,12 +50,12 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $stmt = $db->prepare(
-        'SELECT id, suc_chua,
+        'SELECT id, suc_chua, goi_tap_toi_thieu,
                 (SELECT COUNT(*) FROM dang_ky_lop
                   WHERE lop_hoc_id = lop_hoc.id AND trang_thai = "dang_ky") AS da_dang_ky
            FROM lop_hoc
           WHERE id = ? AND trang_thai = "dang_mo" AND deleted_at IS NULL
-            AND ngay_bat_dau <= CURDATE() AND ngay_ket_thuc >= CURDATE()
+            AND ngay_ket_thuc >= CURDATE()
           LIMIT 1'
     );
     $stmt->bind_param('i', $classId);
@@ -64,6 +65,13 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$class) {
         json_response(['success' => false, 'message' => 'Lớp không tồn tại hoặc chưa mở đăng ký.'], 422);
+    }
+
+    $packageLevels = ['basic' => 1, 'standard' => 2, 'premium' => 3];
+    $packageLevel = $packageLevels[$activePackage['cap_do'] ?? 'basic'] ?? 1;
+    $requiredLevel = $packageLevels[$class['goi_tap_toi_thieu'] ?? 'basic'] ?? 1;
+    if ($requiredLevel > $packageLevel) {
+        json_response(['success' => false, 'message' => 'Gói hiện tại không hỗ trợ lớp này. Hãy nâng cấp gói để đăng ký.'], 422);
     }
 
     if ((int) $class['da_dang_ky'] >= (int) $class['suc_chua']) {
@@ -105,7 +113,16 @@ $classes = data_classes();
 $member = data_current_member();
 $currentPackage = $member['package'] ?? 'Chưa có gói';
 $packageExpiry = $member['package_expiry'] ?? '—';
+$packageLevels = ['basic' => 1, 'standard' => 2, 'premium' => 3];
+$currentPackageLevel = $packageLevels[$member['package_level'] ?? 'basic'] ?? 1;
+$today = (new DateTimeImmutable('today', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('Y-m-d');
 $open = array_values(array_filter($classes, static fn ($c) => $c['status'] === 'dang_mo'));
+foreach ($open as &$class) {
+    if ($class['start_date'] > $today) {
+        $class['status'] = 'sap_mo';
+    }
+}
+unset($class);
 $instructors = array_values(array_unique(array_map(static fn ($c) => $c['instructor'], $open)));
 
 $partials = __DIR__ . '/../common/partials';
@@ -181,7 +198,7 @@ require $partials . '/head.php';
 </form>
 
 <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
-    <div class="text-small text-muted-2">Tìm thấy <strong class="text-brand"><?= count($open) ?></strong> lớp đang mở</div>
+    <div class="text-small text-muted-2">Tìm thấy <strong class="text-brand"><?= count($open) ?></strong> lớp đã được duyệt</div>
     <div class="ms-auto d-flex align-items-center gap-2">
         <label class="form-check form-switch mb-0 d-flex align-items-center gap-2">
             <input class="form-check-input" type="checkbox" id="only-available" checked>
@@ -195,6 +212,8 @@ require $partials . '/head.php';
         $available = $class['capacity'] - $class['enrolled'];
         $percent = (int) round($class['enrolled'] / max(1, $class['capacity']) * 100);
         $tone = $available === 0 ? 'red' : ($percent >= 80 ? 'amber' : '');
+        $requiredLevel = $packageLevels[$class['required_package'] ?? 'basic'] ?? 1;
+        $allowed = $requiredLevel <= $currentPackageLevel;
     ?>
         <div class="col-md-6 col-xl-4" data-class-card data-available="<?= $available > 0 ? '1' : '0' ?>">
             <article class="class-card">
@@ -211,6 +230,7 @@ require $partials . '/head.php';
                         <div class="teacher"><?= icon('person') ?> <?= e($class['instructor']) ?></div>
                     </div>
                 </div>
+                <div class="mt-2"><?= status_badge($class['status']) ?></div>
                 <div class="class-card-body">
                     <div class="class-meta">
                         <div class="item"><?= icon('clock') ?> <?= e($class['start'] . ' – ' . $class['end']) ?></div>
@@ -227,9 +247,12 @@ require $partials . '/head.php';
                 </div>
                 <div class="class-card-foot">
                     <span class="availability <?= $available === 0 ? 'text-danger' : 'text-success' ?>">
-                        <?= $available === 0 ? 'Hết chỗ' : 'Còn ' . $available . ' chỗ' ?>
+                        <?= $available === 0 ? 'Hết chỗ' : ($class['status'] === 'sap_mo' ? 'Đăng ký trước · còn ' . $available . ' chỗ' : 'Còn ' . $available . ' chỗ') ?>
                     </span>
-                    <?php if ($available === 0): ?>
+                    <?php if (!$allowed): ?>
+                        <span class="availability text-warning">Cần gói cao hơn</span>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Nâng cấp gói</button>
+                    <?php elseif ($available === 0): ?>
                         <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Đã đầy</button>
                     <?php else: ?>
                         <button class="btn btn-primary btn-sm" type="button"

@@ -45,9 +45,11 @@ function data_classes(): array
                lh.phong_hoc AS room, lh.suc_chua AS capacity,
                (SELECT COUNT(*) FROM dang_ky_lop d
                  WHERE d.lop_hoc_id = lh.id AND d.trang_thai = 'dang_ky') AS enrolled,
+               lh.ngay_bat_dau AS start_date,
                DATE_FORMAT(lh.ngay_bat_dau, '%d/%m/%Y') AS `from`,
                DATE_FORMAT(lh.ngay_ket_thuc, '%d/%m/%Y') AS `to`,
-               lh.trang_thai AS status, lh.trinh_do AS level, lh.mo_ta AS `desc`
+               lh.trang_thai AS status, lh.trinh_do AS level,
+               lh.goi_tap_toi_thieu AS required_package, lh.mo_ta AS `desc`
         FROM lop_hoc lh
         JOIN giao_vien gv ON gv.id = lh.giao_vien_id
         WHERE lh.deleted_at IS NULL
@@ -59,7 +61,7 @@ function data_classes(): array
 function data_packages(): array
 {
     $sql = "
-        SELECT gt.id, gt.ten_goi AS name, gt.thoi_han_ngay AS days, gt.gia AS price,
+        SELECT gt.id, gt.ten_goi AS name, gt.thoi_han_ngay AS days, gt.gia AS price, gt.cap_do AS level,
                (SELECT COUNT(*) FROM dang_ky_goi d
                  WHERE d.goi_tap_id = gt.id AND d.trang_thai = 'da_thanh_toan') AS sold,
                gt.trang_thai AS status, gt.mo_ta AS `desc`

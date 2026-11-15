@@ -36,13 +36,11 @@
         submit.disabled = true;
 
         try {
+            const formData = new FormData(form);
             const response = await fetch(form.dataset.loginUrl, {
                 method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ten_dang_nhap: username.value.trim(),
-                    mat_khau: password.value
-                }),
+                headers: { 'Accept': 'application/json' },
+                body: formData,
                 credentials: 'same-origin'
             });
 

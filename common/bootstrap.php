@@ -47,6 +47,21 @@ function common_user(): ?array
         unset($_SESSION['tai_khoan_id']);
         return null;
     }
+    if ($user['vai_tro'] === 'instructor') {
+        $stmt = common_db()->prepare(
+            'SELECT id FROM giao_vien
+              WHERE tai_khoan_id = ? AND trang_thai = "dang_lam" AND deleted_at IS NULL
+              LIMIT 1'
+        );
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $instructor = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$instructor) {
+            unset($_SESSION['tai_khoan_id']);
+            return null;
+        }
+    }
     return $user;
 }
 
@@ -62,4 +77,16 @@ function require_role(string $role): array
         exit;
     }
 return $user;
+}
+
+function require_api_role(string $role): array
+{
+    $user = common_user();
+    if (!$user) {
+        json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
+    }
+    if ($user['vai_tro'] !== $role) {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+    return $user;
 }

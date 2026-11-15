@@ -32,7 +32,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => true, 'message' => 'Đã tạo đăng ký gói.'], 201);
     }
 
-    if ($action === 'confirm-package' || $action === 'cancel-package' || $action === 'cancel-class') {
+    if ($action === 'confirm-package' || $action === 'cancel-package') {
         if ($id <= 0) {
             json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
         }
@@ -48,11 +48,6 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => true, 'message' => 'Đã hủy đăng ký gói.']);
     }
 
-    if ($action === 'cancel-class') {
-        admin_class_registration_cancel($id);
-        json_response(['success' => true, 'message' => 'Đã hủy đăng ký lớp.']);
-    }
-
     json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
 }
 
@@ -62,23 +57,15 @@ $menu = require __DIR__ . '/../common/menus/admin.php';
 
 $appRole = 'admin';
 $activeMenu = 'registrations';
-$pageTitle = 'Quản lý đăng ký';
+$pageTitle = 'Quản lý đăng ký gói';
 $pageScripts = [];
 
 $packageRegs = data_package_registrations();
-$classRegs = data_class_registrations();
 $packageId = trim((string) ($_GET['package_id'] ?? ''));
-$classId = trim((string) ($_GET['class_id'] ?? ''));
 $packageFilterId = preg_match('/^(?:DK-)?(\d+)$/i', $packageId, $packageMatch) ? $packageMatch[1] : '';
-$classFilterId = preg_match('/^(?:DL-)?(\d+)$/i', $classId, $classMatch) ? $classMatch[1] : '';
 if ($packageFilterId !== '') {
     $packageRegs = array_values(array_filter($packageRegs, static function (array $registration) use ($packageFilterId): bool {
         return (string) $registration['id'] === $packageFilterId;
-    }));
-}
-if ($classFilterId !== '') {
-    $classRegs = array_values(array_filter($classRegs, static function (array $registration) use ($classFilterId): bool {
-        return (string) $registration['id'] === $classFilterId;
     }));
 }
 $members = data_members();
@@ -93,12 +80,6 @@ foreach ($packageRegs as $reg) {
     }
     if ($reg['payment'] === 'chua_thanh_toan') {
         $pending++;
-    }
-}
-$cancelledClasses = 0;
-foreach ($classRegs as $reg) {
-    if ($reg['status'] === 'da_huy') {
-        $cancelledClasses++;
     }
 }
 
@@ -116,8 +97,8 @@ require $partials . '/head.php';
             <?php require $partials . '/flash.php'; ?>
 <div class="page-head">
     <div>
-        <h1>Quản lý đăng ký</h1>
-        <p>Đăng ký gói tập, lớp học và xác nhận thanh toán.</p>
+        <h1>Quản lý đăng ký gói</h1>
+        <p>Quản lý đăng ký gói tập và xác nhận thanh toán.</p>
     </div>
     <div class="page-head-actions">
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#registrationFormModal"><?= icon('plus-lg') ?> Tạo đăng ký</button>
@@ -146,20 +127,12 @@ require $partials . '/head.php';
             <div class="stat-foot">Doanh thu <?= e(money($paidRevenue)) ?></div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Đăng ký lớp</div>
-            <div class="stat-value"><?= count($classRegs) ?></div>
-            <div class="stat-foot"><?= $cancelledClasses ?> đăng ký đã hủy</div>
-        </div>
-    </div>
 </div>
 
 <div class="app-card">
     <div class="app-card-header pb-0" style="border-bottom:none;">
         <ul class="nav nav-tabs app-tabs w-100" role="tablist">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#reg-packages" type="button" role="tab" aria-selected="true">Đăng ký gói <span class="count"><?= count($packageRegs) ?></span></button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#reg-classes" type="button" role="tab" aria-selected="false">Đăng ký lớp <span class="count"><?= count($classRegs) ?></span></button></li>
         </ul>
     </div>
 
@@ -216,42 +189,6 @@ require $partials . '/head.php';
             <?= pagination(count($packageRegs), 1, 10, 'đăng ký') ?>
         </div>
 
-        <div class="tab-pane fade" id="reg-classes" role="tabpanel" tabindex="0">
-            <form class="table-toolbar" method="get" action="<?= e(url('/admin/registrations')) ?>">
-                <input class="form-control toolbar-search" name="class_id" type="search" inputmode="numeric" value="<?= e($classId) ?>" placeholder="Nhập mã đăng ký, VD: 1" aria-label="Tìm theo mã đăng ký">
-                <button class="btn btn-primary" type="submit"><?= icon('funnel') ?> Lọc</button>
-                <a class="btn btn-ghost" href="<?= e(url('/admin/registrations')) ?>">Xóa lọc</a>
-            </form>
-            <div class="app-table-wrap">
-                <table class="app-table" id="class-regs-table">
-                    <thead>
-                        <tr><th>Mã</th><th>Hội viên</th><th>Lớp học</th><th>Ngày đăng ký</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($classRegs as $reg): ?>
-                            <tr data-row>
-                                <td class="cell-strong">DL-<?= e((string) $reg['id']) ?></td>
-                                <td><?= e($reg['member']) ?></td>
-                                <td><?= e($reg['class']) ?></td>
-                                <td class="text-muted-2"><?= e($reg['registered']) ?></td>
-                                <td><?= status_badge($reg['status']) ?></td>
-                                <td class="cell-actions">
-                                    <?php if ($reg['status'] === 'dang_ky'): ?>
-                                        <button class="btn btn-danger-soft btn-sm" type="button"
-                                                data-reg-action="cancel-class"
-                                                data-reg-id="<?= (int) $reg['id'] ?>"
-                                                data-reg-confirm="Hủy đăng ký lớp <?= e($reg['class']) ?> của <?= e($reg['member']) ?>?">Hủy</button>
-                                    <?php else: ?>
-                                        <button class="btn btn-ghost btn-sm" type="button" disabled>—</button>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <?= pagination(count($classRegs), 1, 10, 'đăng ký lớp') ?>
-        </div>
     </div>
 </div>
 

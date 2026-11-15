@@ -10,10 +10,11 @@ $pageTitle = 'Lịch sử đã dạy';
 $pageScripts = [];
 
 $today = new DateTimeImmutable('today');
-$instructorName = data_current_instructor_name();
+$instructor = data_current_instructor();
+$instructorId = (int) ($instructor['id'] ?? 0);
 $history = [];
 foreach (data_classes() as $class) {
-    if ($class['instructor'] !== $instructorName) {
+    if ((int) $class['giao_vien_id'] !== $instructorId) {
         continue;
     }
 

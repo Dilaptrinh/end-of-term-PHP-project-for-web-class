@@ -6,16 +6,13 @@
     document.getElementById('register-form').addEventListener('submit', async function (event) {
         event.preventDefault();
 
-        var data = {};
-        new FormData(event.currentTarget).forEach(function (value, key) {
-            data[key] = value;
-        });
+        var formData = new FormData(event.currentTarget);
 
         try {
             var res = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(data),
+                headers: { 'Accept': 'application/json' },
+                body: formData,
                 credentials: 'same-origin'
             });
             var json = await res.json().catch(function () {

@@ -817,6 +817,16 @@ input, select, textarea { cursor: text; }
 .kv-list .kv span:first-child { color: var(--muted); }
 .kv-list .kv span:last-child { font-weight: 600; text-align: right; }
 
+.account-detail-hero {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: .85rem;
+    background: var(--surface-soft);
+}
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;

@@ -47,6 +47,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $days,
         (float) ($input['gia'] ?? 0),
         ($input['mo_ta'] ?? '') !== '' ? (string) $input['mo_ta'] : null,
+        (string) ($input['cap_do'] ?? 'basic'),
         (string) ($input['trang_thai'] ?? 'dang_ban'),
     ];
     $savedId = admin_package_save($values, $id);
@@ -225,6 +226,14 @@ require $partials . '/head.php';
                         <div class="col-12">
                             <label class="form-label" for="pf-desc">Mô tả</label>
                             <textarea class="form-control" id="pf-desc" name="mo_ta" rows="3"></textarea>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" for="pf-level">Cấp độ gói</label>
+                            <select class="form-select" id="pf-level" name="cap_do">
+                                <option value="basic">Basic - Cơ bản</option>
+                                <option value="standard">Standard - Trung cấp</option>
+                                <option value="premium">Premium - Tất cả lớp</option>
+                            </select>
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="pf-status">Trạng thái</label>

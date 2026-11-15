@@ -16,11 +16,15 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     $status = $action === 'approve' ? 'dang_mo' : 'tu_choi';
     $room = trim((string) ($_POST['phong_hoc'] ?? ''));
+    $requiredPackage = trim((string) ($_POST['goi_tap_toi_thieu'] ?? 'basic'));
     if ($action === 'approve' && $room === '') {
         json_response(['success' => false, 'message' => 'Vui lòng nhập phòng học trước khi duyệt.'], 422);
     }
+    if (!in_array($requiredPackage, ['basic', 'standard', 'premium'], true)) {
+        json_response(['success' => false, 'message' => 'Gói tối thiểu không hợp lệ.'], 422);
+    }
 
-    $changed = admin_class_proposal_update($id, $status, $room);
+    $changed = admin_class_proposal_update($id, $status, $room, $requiredPackage);
     json_response([
         'success' => $changed,
         'message' => $changed ? ($action === 'approve' ? 'Đã duyệt đề xuất lớp.' : 'Đã từ chối đề xuất lớp.') : 'Không tìm thấy đề xuất đang chờ duyệt.',
@@ -50,13 +54,13 @@ require $partials . '/head.php';
                 <?php if (!$proposals): ?><tr><td colspan="6" class="text-center text-muted-2 py-4">Không có đề xuất đang chờ duyệt.</td></tr>
                 <?php else: foreach ($proposals as $proposal): ?>
                     <tr>
-                        <td class="cell-strong"><?= e($proposal['name']) ?><div class="cell-sub"><?= e($proposal['level']) ?></div></td>
+                        <td class="cell-strong"><?= e($proposal['name']) ?><div class="cell-sub"><?= e($proposal['level']) ?> · Gói <?= e(strtoupper($proposal['required_package'])) ?></div></td>
                         <td><?= e($proposal['instructor']) ?></td>
                         <td><?= e(weekday($proposal['weekday'])) ?><div class="cell-sub"><?= e($proposal['start'] . ' – ' . $proposal['end']) ?><br><?= e($proposal['from'] . ' - ' . $proposal['to']) ?></div></td>
                         <td><?= e($proposal['room']) ?></td>
                         <td><?= (int) $proposal['capacity'] ?></td>
                         <td class="cell-actions">
-                            <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>" data-proposal-room="<?= e($proposal['room']) ?>">Duyệt</button>
+                            <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>" data-proposal-room="<?= e($proposal['room']) ?>" data-proposal-package="<?= e($proposal['required_package']) ?>">Duyệt</button>
                             <button class="btn btn-danger-soft btn-sm" type="button" data-proposal-action="reject" data-proposal-id="<?= (int) $proposal['id'] ?>">Từ chối</button>
                         </td>
                     </tr>
@@ -73,10 +77,16 @@ document.addEventListener('click', async function (event) {
     if (!button) return;
     var action = button.dataset.proposalAction;
     var room = '';
+    var requiredPackage = 'basic';
     if (action === 'approve') {
         room = window.prompt('Nhập phòng học trước khi duyệt:', button.dataset.proposalRoom || '');
         if (room === null || room.trim() === '') {
             alert('Vui lòng nhập phòng học để duyệt đề xuất.');
+            return;
+        }
+        requiredPackage = window.prompt('Gói tối thiểu (basic, standard hoặc premium):', button.dataset.proposalPackage || 'basic');
+        if (requiredPackage === null || !['basic', 'standard', 'premium'].includes(requiredPackage.trim().toLowerCase())) {
+            alert('Vui lòng nhập đúng gói tối thiểu.');
             return;
         }
     }
@@ -85,6 +95,7 @@ document.addEventListener('click', async function (event) {
         var formData = new FormData();
         if (action === 'approve') {
             formData.append('phong_hoc', room.trim());
+            formData.append('goi_tap_toi_thieu', requiredPackage.trim().toLowerCase());
         }
         var response = await fetch(window.location.pathname + '?action=' + action + '&id=' + button.dataset.proposalId, {
             method: 'POST',

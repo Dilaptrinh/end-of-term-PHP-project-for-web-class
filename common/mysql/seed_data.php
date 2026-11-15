@@ -230,21 +230,14 @@ if (!function_exists('seed_core_data')) {
         }
 
         $packages = [
-            ['Basic 1 tháng', 30, 500000, 'Truy cập phòng gym, tủ đồ, phòng tắm trong 30 ngày.', 'dang_ban'],
-            ['Standard 3 tháng', 90, 1200000, 'Toàn bộ quyền lợi Basic + tham gia lớp nhóm không giới hạn.', 'dang_ban'],
-            ['Premium 6 tháng', 180, 2100000, 'Bao gồm Standard + 1 buổi PT/tháng và tư vấn dinh dưỡng.', 'dang_ban'],
-            ['PT 1-1 (10 buổi)', 30, 3000000, '10 buổi tập cá nhân cùng huấn luyện viên chuyên trách.', 'dang_ban'],
-            ['Basic 1 tháng (cũ)', 30, 450000, 'Gói đã ngừng bán, giữ lại cho lịch sử.', 'ngung_ban'],
-            ['Student 1 tháng', 30, 350000, 'Gói tiết kiệm dành cho học sinh, sinh viên.', 'dang_ban'],
-            ['Family 3 tháng', 90, 1800000, 'Gói tập phù hợp cho hai thành viên trong gia đình.', 'dang_ban'],
-            ['Yoga chuyên sâu 2 tháng', 60, 900000, 'Tập trung vào yoga, giãn cơ và cải thiện tư thế.', 'dang_ban'],
-            ['Gói trải nghiệm 7 ngày', 7, 150000, 'Làm quen phòng tập và các lớp nhóm trong 7 ngày.', 'dang_ban'],
-            ['PT 1-1 (cũ)', 30, 2500000, 'Gói PT cũ, chỉ dùng cho dữ liệu lịch sử.', 'ngung_ban'],
+            ['Basic 1 tháng', 30, 500000, 'Truy cập phòng gym, tủ đồ, phòng tắm trong 30 ngày.', 'basic', 'dang_ban'],
+            ['Standard 3 tháng', 90, 1200000, 'Toàn bộ quyền lợi Basic + tham gia lớp cơ bản và trung cấp.', 'standard', 'dang_ban'],
+            ['Premium 6 tháng', 180, 2100000, 'Bao gồm Standard và được tham gia mọi lớp.', 'premium', 'dang_ban'],
         ];
         if ((int) $conn->query('SELECT COUNT(*) AS c FROM goi_tap')->fetch_assoc()['c'] === 0) {
-            $stmt = $conn->prepare('INSERT INTO goi_tap (ten_goi, thoi_han_ngay, gia, mo_ta, trang_thai) VALUES (?, ?, ?, ?, ?)');
-            foreach ($packages as [$name, $days, $price, $description, $status]) {
-                $stmt->bind_param('siiss', $name, $days, $price, $description, $status);
+            $stmt = $conn->prepare('INSERT INTO goi_tap (ten_goi, thoi_han_ngay, gia, mo_ta, cap_do, trang_thai) VALUES (?, ?, ?, ?, ?, ?)');
+            foreach ($packages as [$name, $days, $price, $description, $level, $status]) {
+                $stmt->bind_param('siisss', $name, $days, $price, $description, $level, $status);
                 $stmt->execute();
             }
             $stmt->close();
@@ -267,8 +260,8 @@ if (!function_exists('seed_core_data')) {
             ['Functional Training', 5, 4, '19:00', '20:00', '2026-11-01', '2027-01-31', 15, 'Khu A', 'Trung cấp', 'Rèn sức mạnh và khả năng vận động trong đời sống.', 'dang_mo'],
             ['Boxing nâng cao', 6, 2, '17:00', '18:30', '2026-11-01', '2027-01-31', 12, 'Khu B', 'Nâng cao', 'Nâng cao kỹ thuật boxing và sức bền thi đấu.', 'dang_mo'],
             ['Thiền và hít thở', 7, 5, '08:00', '09:00', '2026-11-01', '2027-01-31', 20, 'P.102', 'Cơ bản', 'Thư giãn tinh thần, điều hòa hơi thở và giảm căng thẳng.', 'dang_mo'],
-            ['Yoga trị liệu', 2, 1, '09:00', '10:00', '2026-11-15', '2027-02-15', 10, 'P.101', 'Nâng cao', 'Lớp chuyên sâu đang chờ quản trị viên duyệt.', 'cho_duyet'],
-            ['Bootcamp cuối tuần', 7, 4, '16:00', '17:30', '2026-11-15', '2027-02-15', 25, 'Sân ngoài trời', 'Trung cấp', 'Luyện tập theo nhóm ngoài trời vào cuối tuần.', 'cho_duyet'],
+            ['Yoga trị liệu', 2, 1, '09:00', '10:00', '2026-11-15', '2027-02-15', 10, 'P.101', 'Nâng cao', 'Lớp chuyên sâu đã được admin duyệt, bắt đầu từ 15/11.', 'dang_mo'],
+            ['Bootcamp cuối tuần', 7, 4, '16:00', '17:30', '2026-11-15', '2027-02-15', 25, 'Sân ngoài trời', 'Trung cấp', 'Lớp ngoài trời đã được admin duyệt, bắt đầu từ 15/11.', 'dang_mo'],
             ['Yoga Morning (finished)', 2, 1, '06:30', '07:30', '2026-06-01', '2026-08-31', 20, 'P.101', 'Beginner', 'Yoga morning class finished.', 'da_dong'],
             ['Pilates Basic (finished)', 4, 1, '18:00', '19:00', '2026-07-01', '2026-09-30', 18, 'P.103', 'Beginner', 'Pilates basic class finished.', 'da_dong'],
             ['HIIT Morning (finished)', 3, 2, '06:30', '07:30', '2026-06-15', '2026-09-15', 16, 'P.202', 'Intermediate', 'HIIT morning class finished.', 'da_dong'],
@@ -277,9 +270,10 @@ if (!function_exists('seed_core_data')) {
             ['Zumba Weekend (finished)', 7, 5, '09:00', '10:00', '2026-07-05', '2026-10-05', 25, 'P.101', 'Beginner', 'Zumba weekend class finished.', 'da_dong'],
         ];
         if ((int) $conn->query('SELECT COUNT(*) AS c FROM lop_hoc')->fetch_assoc()['c'] === 0) {
-            $stmt = $conn->prepare('INSERT INTO lop_hoc (ten_lop, thu_trong_tuan, giao_vien_id, gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc, suc_chua, phong_hoc, trinh_do, mo_ta, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $conn->prepare('INSERT INTO lop_hoc (ten_lop, thu_trong_tuan, giao_vien_id, gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc, suc_chua, phong_hoc, trinh_do, goi_tap_toi_thieu, mo_ta, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             foreach ($classes as [$name, $weekday, $instructorId, $start, $end, $from, $to, $capacity, $room, $level, $description, $status]) {
-                $stmt->bind_param('siissssissss', $name, $weekday, $instructorId, $start, $end, $from, $to, $capacity, $room, $level, $description, $status);
+                $requiredPackage = $level === 'Nâng cao' ? 'premium' : ($level === 'Trung cấp' ? 'standard' : 'basic');
+                $stmt->bind_param('siissssisssss', $name, $weekday, $instructorId, $start, $end, $from, $to, $capacity, $room, $level, $requiredPackage, $description, $status);
                 $stmt->execute();
             }
             $stmt->close();
@@ -292,14 +286,14 @@ if (!function_exists('seed_core_data')) {
                 [3, 3, '2026-07-05', '2027-01-05', 2100000, 'da_thanh_toan', 'Tiền mặt', '2026-07-05 16:40:00', 'admin'],
                 [4, 1, '2026-10-01', '2026-11-01', 500000, 'chua_thanh_toan', null, null, null],
                 [7, 3, '2026-09-22', '2027-03-22', 2100000, 'da_thanh_toan', 'Thẻ', '2026-09-22 10:05:00', 'admin'],
-                [8, 4, '2026-10-02', '2026-11-02', 3000000, 'da_thanh_toan', 'Chuyển khoản', '2026-10-02 14:22:00', 'admin'],
+                [8, 3, '2026-10-02', '2026-11-02', 2100000, 'da_thanh_toan', 'Chuyển khoản', '2026-10-02 14:22:00', 'admin'],
                 [6, 1, '2026-06-10', '2026-07-10', 500000, 'da_huy', null, null, null],
-                [9, 6, '2026-10-15', '2026-11-14', 350000, 'da_thanh_toan', 'Tiền mặt', '2026-10-15 08:30:00', 'admin'],
-                [10, 7, '2026-10-20', '2027-01-18', 1800000, 'da_thanh_toan', 'Chuyển khoản', '2026-10-20 11:10:00', 'admin'],
-                [11, 8, '2026-11-01', '2026-12-30', 900000, 'da_thanh_toan', 'Tiền mặt', '2026-11-01 09:00:00', 'admin'],
-                [12, 9, '2026-11-10', '2026-11-16', 150000, 'chua_thanh_toan', null, null, null],
+                [9, 1, '2026-10-15', '2026-11-14', 500000, 'da_thanh_toan', 'Tiền mặt', '2026-10-15 08:30:00', 'admin'],
+                [10, 2, '2026-10-20', '2027-01-18', 1200000, 'da_thanh_toan', 'Chuyển khoản', '2026-10-20 11:10:00', 'admin'],
+                [11, 3, '2026-11-01', '2026-12-30', 2100000, 'da_thanh_toan', 'Tiền mặt', '2026-11-01 09:00:00', 'admin'],
+                [12, 1, '2026-11-10', '2026-11-16', 500000, 'chua_thanh_toan', null, null, null],
                 [13, 2, '2026-08-01', '2026-10-30', 1200000, 'da_huy', null, null, null],
-                [14, 4, '2026-11-05', '2026-12-04', 3000000, 'chua_thanh_toan', null, null, null],
+                [14, 3, '2026-11-05', '2026-12-04', 2100000, 'chua_thanh_toan', null, null, null],
             ];
             $stmt = $conn->prepare('INSERT INTO dang_ky_goi (hoi_vien_id, goi_tap_id, ngay_bat_dau, ngay_ket_thuc, gia_tai_thoi_diem, trang_thai, phuong_thuc, ngay_thanh_toan, nhan_vien_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1))');
             foreach ($registrations as [$memberId, $packageId, $from, $to, $price, $status, $method, $paidAt, $staff]) {

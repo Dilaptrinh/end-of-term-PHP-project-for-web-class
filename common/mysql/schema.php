@@ -36,6 +36,7 @@ if (!function_exists('ensure_schema')) {
                 CONSTRAINT fk_giao_vien_tai_khoan FOREIGN KEY (tai_khoan_id) REFERENCES tai_khoan(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        $conn->query('ALTER TABLE giao_vien MODIFY sdt VARCHAR(15) NOT NULL, MODIFY email VARCHAR(100) NOT NULL');
 
         $conn->query("
             CREATE TABLE IF NOT EXISTS `chuyen_mon` (
@@ -78,6 +79,7 @@ if (!function_exists('ensure_schema')) {
                 CONSTRAINT fk_hoi_vien_tai_khoan FOREIGN KEY (tai_khoan_id) REFERENCES tai_khoan(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        $conn->query('ALTER TABLE hoi_vien MODIFY sdt VARCHAR(15) NOT NULL, MODIFY email VARCHAR(100) NOT NULL');
 
         $conn->query("
             CREATE TABLE IF NOT EXISTS `goi_tap` (
@@ -86,12 +88,17 @@ if (!function_exists('ensure_schema')) {
                 thoi_han_ngay INT NOT NULL,
                 gia           BIGINT NOT NULL,
                 mo_ta         TEXT NULL,
+                cap_do        VARCHAR(20) NOT NULL DEFAULT 'basic',
                 trang_thai    VARCHAR(20) NOT NULL DEFAULT 'dang_ban',
                 deleted_at    DATETIME NULL,
                 created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        $column = $conn->query("SHOW COLUMNS FROM goi_tap LIKE 'cap_do'");
+        if ($column && $column->num_rows === 0) {
+            $conn->query("ALTER TABLE goi_tap ADD COLUMN cap_do VARCHAR(20) NOT NULL DEFAULT 'basic' AFTER mo_ta");
+        }
 
         $conn->query("
             CREATE TABLE IF NOT EXISTS `lop_hoc` (
@@ -107,6 +114,7 @@ if (!function_exists('ensure_schema')) {
                 phong_hoc      VARCHAR(50) NULL,
                 mo_ta          TEXT NULL,
                 trinh_do       VARCHAR(50) NULL,
+                goi_tap_toi_thieu VARCHAR(20) NOT NULL DEFAULT 'basic',
                 trang_thai     VARCHAR(20) NOT NULL DEFAULT 'dang_mo',
                 deleted_at     DATETIME NULL,
                 created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -114,6 +122,10 @@ if (!function_exists('ensure_schema')) {
                 ,CONSTRAINT fk_lop_hoc_giao_vien FOREIGN KEY (giao_vien_id) REFERENCES giao_vien(id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        $column = $conn->query("SHOW COLUMNS FROM lop_hoc LIKE 'goi_tap_toi_thieu'");
+        if ($column && $column->num_rows === 0) {
+            $conn->query("ALTER TABLE lop_hoc ADD COLUMN goi_tap_toi_thieu VARCHAR(20) NOT NULL DEFAULT 'basic' AFTER trinh_do");
+        }
 
         $conn->query("
             CREATE TABLE IF NOT EXISTS `dang_ky_goi` (

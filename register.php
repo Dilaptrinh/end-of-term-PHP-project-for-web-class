@@ -2,10 +2,7 @@
 require __DIR__ . '/common/bootstrap.php';
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    $input = json_decode(file_get_contents('php://input') ?: '', true);
-    if (!is_array($input)) {
-        $input = $_POST;
-    }
+    $input = $_POST;
 
     $username = trim((string) ($input['ten_dang_nhap'] ?? ''));
     $password = (string) ($input['mat_khau'] ?? '');

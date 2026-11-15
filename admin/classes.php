@@ -57,6 +57,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         ($input['phong_hoc'] ?? '') !== '' ? (string) $input['phong_hoc'] : null,
         ($input['mo_ta'] ?? '') !== '' ? (string) $input['mo_ta'] : null,
         ($input['trinh_do'] ?? '') !== '' ? (string) $input['trinh_do'] : null,
+        (string) ($input['goi_tap_toi_thieu'] ?? 'basic'),
         (string) ($input['trang_thai'] ?? 'dang_mo'),
     ];
     $savedId = admin_class_save($values, $id);
@@ -205,8 +206,8 @@ require $partials . '/head.php';
                                            data-class-room="<?= e($class['room']) ?>"
                                            data-class-capacity="<?= e((string) $class['capacity']) ?>"
                                            data-class-level="<?= e($class['level']) ?>"
+                                           data-class-package="<?= e($class['required_package']) ?>"
                                            data-class-desc="<?= e($class['desc']) ?>"><?= icon('pencil') ?> Sửa lớp</a></li>
-                                    <li><a class="dropdown-item" href="<?= e(url('/admin/classes')) ?>"><?= icon('people') ?> Xem học viên</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" type="button"
                                                 data-delete-id="<?= (int) $class['id'] ?>"
@@ -246,6 +247,14 @@ require $partials . '/head.php';
                                 <option>Trung cấp</option>
                                 <option>Nâng cao</option>
                                 <option>Mọi trình độ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="cf-package">Gói tối thiểu</label>
+                            <select class="form-select" id="cf-package" name="goi_tap_toi_thieu" data-field="package">
+                                <option value="basic">Basic</option>
+                                <option value="standard">Standard</option>
+                                <option value="premium">Premium</option>
                             </select>
                         </div>
                         <div class="col-md-6">

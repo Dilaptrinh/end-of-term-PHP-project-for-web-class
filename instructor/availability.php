@@ -28,12 +28,16 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $to = trim((string) ($input['ngay_ket_thuc'] ?? ''));
     $capacity = (int) ($input['suc_chua'] ?? 0);
     $level = trim((string) ($input['trinh_do'] ?? ''));
+    $requiredPackage = trim((string) ($input['goi_tap_toi_thieu'] ?? 'basic'));
 
     if ($name === '' || $weekday < 1 || $weekday > 7 || $start === '' || $end === '' || $from === '' || $to === '' || $capacity < 1) {
         json_response(['success' => false, 'message' => 'Vui lòng nhập đầy đủ thông tin đề xuất lớp.'], 422);
     }
     if (!in_array($level, ['Cơ bản', 'Mọi trình độ', 'Nâng cao'], true)) {
         json_response(['success' => false, 'message' => 'Trình độ lớp không hợp lệ.'], 422);
+    }
+    if (!in_array($requiredPackage, ['basic', 'standard', 'premium'], true)) {
+        json_response(['success' => false, 'message' => 'Gói tối thiểu không hợp lệ.'], 422);
     }
     if ($start >= $end || $from > $to) {
         json_response(['success' => false, 'message' => 'Thời gian lớp học không hợp lệ.'], 422);
@@ -59,10 +63,10 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $description = null;
     $stmt = $db->prepare(
         'INSERT INTO lop_hoc
-            (ten_lop, giao_vien_id, thu_trong_tuan, gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc, suc_chua, phong_hoc, mo_ta, trinh_do, trang_thai)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "cho_duyet")'
+            (ten_lop, giao_vien_id, thu_trong_tuan, gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc, suc_chua, phong_hoc, mo_ta, trinh_do, goi_tap_toi_thieu, trang_thai)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "cho_duyet")'
     );
-    $stmt->bind_param('siissssisss', $name, $instructorId, $weekday, $start, $end, $from, $to, $capacity, $room, $description, $level);
+    $stmt->bind_param('siissssissss', $name, $instructorId, $weekday, $start, $end, $from, $to, $capacity, $room, $description, $level, $requiredPackage);
     $stmt->execute();
     $stmt->close();
 
@@ -146,6 +150,14 @@ require $partials . '/head.php';
                                         <option value="Nâng cao">Nâng cao</option>
                                     </select>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="proposal-package">Gói tối thiểu <span class="req">*</span></label>
+                                    <select class="form-select" id="proposal-package" required>
+                                        <option value="basic">Basic - Lớp cơ bản</option>
+                                        <option value="standard">Standard - Lớp phổ thông</option>
+                                        <option value="premium">Premium - Lớp chuyên sâu</option>
+                                    </select>
+                                </div>
                                 <button class="btn btn-primary" type="submit"><?= icon('send') ?> Gửi đề xuất</button>
                             </form>
                         </div>
@@ -175,6 +187,7 @@ document.getElementById('class-proposal-form').addEventListener('submit', async 
     formData.append('ngay_ket_thuc', document.getElementById('proposal-to').value);
     formData.append('suc_chua', document.getElementById('proposal-capacity').value);
     formData.append('trinh_do', document.getElementById('proposal-level').value);
+    formData.append('goi_tap_toi_thieu', document.getElementById('proposal-package').value);
     try {
         var response = await fetch(window.location.pathname, { method: 'POST', headers: {'Accept': 'application/json'}, body: formData, credentials: 'same-origin' });
         var result = await response.json();

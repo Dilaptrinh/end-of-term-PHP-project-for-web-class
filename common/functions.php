@@ -62,3 +62,18 @@ function e(mixed $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
+
+function post_string(string $key, string $default = ''): string
+{
+    return trim((string) ($_POST[$key] ?? $default));
+}
+
+function post_int(string $key, int $default = 0): int
+{
+    return (int) ($_POST[$key] ?? $default);
+}
+
+function post_array(string $key): array
+{
+    return is_array($_POST[$key] ?? null) ? $_POST[$key] : [];
+}

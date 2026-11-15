@@ -46,7 +46,7 @@ function data_current_member(): array
     }
 
     $package = $conn->prepare(
-        'SELECT gt.ten_goi, DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS het_han
+        'SELECT gt.ten_goi, gt.cap_do, DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS het_han
            FROM dang_ky_goi d JOIN goi_tap gt ON gt.id = d.goi_tap_id
           WHERE d.hoi_vien_id = ? AND d.trang_thai = "da_thanh_toan"
             AND d.ngay_bat_dau <= CURDATE() AND d.ngay_ket_thuc >= CURDATE()
@@ -58,6 +58,7 @@ function data_current_member(): array
     $package->close();
 
     $row['package'] = $pkg['ten_goi'] ?? '—';
+    $row['package_level'] = $pkg['cap_do'] ?? 'basic';
     $row['package_expiry'] = $pkg['het_han'] ?? '—';
     return $row;
 }

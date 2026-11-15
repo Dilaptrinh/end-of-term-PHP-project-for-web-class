@@ -1,5 +1,33 @@
 <?php
 
+function admin_account_update_name(int $accountId, string $name): bool
+{
+    $stmt = common_db()->prepare('UPDATE tai_khoan SET ho_ten = ? WHERE id = ? AND vai_tro = "admin"');
+    $stmt->bind_param('si', $name, $accountId);
+    $stmt->execute();
+    $stmt->close();
+    return true;
+}
+
+function admin_account_password_hash(int $accountId): ?string
+{
+    $stmt = common_db()->prepare('SELECT mat_khau FROM tai_khoan WHERE id = ? AND vai_tro = "admin" LIMIT 1');
+    $stmt->bind_param('i', $accountId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $row ? (string) $row['mat_khau'] : null;
+}
+
+function admin_account_update_password(int $accountId, string $passwordHash): bool
+{
+    $stmt = common_db()->prepare('UPDATE tai_khoan SET mat_khau = ? WHERE id = ? AND vai_tro = "admin"');
+    $stmt->bind_param('si', $passwordHash, $accountId);
+    $stmt->execute();
+    $stmt->close();
+    return true;
+}
+
 function admin_username_exists(string $username): bool
 {
     $stmt = common_db()->prepare('SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
@@ -10,11 +38,11 @@ function admin_username_exists(string $username): bool
     return (bool) $row;
 }
 
-function admin_class_proposal_update(int $id, string $status, string $room = ''): bool
+function admin_class_proposal_update(int $id, string $status, string $room = '', string $requiredPackage = 'basic'): bool
 {
     if ($status === 'dang_mo') {
-        $stmt = common_db()->prepare('UPDATE lop_hoc SET phong_hoc = ?, trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
-        $stmt->bind_param('ssi', $room, $status, $id);
+        $stmt = common_db()->prepare('UPDATE lop_hoc SET phong_hoc = ?, goi_tap_toi_thieu = ?, trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
+        $stmt->bind_param('sssi', $room, $requiredPackage, $status, $id);
     } else {
         $stmt = common_db()->prepare('UPDATE lop_hoc SET trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
         $stmt->bind_param('si', $status, $id);
@@ -28,12 +56,12 @@ function admin_class_proposal_update(int $id, string $status, string $room = '')
 function admin_class_save(array $values, int $id = 0): int
 {
     $db = common_db();
-    $columns = 'ten_lop,giao_vien_id,thu_trong_tuan,gio_bat_dau,gio_ket_thuc,ngay_bat_dau,ngay_ket_thuc,suc_chua,phong_hoc,mo_ta,trinh_do,trang_thai';
+    $columns = 'ten_lop,giao_vien_id,thu_trong_tuan,gio_bat_dau,gio_ket_thuc,ngay_bat_dau,ngay_ket_thuc,suc_chua,phong_hoc,mo_ta,trinh_do,goi_tap_toi_thieu,trang_thai';
 
     if ($id === 0) {
         $marks = implode(',', array_fill(0, count($values), '?'));
         $stmt = $db->prepare("INSERT INTO lop_hoc ($columns) VALUES ($marks)");
-        $stmt->bind_param('siissssissss', ...$values);
+        $stmt->bind_param('siissssisssss', ...$values);
         $stmt->execute();
         $newId = $stmt->insert_id;
         $stmt->close();
@@ -56,7 +84,7 @@ function admin_class_save(array $values, int $id = 0): int
     }
     $sets = implode(',', $setParts);
     $stmt = $db->prepare("UPDATE lop_hoc SET $sets WHERE id = ?");
-    $stmt->bind_param('siissssissssi', ...$values);
+    $stmt->bind_param('siissssisssssi', ...$values);
     $stmt->execute();
     $stmt->close();
     return $id;
@@ -122,11 +150,11 @@ function admin_member_delete(int $id): bool
 function admin_package_save(array $values, int $id = 0): int
 {
     $db = common_db();
-    $columns = 'ten_goi,thoi_han_ngay,gia,mo_ta,trang_thai';
+    $columns = 'ten_goi,thoi_han_ngay,gia,mo_ta,cap_do,trang_thai';
 
     if ($id === 0) {
-        $stmt = $db->prepare("INSERT INTO goi_tap ($columns) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param('sidss', ...$values);
+        $stmt = $db->prepare("INSERT INTO goi_tap ($columns) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param('sidsss', ...$values);
         $stmt->execute();
         $newId = $stmt->insert_id;
         $stmt->close();
@@ -143,8 +171,8 @@ function admin_package_save(array $values, int $id = 0): int
     }
 
     $values[] = $id;
-    $stmt = $db->prepare('UPDATE goi_tap SET ten_goi = ?, thoi_han_ngay = ?, gia = ?, mo_ta = ?, trang_thai = ? WHERE id = ?');
-    $stmt->bind_param('sidssi', ...$values);
+    $stmt = $db->prepare('UPDATE goi_tap SET ten_goi = ?, thoi_han_ngay = ?, gia = ?, mo_ta = ?, cap_do = ?, trang_thai = ? WHERE id = ?');
+    $stmt->bind_param('sidsssi', ...$values);
     $stmt->execute();
     $stmt->close();
     return $id;
@@ -272,6 +300,114 @@ function admin_account_find(int $id): ?array
     return $row;
 }
 
+function admin_account_detail(int $id): ?array
+{
+    $stmt = common_db()->prepare(
+        'SELECT tk.id, tk.ten_dang_nhap, tk.ho_ten, tk.vai_tro, tk.trang_thai, tk.created_at,
+                COALESCE(gv.sdt, hv.sdt, "") AS sdt,
+                COALESCE(gv.email, hv.email, "") AS email,
+                COALESCE(GROUP_CONCAT(DISTINCT cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR " · "), "") AS specialty,
+                COALESCE(GROUP_CONCAT(DISTINCT cm.id ORDER BY cm.id), "") AS specialty_ids,
+                gv.gioi_thieu,
+                gv.trang_thai AS instructor_status,
+                hv.gioi_tinh, hv.ngay_sinh, hv.dia_chi, hv.muc_tieu,
+                hv.chieu_cao, hv.can_nang
+           FROM tai_khoan tk
+           LEFT JOIN giao_vien gv ON gv.tai_khoan_id = tk.id AND gv.deleted_at IS NULL
+           LEFT JOIN giao_vien_chuyen_mon gvcm ON gvcm.giao_vien_id = gv.id
+           LEFT JOIN chuyen_mon cm ON cm.id = gvcm.chuyen_mon_id AND cm.trang_thai = 1
+           LEFT JOIN hoi_vien hv ON hv.tai_khoan_id = tk.id AND hv.deleted_at IS NULL
+          WHERE tk.id = ?
+          GROUP BY tk.id
+          LIMIT 1'
+    );
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc() ?: null;
+    $stmt->close();
+    return $row;
+}
+
+function admin_account_update_details(int $id, string $name, string $phone, string $email, int $active, ?string $birth, ?string $address, ?string $goal, ?string $height, ?string $weight, ?string $intro, array $specialtyIds): bool
+{
+    $db = common_db();
+    $stmt = $db->prepare('UPDATE tai_khoan SET ho_ten = ?, trang_thai = ? WHERE id = ?');
+    $stmt->bind_param('sii', $name, $active, $id);
+    $stmt->execute();
+    $changed = $stmt->affected_rows;
+    $stmt->close();
+
+    $stmt = $db->prepare('UPDATE giao_vien SET ho_ten = ?, sdt = ?, email = ?, gioi_thieu = ? WHERE tai_khoan_id = ?');
+    $stmt->bind_param('ssssi', $name, $phone, $email, $intro, $id);
+    $stmt->execute();
+    $changed = max($changed, $stmt->affected_rows);
+    $stmt->close();
+
+    $stmt = $db->prepare(
+        'UPDATE hoi_vien SET ho_ten = ?, sdt = ?, email = ?, ngay_sinh = ?, dia_chi = ?, muc_tieu = ?, chieu_cao = ?, can_nang = ?
+          WHERE tai_khoan_id = ?'
+    );
+    $stmt->bind_param('ssssssssi', $name, $phone, $email, $birth, $address, $goal, $height, $weight, $id);
+    $stmt->execute();
+    $changed = max($changed, $stmt->affected_rows);
+    $stmt->close();
+
+    $stmt = $db->prepare('SELECT id FROM giao_vien WHERE tai_khoan_id = ? AND deleted_at IS NULL LIMIT 1');
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $instructor = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($instructor) {
+        admin_instructor_sync_specialties((int) $instructor['id'], $specialtyIds);
+    }
+
+    return $changed > 0;
+}
+
+function admin_account_create(string $username, string $password, string $name, string $role, string $phone, string $email): int
+{
+    $db = common_db();
+    $db->begin_transaction();
+
+    try {
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $db->prepare(
+            'INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, ho_ten, vai_tro, trang_thai)
+             VALUES (?, ?, ?, ?, 1)'
+        );
+        $stmt->bind_param('ssss', $username, $hash, $name, $role);
+        $stmt->execute();
+        $accountId = $stmt->insert_id;
+        $stmt->close();
+
+        if ($role === 'instructor') {
+            $status = 'dang_lam';
+            $stmt = $db->prepare(
+                'INSERT INTO giao_vien (tai_khoan_id, ho_ten, sdt, email, trang_thai)
+                 VALUES (?, ?, ?, ?, ?)'
+            );
+            $stmt->bind_param('issss', $accountId, $name, $phone, $email, $status);
+            $stmt->execute();
+            $stmt->close();
+        } elseif ($role === 'customer') {
+            $gender = 'khac';
+            $stmt = $db->prepare(
+                'INSERT INTO hoi_vien (tai_khoan_id, ho_ten, sdt, email, gioi_tinh, trang_thai)
+                 VALUES (?, ?, ?, ?, ?, "hoat_dong")'
+            );
+            $stmt->bind_param('issss', $accountId, $name, $phone, $email, $gender);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        $db->commit();
+        return $accountId;
+    } catch (Throwable $error) {
+        $db->rollback();
+        throw $error;
+    }
+}
+
 function admin_account_save(string $username, string $name, string $role, string $password, int $active, int $id = 0): int
 {
     $db = common_db();
@@ -304,7 +440,7 @@ function admin_account_save(string $username, string $name, string $role, string
 
 function admin_account_status(int $id, int $active): bool
 {
-    $stmt = common_db()->prepare('UPDATE tai_khoan SET trang_thai = ? WHERE id = ?');
+    $stmt = common_db()->prepare('UPDATE tai_khoan SET trang_thai = ? WHERE id = ? AND vai_tro <> "admin"');
     $stmt->bind_param('ii', $active, $id);
     $stmt->execute();
     $changed = $stmt->affected_rows;
