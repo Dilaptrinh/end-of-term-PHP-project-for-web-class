@@ -4,7 +4,6 @@
     var endpoint = window.location.pathname;
     var modal = document.getElementById('packageFormModal');
     var form = document.getElementById('package-form');
-    var registrationForm = document.getElementById('registration-form');
     if (!modal || !form) return;
 
     var title = document.getElementById('packageFormTitle');
@@ -90,48 +89,4 @@
             alert(error.message);
         }
     });
-
-    document.addEventListener('click', async function (event) {
-        var button = event.target.closest('[data-reg-action]');
-        if (!button) return;
-
-        if (!confirm(button.dataset.regConfirm || 'Xác nhận thao tác?')) {
-            return;
-        }
-
-        try {
-            var res = await fetch(endpoint + '?action=' + button.dataset.regAction + '&id=' + button.dataset.regId, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json' },
-                credentials: 'same-origin'
-            });
-            var json = await res.json();
-            if (!res.ok || !json.success) throw new Error(json.message || 'Có lỗi xảy ra.');
-            alert(json.message);
-            location.reload();
-        } catch (error) {
-            alert(error.message);
-        }
-    });
-
-    if (registrationForm) {
-        registrationForm.addEventListener('submit', async function (event) {
-            event.preventDefault();
-
-            try {
-                var res = await fetch(endpoint + '?action=create-package', {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json' },
-                    body: new FormData(registrationForm),
-                    credentials: 'same-origin'
-                });
-                var json = await res.json();
-                if (!res.ok || !json.success) throw new Error(json.message || 'Có lỗi xảy ra.');
-                alert(json.message);
-                location.reload();
-            } catch (error) {
-                alert(error.message);
-            }
-        });
-    }
 })();
