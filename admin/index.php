@@ -72,7 +72,7 @@ require $partials . '/head.php';
         <p>Cập nhật lúc <?= e(date('d/m/Y H:i')) ?></p>
     </div>
     <div class="page-head-actions">
-        <a class="btn btn-primary" href="<?= e(url('/admin/registrations')) ?>"><?= icon('receipt') ?> Xem đăng ký</a>
+        <a class="btn btn-primary" href="<?= e(url('/admin/packages#package-registrations')) ?>"><?= icon('receipt') ?> Xem đăng ký</a>
     </div>
 </div>
 
@@ -135,7 +135,7 @@ require $partials . '/head.php';
                     <h2>Đăng ký gói chờ thanh toán</h2>
                     <p class="sub"><?= count($pendingPackages) ?> đăng ký cần xác nhận</p>
                 </div>
-                <a class="btn btn-ghost btn-sm ms-auto" href="<?= e(url('/admin/registrations')) ?>">Xem tất cả <?= icon('arrow-right') ?></a>
+                <a class="btn btn-ghost btn-sm ms-auto" href="<?= e(url('/admin/packages#package-registrations')) ?>">Xem tất cả <?= icon('arrow-right') ?></a>
             </div>
             <div class="app-table-wrap">
                 <table class="app-table">
