@@ -31,12 +31,24 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     $name = trim((string) ($input['ten_goi'] ?? ''));
     $days = (int) ($input['thoi_han_ngay'] ?? 0);
+    $price = (float) ($input['gia'] ?? 0);
+    $level = (string) ($input['cap_do'] ?? 'basic');
+    $status = (string) ($input['trang_thai'] ?? 'dang_ban');
     $errors = [];
     if (mb_strlen($name) < 2) {
         $errors['ten_goi'] = 'Tên gói không hợp lệ.';
     }
     if ($days < 1) {
         $errors['thoi_han_ngay'] = 'Thời hạn không hợp lệ.';
+    }
+    if ($price < 0) {
+        $errors['gia'] = 'Giá gói không hợp lệ.';
+    }
+    if (!in_array($level, ['basic', 'standard', 'premium'], true)) {
+        $errors['cap_do'] = 'Cấp độ gói không hợp lệ.';
+    }
+    if (!in_array($status, ['dang_ban', 'ngung_ban'], true)) {
+        $errors['trang_thai'] = 'Trạng thái gói không hợp lệ.';
     }
     if ($errors) {
         json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
@@ -45,10 +57,10 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $values = [
         $name,
         $days,
-        (float) ($input['gia'] ?? 0),
+        $price,
         ($input['mo_ta'] ?? '') !== '' ? (string) $input['mo_ta'] : null,
-        (string) ($input['cap_do'] ?? 'basic'),
-        (string) ($input['trang_thai'] ?? 'dang_ban'),
+        $level,
+        $status,
     ];
     $savedId = admin_package_save($values, $id);
 

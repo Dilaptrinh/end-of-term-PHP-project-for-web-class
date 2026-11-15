@@ -117,10 +117,12 @@ require $partials . '/head.php';
                             <tr>
                                 <th>Học viên</th>
                                 <th>Điện thoại</th>
+                                <th>Email</th>
+                                <th>Ngày đăng ký</th>
                             </tr>
                         </thead>
                         <tbody id="class-students-list">
-                            <tr><td colspan="2" class="text-muted-2">Đang tải học viên…</td></tr>
+                            <tr><td colspan="4" class="text-muted-2">Đang tải học viên…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -140,5 +142,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/instructor/instructor-classes.js')) ?>?v=6"></script>
+<script src="<?= e(url('/common/assets/js/instructor/instructor-classes.js')) ?>?v=7"></script>
 <?php require $partials . '/foot.php'; ?>

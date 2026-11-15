@@ -100,6 +100,7 @@ $pageTitle = 'Quản lý tài khoản';
 $pageScripts = [];
 
 $specialties = data_specialties();
+$account = common_user();
 $instructor = data_current_instructor();
 $instructorCode = 'GV-' . str_pad((string) ($instructor['id'] ?? 0), 4, '0', STR_PAD_LEFT);
 
@@ -198,7 +199,7 @@ require $partials . '/head.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="ins-account">Tên đăng nhập</label>
-                            <input class="form-control" id="ins-account" type="text" value="thuha" disabled>
+                            <input class="form-control" id="ins-account" type="text" value="<?= e($account['ten_dang_nhap'] ?? '') ?>" disabled>
                             <div class="form-text">Liên hệ quản trị viên để thay đổi.</div>
                         </div>
                         <div class="col-md-6">

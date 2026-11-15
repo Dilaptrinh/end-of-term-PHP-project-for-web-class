@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * mysql/seed_data.php
  * ------------------------------------------------------------------
@@ -268,6 +268,11 @@ if (!function_exists('seed_core_data')) {
             ['Cardio Light (finished)', 6, 3, '08:30', '09:30', '2026-07-01', '2026-10-15', 22, 'P.103', 'Beginner', 'Cardio light class finished.', 'da_dong'],
             ['Strength Basic (finished)', 5, 4, '17:00', '18:00', '2026-06-01', '2026-09-30', 14, 'Khu A', 'Beginner', 'Strength basic class finished.', 'da_dong'],
             ['Zumba Weekend (finished)', 7, 5, '09:00', '10:00', '2026-07-05', '2026-10-05', 25, 'P.101', 'Beginner', 'Zumba weekend class finished.', 'da_dong'],
+            ['Yoga phục hồi', 2, 1, '07:00', '08:00', '2026-12-01', '2027-02-28', 15, null, 'Cơ bản', 'Lớp yoga nhẹ giúp phục hồi cơ thể và giảm căng thẳng.', 'cho_duyet'],
+            ['HIIT bùng nổ', 4, 2, '18:00', '19:00', '2026-12-01', '2027-02-28', 18, null, 'Nâng cao', 'Bài HIIT cường độ cao, đốt mỡ và tăng sức bền.', 'cho_duyet'],
+            ['Pilates core', 6, 3, '09:00', '10:00', '2026-12-05', '2027-03-05', 16, null, 'Cơ bản', 'Tăng sức mạnh vùng core và cải thiện tư thế.', 'cho_duyet'],
+            ['Gym sức mạnh', 3, 4, '17:30', '18:30', '2026-12-02', '2027-02-28', 20, null, 'Nâng cao', 'Giáo án sức mạnh toàn thân với tạ và bài tập bổ trợ.', 'cho_duyet'],
+            ['Zumba năng lượng', 5, 5, '19:00', '20:00', '2026-12-04', '2027-03-04', 25, null, 'Mọi trình độ', 'Lớp Zumba sôi động kết hợp vũ đạo Latin và cardio.', 'cho_duyet'],
         ];
         if ((int) $conn->query('SELECT COUNT(*) AS c FROM lop_hoc')->fetch_assoc()['c'] === 0) {
             $stmt = $conn->prepare('INSERT INTO lop_hoc (ten_lop, thu_trong_tuan, giao_vien_id, gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc, suc_chua, phong_hoc, trinh_do, goi_tap_toi_thieu, mo_ta, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');

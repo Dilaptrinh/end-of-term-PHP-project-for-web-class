@@ -100,6 +100,52 @@ function admin_class_delete(int $id): bool
     return $changed > 0;
 }
 
+function admin_class_detail(int $id): ?array
+{
+    $stmt = common_db()->prepare(
+        'SELECT lh.id, lh.ten_lop AS name, gv.ho_ten AS instructor, lh.giao_vien_id,
+                lh.thu_trong_tuan AS weekday,
+                TIME_FORMAT(lh.gio_bat_dau, "%H:%i") AS start,
+                TIME_FORMAT(lh.gio_ket_thuc, "%H:%i") AS end,
+                DATE_FORMAT(lh.ngay_bat_dau, "%d/%m/%Y") AS `from`,
+                DATE_FORMAT(lh.ngay_ket_thuc, "%d/%m/%Y") AS `to`,
+                lh.phong_hoc AS room, lh.suc_chua AS capacity,
+                (SELECT COUNT(*) FROM dang_ky_lop d
+                  WHERE d.lop_hoc_id = lh.id AND d.trang_thai = "dang_ky") AS enrolled,
+                lh.trang_thai AS status, lh.trinh_do AS level,
+                lh.goi_tap_toi_thieu AS required_package, lh.mo_ta AS `desc`
+           FROM lop_hoc lh
+           JOIN giao_vien gv ON gv.id = lh.giao_vien_id
+          WHERE lh.id = ? AND lh.deleted_at IS NULL
+          LIMIT 1'
+    );
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc() ?: null;
+    $stmt->close();
+    return $row ? view_cast_ints($row, ['id', 'giao_vien_id', 'weekday', 'capacity', 'enrolled']) : null;
+}
+
+function admin_class_members(int $classId): array
+{
+    $stmt = common_db()->prepare(
+        'SELECT dkl.id AS registration_id, hv.id AS member_id, hv.ho_ten AS name,
+                hv.sdt AS phone, hv.email, hv.gioi_tinh AS gender,
+                DATE_FORMAT(hv.ngay_sinh, "%d/%m/%Y") AS birth,
+                DATE_FORMAT(dkl.ngay_dang_ky, "%d/%m/%Y") AS registered,
+                dkl.trang_thai AS status, hv.trang_thai AS member_status
+           FROM dang_ky_lop dkl
+           JOIN hoi_vien hv ON hv.id = dkl.hoi_vien_id
+          WHERE dkl.lop_hoc_id = ? AND dkl.trang_thai = "dang_ky"
+          ORDER BY hv.ho_ten'
+    );
+    $stmt->bind_param('i', $classId);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return view_cast_ints($rows, ['registration_id', 'member_id']);
+}
+
 function admin_package_save(array $values, int $id = 0): int
 {
     $db = common_db();

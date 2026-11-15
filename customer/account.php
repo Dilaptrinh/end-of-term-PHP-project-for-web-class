@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require __DIR__ . '/../common/bootstrap.php';
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
@@ -17,6 +17,14 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $name = trim((string) ($input['ho_ten'] ?? ''));
         $phone = trim((string) ($input['sdt'] ?? ''));
         $email = trim((string) ($input['email'] ?? ''));
+        $birth = trim((string) ($input['ngay_sinh'] ?? '')) ?: null;
+        $gender = trim((string) ($input['gioi_tinh'] ?? ''));
+        $height = trim((string) ($input['chieu_cao'] ?? ''));
+        $weight = trim((string) ($input['can_nang'] ?? ''));
+        $goal = trim((string) ($input['muc_tieu'] ?? '')) ?: null;
+        $address = trim((string) ($input['dia_chi'] ?? '')) ?: null;
+        $note = trim((string) ($input['ghi_chu'] ?? '')) ?: null;
+
         $errors = [];
         if (mb_strlen($name) < 2) {
             $errors['ho_ten'] = 'Họ tên không hợp lệ.';
@@ -27,17 +35,51 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'Email không hợp lệ.';
         }
+        if ($birth !== null && !DateTime::createFromFormat('Y-m-d', $birth)) {
+            $errors['ngay_sinh'] = 'Ngày sinh không hợp lệ.';
+        }
+        if (!in_array($gender, ['', 'nam', 'nu', 'khac'], true)) {
+            $errors['gioi_tinh'] = 'Giới tính không hợp lệ.';
+        }
+        if ($height !== '' && (!is_numeric($height) || (float) $height < 50 || (float) $height > 250)) {
+            $errors['chieu_cao'] = 'Chiều cao phải từ 50 đến 250 cm.';
+        }
+        if ($weight !== '' && (!is_numeric($weight) || (float) $weight < 1 || (float) $weight > 500)) {
+            $errors['can_nang'] = 'Cân nặng phải từ 1 đến 500 kg.';
+        }
         if ($errors) {
             json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
         }
+
+        $genderValue = $gender !== '' ? $gender : null;
+        $heightValue = $height !== '' ? (float) $height : null;
+        $weightValue = $weight !== '' ? (float) $weight : null;
 
         $stmt = $db->prepare('UPDATE tai_khoan SET ho_ten = ? WHERE id = ?');
         $stmt->bind_param('si', $name, $accountId);
         $stmt->execute();
         $stmt->close();
 
-        $stmt = $db->prepare('UPDATE hoi_vien SET ho_ten = ?, sdt = ?, email = ? WHERE tai_khoan_id = ?');
-        $stmt->bind_param('sssi', $name, $phone, $email, $accountId);
+        $stmt = $db->prepare(
+            'UPDATE hoi_vien
+                SET ho_ten = ?, sdt = ?, email = ?, ngay_sinh = ?, gioi_tinh = ?,
+                    chieu_cao = ?, can_nang = ?, muc_tieu = ?, dia_chi = ?, ghi_chu = ?
+              WHERE tai_khoan_id = ?'
+        );
+        $stmt->bind_param(
+            'sssssddsssi',
+            $name,
+            $phone,
+            $email,
+            $birth,
+            $genderValue,
+            $heightValue,
+            $weightValue,
+            $goal,
+            $address,
+            $note,
+            $accountId
+        );
         $stmt->execute();
         $stmt->close();
 

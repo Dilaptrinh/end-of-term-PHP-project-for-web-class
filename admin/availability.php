@@ -57,7 +57,7 @@ require $partials . '/head.php';
                         <td class="cell-strong"><?= e($proposal['name']) ?><div class="cell-sub"><?= e($proposal['level']) ?> · Gói <?= e(strtoupper($proposal['required_package'])) ?></div></td>
                         <td><?= e($proposal['instructor']) ?></td>
                         <td><?= e(weekday($proposal['weekday'])) ?><div class="cell-sub"><?= e($proposal['start'] . ' – ' . $proposal['end']) ?><br><?= e($proposal['from'] . ' - ' . $proposal['to']) ?></div></td>
-                        <td><?= e($proposal['room']) ?></td>
+                        <td><?= e($proposal['room'] ?: 'Chưa xếp') ?></td>
                         <td><?= (int) $proposal['capacity'] ?></td>
                         <td class="cell-actions">
                             <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>" data-proposal-room="<?= e($proposal['room']) ?>" data-proposal-package="<?= e($proposal['required_package']) ?>">Duyệt</button>

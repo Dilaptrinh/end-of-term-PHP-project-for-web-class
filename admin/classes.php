@@ -41,24 +41,58 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if ((int) ($input['suc_chua'] ?? 0) < 1) {
         $errors['suc_chua'] = 'Sức chứa không hợp lệ.';
     }
+
+    $weekday = (int) ($input['thu_trong_tuan'] ?? 0);
+    if ($weekday < 1 || $weekday > 7) {
+        $errors['thu_trong_tuan'] = 'Thứ trong tuần không hợp lệ.';
+    }
+    $startTime = (string) ($input['gio_bat_dau'] ?? '');
+    $endTime = (string) ($input['gio_ket_thuc'] ?? '');
+    if ($startTime !== '' && $endTime !== '' && $startTime >= $endTime) {
+        $errors['gio_ket_thuc'] = 'Giờ kết thúc phải sau giờ bắt đầu.';
+    }
+    $startDateValue = (string) ($input['ngay_bat_dau'] ?? '');
+    $endDateValue = (string) ($input['ngay_ket_thuc'] ?? '');
+    if ($startDateValue !== '' && $endDateValue !== '' && $startDateValue > $endDateValue) {
+        $errors['ngay_ket_thuc'] = 'Ngày kết thúc phải sau ngày bắt đầu.';
+    }
+    $requiredPackage = (string) ($input['goi_tap_toi_thieu'] ?? 'basic');
+    if (!in_array($requiredPackage, ['basic', 'standard', 'premium'], true)) {
+        $errors['goi_tap_toi_thieu'] = 'Gói tối thiểu không hợp lệ.';
+    }
+    $statusValue = (string) ($input['trang_thai'] ?? 'dang_mo');
+    if (!in_array($statusValue, ['dang_mo', 'cho_duyet', 'tu_choi', 'da_dong'], true)) {
+        $errors['trang_thai'] = 'Trạng thái lớp không hợp lệ.';
+    }
+
+    $teacherStmt = $db->prepare('SELECT id FROM giao_vien WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $teacherId = (int) ($input['giao_vien_id'] ?? 0);
+    $teacherStmt->bind_param('i', $teacherId);
+    $teacherStmt->execute();
+    $teacherExists = $teacherStmt->get_result()->fetch_assoc();
+    $teacherStmt->close();
+    if (!$teacherExists) {
+        $errors['giao_vien_id'] = 'Giáo viên không tồn tại.';
+    }
+
     if ($errors) {
         json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
     }
 
     $values = [
         trim((string) $input['ten_lop']),
-        (int) $input['giao_vien_id'],
-        (int) ($input['thu_trong_tuan'] ?? 1),
-        (string) $input['gio_bat_dau'],
-        (string) $input['gio_ket_thuc'],
-        (string) $input['ngay_bat_dau'],
-        (string) $input['ngay_ket_thuc'],
+        $teacherId,
+        $weekday,
+        $startTime,
+        $endTime,
+        $startDateValue,
+        $endDateValue,
         (int) $input['suc_chua'],
         ($input['phong_hoc'] ?? '') !== '' ? (string) $input['phong_hoc'] : null,
         ($input['mo_ta'] ?? '') !== '' ? (string) $input['mo_ta'] : null,
         ($input['trinh_do'] ?? '') !== '' ? (string) $input['trinh_do'] : null,
-        (string) ($input['goi_tap_toi_thieu'] ?? 'basic'),
-        (string) ($input['trang_thai'] ?? 'dang_mo'),
+        $requiredPackage,
+        $statusValue,
     ];
     $savedId = admin_class_save($values, $id);
 
@@ -70,6 +104,27 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     json_response(['success' => true, 'message' => 'Đã cập nhật lớp học.']);
+}
+
+$requestAction = (string) ($_GET['action'] ?? '');
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'members') {
+    $user = common_user();
+    if (!$user || $user['vai_tro'] !== 'admin') {
+        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+    }
+
+    $detail = admin_class_detail((int) ($_GET['id'] ?? 0));
+    if (!$detail) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy lớp học.'], 404);
+    }
+
+    json_response([
+        'success' => true,
+        'data' => [
+            'class' => $detail,
+            'members' => admin_class_members((int) $detail['id']),
+        ],
+    ]);
 }
 
 require_role('admin');
@@ -195,6 +250,10 @@ require $partials . '/head.php';
                             <div class="dropdown">
                                 <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" aria-label="Thao tác"><?= icon('three-dots') ?></button>
                                 <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#classDetailModal"
+                                                data-class-id="<?= (int) $class['id'] ?>"
+                                                data-class-name="<?= e($class['name']) ?>"><?= icon('info-circle') ?> Xem chi tiết</button></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="<?= e(url('/admin/classes')) ?>" data-bs-toggle="modal" data-bs-target="#classFormModal"
                                         data-form-mode="edit"
                                         data-class-id="<?= (int) $class['id'] ?>"
@@ -309,10 +368,62 @@ require $partials . '/head.php';
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="classDetailModal" tabindex="-1" aria-labelledby="classDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="classDetailTitle">Chi tiết lớp học</h2>
+                    <p class="text-tiny text-muted-2 mb-0" id="classDetailSubtitle">Thông tin lớp và danh sách học viên đã đăng ký.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div id="classDetailLoading" class="text-center text-muted-2 py-4">
+                    <?= icon('arrow-repeat') ?> Đang tải thông tin lớp học...
+                </div>
+                <div id="classDetailError" class="alert alert-danger d-none" role="alert"></div>
+                <div id="classDetailBody" class="d-none">
+                    <div class="row g-3" id="classDetailInfo"></div>
+                    <div class="app-card mt-3">
+                        <div class="app-card-header">
+                            <div>
+                                <h3 class="mb-0">Danh sách học viên</h3>
+                                <p class="sub mb-0">Học viên đã đăng ký lớp này</p>
+                            </div>
+                            <span class="badge-soft ms-auto" id="classMemberCount">0 học viên</span>
+                        </div>
+                        <div class="app-table-wrap">
+                            <table class="app-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th>Học viên</th>
+                                        <th>Điện thoại</th>
+                                        <th>Email</th>
+                                        <th>Ngày đăng ký</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="classDetailMembers">
+                                    <tr><td colspan="6" class="text-center text-muted-2 py-4">Chưa có học viên.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
         </main>
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=3"></script>
 <?php require $partials . '/foot.php'; ?>

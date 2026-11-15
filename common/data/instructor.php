@@ -9,7 +9,8 @@ function data_students_for_class(int $classId = 1, ?string $date = null): array
 {
     $conn = view_db();
     $sql = "
-        SELECT dkl.hoi_vien_id AS member_id, hv.ho_ten AS name, hv.sdt AS phone
+        SELECT dkl.hoi_vien_id AS member_id, hv.ho_ten AS name, hv.sdt AS phone,
+               hv.email, DATE_FORMAT(dkl.ngay_dang_ky, '%d/%m/%Y') AS registered
         FROM dang_ky_lop dkl
         JOIN hoi_vien hv ON hv.id = dkl.hoi_vien_id
         WHERE dkl.lop_hoc_id = ? AND dkl.trang_thai = 'dang_ky'

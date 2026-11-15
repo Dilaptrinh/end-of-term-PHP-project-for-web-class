@@ -24,6 +24,21 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             json_response(['success' => false, 'message' => 'Vui lòng chọn hội viên, gói tập và thời hạn.'], 422);
         }
 
+        $fromDate = DateTimeImmutable::createFromFormat('!Y-m-d', $from);
+        $toDate = DateTimeImmutable::createFromFormat('!Y-m-d', $to);
+        if (!$fromDate || !$toDate || $fromDate > $toDate) {
+            json_response(['success' => false, 'message' => 'Thời hạn gói tập không hợp lệ.'], 422);
+        }
+
+        $memberStmt = $db->prepare('SELECT id FROM hoi_vien WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+        $memberStmt->bind_param('i', $memberId);
+        $memberStmt->execute();
+        $memberExists = $memberStmt->get_result()->fetch_assoc();
+        $memberStmt->close();
+        if (!$memberExists) {
+            json_response(['success' => false, 'message' => 'Hội viên không tồn tại.'], 404);
+        }
+
         $newId = admin_package_registration_create($memberId, $packageId, $from, $to, $payMethod !== '' ? $payMethod : null);
         if ($newId === 0) {
             json_response(['success' => false, 'message' => 'Gói tập không tồn tại.'], 404);
@@ -36,16 +51,15 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($id <= 0) {
             json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
         }
-    }
-
-    if ($action === 'confirm-package') {
-        admin_package_registration_confirm($id);
-        json_response(['success' => true, 'message' => 'Đã xác nhận thanh toán.']);
-    }
-
-    if ($action === 'cancel-package') {
-        admin_package_registration_cancel($id);
-        json_response(['success' => true, 'message' => 'Đã hủy đăng ký gói.']);
+        $changed = $action === 'confirm-package'
+            ? admin_package_registration_confirm($id)
+            : admin_package_registration_cancel($id);
+        json_response([
+            'success' => $changed,
+            'message' => $changed
+                ? ($action === 'confirm-package' ? 'Đã xác nhận thanh toán.' : 'Đã hủy đăng ký gói.')
+                : 'Không tìm thấy đăng ký hoặc đăng ký đã được xử lý.',
+        ], $changed ? 200 : 404);
     }
 
     json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);

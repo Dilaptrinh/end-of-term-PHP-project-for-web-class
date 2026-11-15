@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require __DIR__ . '/../common/bootstrap.php';
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
@@ -35,9 +35,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     $stmt = $db->prepare(
         'SELECT gt.cap_do FROM dang_ky_goi d
-           JOIN goi_tap gt ON gt.id = d.goi_tap_id
-          WHERE hoi_vien_id = ? AND trang_thai = "da_thanh_toan"
-            AND ngay_bat_dau <= CURDATE() AND ngay_ket_thuc >= CURDATE()
+           JOIN goi_tap gt ON gt.id = d.goi_tap_id AND gt.deleted_at IS NULL
+          WHERE d.hoi_vien_id = ? AND d.trang_thai = "da_thanh_toan"
+            AND d.ngay_bat_dau <= CURDATE() AND d.ngay_ket_thuc >= CURDATE()
+          ORDER BY CASE gt.cap_do WHEN "premium" THEN 3 WHEN "standard" THEN 2 ELSE 1 END DESC,
+                   d.ngay_ket_thuc DESC
           LIMIT 1'
     );
     $stmt->bind_param('i', $memberId);
@@ -50,7 +52,8 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $stmt = $db->prepare(
-        'SELECT id, suc_chua, goi_tap_toi_thieu,
+        'SELECT id, ten_lop, suc_chua, goi_tap_toi_thieu, thu_trong_tuan,
+                gio_bat_dau, gio_ket_thuc, ngay_bat_dau, ngay_ket_thuc,
                 (SELECT COUNT(*) FROM dang_ky_lop
                   WHERE lop_hoc_id = lop_hoc.id AND trang_thai = "dang_ky") AS da_dang_ky
            FROM lop_hoc
@@ -90,6 +93,37 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if ($existing) {
         json_response(['success' => false, 'message' => 'Bạn đã đăng ký lớp này rồi.'], 422);
+    }
+
+    $stmt = $db->prepare(
+        'SELECT lh.ten_lop
+           FROM dang_ky_lop d
+           JOIN lop_hoc lh ON lh.id = d.lop_hoc_id
+          WHERE d.hoi_vien_id = ? AND d.trang_thai = "dang_ky"
+            AND lh.trang_thai = "dang_mo" AND lh.deleted_at IS NULL
+            AND lh.thu_trong_tuan = ?
+            AND lh.gio_bat_dau < ? AND lh.gio_ket_thuc > ?
+            AND lh.ngay_bat_dau <= ? AND lh.ngay_ket_thuc >= ?
+          LIMIT 1'
+    );
+    $stmt->bind_param(
+        'iissss',
+        $memberId,
+        $class['thu_trong_tuan'],
+        $class['gio_ket_thuc'],
+        $class['gio_bat_dau'],
+        $class['ngay_ket_thuc'],
+        $class['ngay_bat_dau']
+    );
+    $stmt->execute();
+    $conflict = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($conflict) {
+        json_response([
+            'success' => false,
+            'message' => 'Bạn đã có lớp "' . $conflict['ten_lop'] . '" trùng khung giờ này.',
+        ], 422);
     }
 
     $stmt = $db->prepare('INSERT INTO dang_ky_lop (hoi_vien_id, lop_hoc_id, trang_thai, ngay_dang_ky) VALUES (?, ?, "dang_ky", NOW())');

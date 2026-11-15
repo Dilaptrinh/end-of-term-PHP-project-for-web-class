@@ -30,7 +30,14 @@
         var data = {
             ho_ten: document.getElementById('acc-name').value.trim(),
             sdt: document.getElementById('acc-phone').value.trim(),
-            email: document.getElementById('acc-email').value.trim()
+            email: document.getElementById('acc-email').value.trim(),
+            ngay_sinh: document.getElementById('acc-birth').value,
+            gioi_tinh: document.getElementById('acc-gender').value,
+            can_nang: document.getElementById('acc-weight').value,
+            chieu_cao: document.getElementById('acc-height').value,
+            muc_tieu: document.getElementById('acc-goal').value,
+            dia_chi: document.getElementById('acc-address').value.trim(),
+            ghi_chu: document.getElementById('acc-note').value.trim()
         };
 
         try {

@@ -1,10 +1,14 @@
-﻿<?php
+<?php
 require __DIR__ . '/../common/bootstrap.php';
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'customer') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
+    }
+
+    if (($_GET['action'] ?? '') !== 'cancel') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 422);
     }
 
     $registrationId = (int) ($_GET['id'] ?? 0);
@@ -26,10 +30,15 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Bạn không có quyền hủy đăng ký này.'], 403);
     }
 
-    $stmt = $db->prepare('UPDATE dang_ky_lop SET trang_thai = "da_huy" WHERE id = ?');
+    $stmt = $db->prepare('UPDATE dang_ky_lop SET trang_thai = "da_huy" WHERE id = ? AND trang_thai = "dang_ky"');
     $stmt->bind_param('i', $registrationId);
     $stmt->execute();
+    $changed = $stmt->affected_rows;
     $stmt->close();
+
+    if ($changed < 1) {
+        json_response(['success' => false, 'message' => 'Đăng ký đã được hủy hoặc không còn hiệu lực.'], 422);
+    }
 
     json_response(['success' => true, 'message' => 'Đã hủy đăng ký lớp.']);
 }

@@ -47,10 +47,11 @@ function data_current_member(): array
 
     $package = $conn->prepare(
         'SELECT gt.ten_goi, gt.cap_do, DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS het_han
-           FROM dang_ky_goi d JOIN goi_tap gt ON gt.id = d.goi_tap_id
+           FROM dang_ky_goi d JOIN goi_tap gt ON gt.id = d.goi_tap_id AND gt.deleted_at IS NULL
           WHERE d.hoi_vien_id = ? AND d.trang_thai = "da_thanh_toan"
             AND d.ngay_bat_dau <= CURDATE() AND d.ngay_ket_thuc >= CURDATE()
-          ORDER BY d.ngay_ket_thuc DESC LIMIT 1'
+          ORDER BY CASE gt.cap_do WHEN "premium" THEN 3 WHEN "standard" THEN 2 ELSE 1 END DESC,
+                   d.ngay_ket_thuc DESC LIMIT 1'
     );
     $package->bind_param('i', $id);
     $package->execute();
