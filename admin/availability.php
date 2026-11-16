@@ -1,6 +1,11 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
+
+function pending_proposals(): array
+{
+    return array_values(array_filter(data_classes(), static fn ($class) => $class['status'] === 'cho_duyet'));
+}
 //data_class trong data_shared
 //json_response trong common function
 //common_user() trong bootstraps
@@ -28,9 +33,12 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $changed = admin_class_proposal_update($id, $status, $room, $requiredPackage);
+    $proposals = pending_proposals();
     json_response([
         'success' => $changed,
         'message' => $changed ? ($action === 'approve' ? 'Đã duyệt đề xuất lớp.' : 'Đã từ chối đề xuất lớp.') : 'Không tìm thấy đề xuất đang chờ duyệt.',
+        'id' => $id,
+        'remaining' => count($proposals),
     ], $changed ? 200 : 404);
 }
 
@@ -40,7 +48,7 @@ $appRole = 'admin';
 $activeMenu = 'availability';
 $pageTitle = 'Duyệt đề xuất lớp';
 $pageScripts = [];
-$proposals = array_values(array_filter(data_classes(), static fn ($class) => $class['status'] === 'cho_duyet'));
+$proposals = pending_proposals();
 $partials = __DIR__ . '/../common/partials';
 require $partials . '/head.php';
 ?>
@@ -52,27 +60,30 @@ require $partials . '/head.php';
             <?php require $partials . '/flash.php'; ?>
             <div class="page-head"><div><h1>Duyệt đề xuất lớp</h1><p>Kiểm tra thông tin lớp trước khi mở cho học viên đăng ký.</p></div></div>
             <div class="app-card">
-                <div class="app-card-header"><h2>Đề xuất đang chờ duyệt</h2><span class="badge-soft ms-auto"><?= count($proposals) ?> đề xuất</span></div>
-                <div class="app-table-wrap"><table class="app-table"><thead><tr><th>Lớp học</th><th>Giáo viên</th><th>Lịch học</th><th>Phòng</th><th>Sức chứa</th><th>Thao tác</th></tr></thead><tbody>
-                <?php if (!$proposals): ?><tr><td colspan="6" class="text-center text-muted-2 py-4">Không có đề xuất đang chờ duyệt.</td></tr>
-                <?php else: foreach ($proposals as $proposal): ?>
-                    <tr>
-                        <td class="cell-strong"><?= e($proposal['name']) ?><div class="cell-sub"><?= e($proposal['level']) ?> · Gói <?= e(strtoupper($proposal['required_package'])) ?></div></td>
-                        <td><?= e($proposal['instructor']) ?></td>
-                        <td><?= e(weekday($proposal['weekday'])) ?><div class="cell-sub"><?= e($proposal['start'] . ' – ' . $proposal['end']) ?><br><?= e($proposal['from'] . ' - ' . $proposal['to']) ?></div></td>
-                        <td><?= e($proposal['room'] ?: 'Chưa xếp') ?></td>
-                        <td><?= (int) $proposal['capacity'] ?></td>
-                        <td class="cell-actions">
-                            <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>" data-proposal-room="<?= e($proposal['room']) ?>" data-proposal-package="<?= e($proposal['required_package']) ?>">Duyệt</button>
-                            <button class="btn btn-danger-soft btn-sm" type="button" data-proposal-action="reject" data-proposal-id="<?= (int) $proposal['id'] ?>">Từ chối</button>
-                        </td>
-                    </tr>
-                <?php endforeach; endif; ?>
+                <div class="app-card-header"><h2>Đề xuất đang chờ duyệt</h2><span class="badge-soft ms-auto" id="proposals-count"><?= count($proposals) ?> đề xuất</span></div>
+                <div class="app-table-wrap"><table class="app-table"><thead><tr><th>Lớp học</th><th>Giáo viên</th><th>Lịch học</th><th>Phòng</th><th>Sức chứa</th><th>Thao tác</th></tr></thead><tbody id="proposals-body">
+                <?php if (!$proposals): ?>
+                    <tr data-empty-row><td colspan="6" class="text-center text-muted-2 py-4">Không có đề xuất đang chờ duyệt.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($proposals as $proposal): ?>
+                        <tr data-proposal-row="<?= (int) $proposal['id'] ?>">
+                            <td class="cell-strong"><?= e($proposal['name']) ?><div class="cell-sub"><?= e($proposal['level']) ?> · Gói <?= e(strtoupper($proposal['required_package'])) ?></div></td>
+                            <td><?= e($proposal['instructor']) ?></td>
+                            <td><?= e(weekday($proposal['weekday'])) ?><div class="cell-sub"><?= e($proposal['start'] . ' – ' . $proposal['end']) ?><br><?= e($proposal['from'] . ' - ' . $proposal['to']) ?></div></td>
+                            <td><?= e($proposal['room'] ?: 'Chưa xếp') ?></td>
+                            <td><?= (int) $proposal['capacity'] ?></td>
+                            <td class="cell-actions">
+                                <button class="btn btn-primary btn-sm" type="button" data-proposal-action="approve" data-proposal-id="<?= (int) $proposal['id'] ?>" data-proposal-room="<?= e($proposal['room']) ?>" data-proposal-package="<?= e($proposal['required_package']) ?>">Duyệt</button>
+                                <button class="btn btn-danger-soft btn-sm" type="button" data-proposal-action="reject" data-proposal-id="<?= (int) $proposal['id'] ?>">Từ chối</button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
                 </tbody></table></div>
             </div>
         </main>
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
-<script src="<?= e(url('/common/assets/js/admin/availability.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/admin/availability.js')) ?>?v=3"></script>
 <?php require $partials . '/foot.php'; ?>

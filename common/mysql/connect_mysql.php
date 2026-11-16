@@ -13,33 +13,20 @@ $config = require __DIR__ . '/config.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 try {
-    // 4) Tạo kết nối tới MySQL server (chưa chọn database, vì CSDL có thể chưa tồn tại).
-    //    Thứ tự tham số: host, user, pass, database, port
+    // 4) Kết nối trực tiếp tới database đã được tạo/import từ file SQL.
     $conn = new mysqli(
         $config['host'],
         $config['user'],
         $config['pass'],
-        '',
+        $config['name'],
         (int) $config['port']
     );
 
     // 5) Đặt bảng mã để lưu tiếng Việt đúng
     $conn->set_charset($config['charset']);
 
-    // 6) Tự tạo CSDL nếu chưa có 
-    $conn->query(
-        'CREATE DATABASE IF NOT EXISTS `' . $config['name'] . '` CHARACTER SET utf8mb4'
-    );
-    $conn->select_db($config['name']);
-
-    // 7) Nếu chạy tới đây tức là kết nối thành công
-    if (PHP_SAPI === 'cli') {
-        echo "Kết nối MySQL thành công! Database: {$config['name']}" . PHP_EOL;
-    }
 } catch (mysqli_sql_exception $e) {
-    // Có lỗi (sai mật khẩu, database không tồn tại, MySQL chưa chạy...)
     die('Lỗi kết nối MySQL: ' . $e->getMessage() . PHP_EOL);
 }
 
-// 7) Trả về đối tượng kết nối để file khác dùng tiếp
 return $conn;

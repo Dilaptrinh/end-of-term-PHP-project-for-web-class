@@ -2,6 +2,16 @@
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
+function package_find(int $id): ?array
+{
+    foreach (data_packages() as $package) {
+        if ((int) $package['id'] === $id) {
+            return $package;
+        }
+    }
+    return null;
+}
+
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
@@ -20,6 +30,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response([
             'success' => $changed,
             'message' => $changed ? 'Đã xóa gói tập.' : 'Không tìm thấy gói tập.',
+            'id' => $id,
         ], $changed ? 200 : 404);
     }
 
@@ -66,13 +77,21 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $savedId = admin_package_save($values, $id);
 
     if ($id === 0) {
-        json_response(['success' => true, 'data' => ['id' => $savedId], 'message' => 'Đã tạo gói tập.'], 201);
+        json_response([
+            'success' => true,
+            'message' => 'Đã tạo gói tập.',
+            'data' => package_find($savedId),
+        ], 201);
     }
     if ($savedId === 0) {
         json_response(['success' => false, 'message' => 'Không tìm thấy gói tập.'], 404);
     }
 
-    json_response(['success' => true, 'message' => 'Đã cập nhật gói tập.']);
+    json_response([
+        'success' => true,
+        'message' => 'Đã cập nhật gói tập.',
+        'data' => package_find($savedId),
+    ]);
 }
 
 require_role('admin');
@@ -85,24 +104,6 @@ $pageTitle = 'Quản lý gói tập';
 $pageScripts = [];
 
 $packages = data_packages();
-$selling = 0;
-
-
-$selling = count(array_filter($packages ,static fn (array $package):bool => $package['status'] === 'dang_ban'));
-$estimatedRevenue = 0;
-
-$estimatedRevenue = array_sum(array_map( static fn (array $package):int => (int) $package['price'] *  $package['sold']
-,$packages));
-
-$bestSeller = $packages[0] ?? ['name' => '—', 'sold' => 0];
-foreach ($packages as $package) {
-    if ($package['sold'] > $bestSeller['sold']) {
-        $bestSeller = $package;
-    }
-}
-$revenueLabel = $estimatedRevenue >= 1000000000
-    ? number_format($estimatedRevenue / 1000000000, 2, ',', '.') . ' tỷ'
-    : money($estimatedRevenue);
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -119,41 +120,10 @@ require $partials . '/head.php';
 <div class="page-head">
     <div>
         <h1>Quản lý gói tập</h1>
-        <p><?= count($packages) ?> gói · <?= $selling ?> đang bán.</p>
+        <p>Danh sách toàn bộ gói tập trong hệ thống.</p>
     </div>
     <div class="page-head-actions">
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"><?= icon('plus-lg') ?> Thêm gói tập</button>
-    </div>
-</div>
-
-<div class="row g-3 mb-3">
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Gói đang bán</div>
-            <div class="stat-value"><?= $selling ?></div>
-            <div class="stat-foot"><?= count($packages) - $selling ?> gói ngừng bán</div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Lượt đăng ký</div>
-            <div class="stat-value"><?= e((string) array_sum(array_column($packages, 'sold'))) ?></div>
-            <div class="stat-foot">Tích lũy toàn hệ thống</div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Doanh thu ước tính</div>
-            <div class="stat-value" style="font-size:1.35rem;"><?= e($revenueLabel) ?></div>
-            <div class="stat-foot">Từ các gói đang bán</div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Gói bán chạy</div>
-            <div class="stat-value" style="font-size:1.05rem;"><?= e($bestSeller['name']) ?></div>
-            <div class="stat-foot"><?= e((string) $bestSeller['sold']) ?> lượt đăng ký</div>
-        </div>
     </div>
 </div>
 
@@ -179,15 +149,17 @@ require $partials . '/head.php';
 <div class="app-card">
     <div class="app-card-header">
         <h2>Danh sách gói tập</h2>
-        <span class="badge-soft ms-auto"><?= count($packages) ?> gói</span>
     </div>
     <div class="app-table-wrap">
         <table class="app-table" id="packages-table">
             <thead><tr><th>Gói tập</th><th>Thời hạn</th><th>Giá bán</th><th>Đã bán</th><th>Doanh thu</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr></thead>
-            <tbody>
+            <tbody id="packages-body">
+            <?php if (!$packages): ?>
+                <tr data-empty-row><td colspan="7" class="text-center text-muted-2 py-4">Chưa có gói tập nào.</td></tr>
+            <?php endif; ?>
             <?php foreach ($packages as $package): ?>
                 <tr data-row data-package-id="<?= (int) $package['id'] ?>" data-package-status="<?= e($package['status']) ?>">
-                    <td class="cell-strong"><?= e($package['name']) ?><div class="cell-sub"><?= e(truncate($package['desc'], 46)) ?></div></td>
+                    <td class="cell-strong"><?= e($package['name']) ?><div class="cell-sub"><?= e(truncate((string) $package['desc'], 46)) ?></div></td>
                     <td><?= e((string) $package['days']) ?> ngày</td>
                     <td class="cell-strong"><?= e(money($package['price'])) ?></td>
                     <td><?= e((string) $package['sold']) ?></td>
@@ -270,4 +242,4 @@ require $partials . '/head.php';
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
 <?php require $partials . '/foot.php'; ?>
-<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=2"></script>
+<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=5"></script>

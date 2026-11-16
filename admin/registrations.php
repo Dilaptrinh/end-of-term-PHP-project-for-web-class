@@ -2,6 +2,16 @@
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
+function package_registration_find(int $id): ?array
+{
+    foreach (data_package_registrations() as $registration) {
+        if ((int) $registration['id'] === $id) {
+            return $registration;
+        }
+    }
+    return null;
+}
+
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
@@ -44,7 +54,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             json_response(['success' => false, 'message' => 'Gói tập không tồn tại.'], 404);
         }
 
-        json_response(['success' => true, 'message' => 'Đã tạo đăng ký gói.'], 201);
+        json_response([
+            'success' => true,
+            'message' => 'Đã tạo đăng ký gói.',
+            'data' => package_registration_find($newId),
+        ], 201);
     }
 
     if ($action === 'confirm-package' || $action === 'cancel-package') {
@@ -59,6 +73,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             'message' => $changed
                 ? ($action === 'confirm-package' ? 'Đã xác nhận thanh toán.' : 'Đã hủy đăng ký gói.')
                 : 'Không tìm thấy đăng ký hoặc đăng ký đã được xử lý.',
+            'data' => $changed ? package_registration_find($id) : null,
         ], $changed ? 200 : 404);
     }
 
@@ -84,18 +99,6 @@ if ($packageFilterId !== '') {
 }
 $members = data_members();
 $packages = data_packages();
-$pending = 0;
-$paid = 0;
-$paidRevenue = 0;
-foreach ($packageRegs as $reg) {
-    if ($reg['payment'] === 'da_thanh_toan') {
-        $paid++;
-        $paidRevenue += $reg['price'];
-    }
-    if ($reg['payment'] === 'chua_thanh_toan') {
-        $pending++;
-    }
-}
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -119,34 +122,10 @@ require $partials . '/head.php';
     </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Đăng ký gói</div>
-            <div class="stat-value"><?= count($packageRegs) ?></div>
-            <div class="stat-foot">Trong tháng 10</div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Chờ thanh toán</div>
-            <div class="stat-value" style="color:var(--warning);"><?= $pending ?></div>
-            <div class="stat-foot">Cần xác nhận</div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card">
-            <div class="stat-label">Đã thanh toán</div>
-            <div class="stat-value text-success"><?= $paid ?></div>
-            <div class="stat-foot">Doanh thu <?= e(money($paidRevenue)) ?></div>
-        </div>
-    </div>
-</div>
-
 <div class="app-card">
     <div class="app-card-header pb-0" style="border-bottom:none;">
         <ul class="nav nav-tabs app-tabs w-100" role="tablist">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#reg-packages" type="button" role="tab" aria-selected="true">Đăng ký gói <span class="count"><?= count($packageRegs) ?></span></button></li>
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#reg-packages" type="button" role="tab" aria-selected="true">Đăng ký gói</button></li>
         </ul>
     </div>
 
@@ -171,9 +150,12 @@ require $partials . '/head.php';
                             <th class="cell-actions">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="package-regs-body">
+                        <?php if (!$packageRegs): ?>
+                            <tr data-empty-row><td colspan="8" class="text-center text-muted-2 py-4">Chưa có đăng ký gói nào.</td></tr>
+                        <?php endif; ?>
                         <?php foreach ($packageRegs as $reg): ?>
-                            <tr data-row>
+                            <tr data-row data-reg-row="<?= (int) $reg['id'] ?>">
                                 <td class="cell-strong">DK-<?= e((string) $reg['id']) ?></td>
                                 <td><?= e($reg['member']) ?></td>
                                 <td><?= e($reg['package']) ?></td>
@@ -270,5 +252,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/registrations.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/admin/registrations.js')) ?>?v=5"></script>
 <?php require $partials . '/foot.php'; ?>

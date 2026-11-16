@@ -201,7 +201,7 @@
   <thead><tr><th style="width:25%">Module</th><th style="width:15%">Phụ trách chính</th><th style="width:17%">Phối hợp</th><th>Sản phẩm bàn giao</th></tr></thead>
   <tbody>
     <tr><td>Kiến trúc dự án, cấu trúc thư mục, quy ước mã nguồn</td><td>Bùi Nhựt Duy</td><td>Bạch Thái Nhựt, Duy Thường</td><td><code>bootstrap.php</code>, <code>functions.php</code>, <code>data/data.php</code>, README.</td></tr>
-    <tr><td>Thiết kế CSDL, schema, khóa ngoại, dữ liệu mẫu</td><td>Bùi Nhựt Duy</td><td>Cả nhóm</td><td><code>schema.php</code>, <code>seed_data.php</code>, <code>setup.php</code>, file SQL.</td></tr>
+    <tr><td>Thiết kế CSDL, schema, khóa ngoại, dữ liệu mẫu</td><td>Bùi Nhựt Duy</td><td>Cả nhóm</td><td>File SQL và kết nối MySQL.</td></tr>
     <tr><td>Layout web, partials, CSS, menu theo vai trò</td><td>Bùi Nhựt Duy</td><td>Cả nhóm</td><td><code>partials/</code>, <code>menus/</code>, <code>tokens.css</code>, <code>app.css</code>, <code>pages.css</code>.</td></tr>
     <tr><td>Đăng nhập, đăng ký, đăng xuất, session, phân quyền</td><td>Bùi Nhựt Duy</td><td>Cả nhóm</td><td><code>login.php</code>, <code>register.php</code>, <code>common/logout.php</code>, <code>require_role()</code>.</td></tr>
     <tr><td>Endpoint admin: tài khoản, gói tập, lớp học, đăng ký, duyệt đề xuất</td><td>Bùi Nhựt Duy</td><td>Bạch Thái Nhựt, Duy Thường</td><td><code>admin/*.php</code>, <code>admin/queries.php</code>.</td></tr>
@@ -353,7 +353,7 @@ HTML + CSS + JS  →  trình duyệt
   <li>Tệp nạp <code>bootstrap.php</code> để mở session, nạp hàm dùng chung, UI helper và data layer.</li>
   <li><code>common_user()</code> đọc <code>tai_khoan_id</code> từ session, truy vấn tài khoản; tài khoản bị khóa hoặc giáo viên không còn hồ sơ hợp lệ sẽ bị đăng xuất.</li>
   <li><code>require_role()</code> chặn truy cập sai vai trò và chuyển hướng về khu vực phù hợp.</li>
-  <li>Với POST/AJAX, trang kiểm tra vai trò, đọc dữ liệu, kiểm tra hợp lệ, gọi hàm truy vấn và trả JSON qua <code>json_response()</code>.</li>
+  <li>Với POST hoặc các thao tác cập nhật nhanh, trang kiểm tra vai trò, đọc dữ liệu, kiểm tra hợp lệ, gọi hàm truy vấn và trả kết quả phù hợp.</li>
   <li>Với GET, trang gọi các hàm <code>data_*()</code>, ghép partial và trả HTML.</li>
 </ol>
 
@@ -408,12 +408,8 @@ doanh_thu (tháng, năm, số tiền) ── bảng tổng hợp độc lập   
 
 <h3>4.5.1. Khởi tạo cơ sở dữ liệu và dữ liệu mẫu</h3>
 <ol>
-  <li><code>connect_mysql.php</code> đọc cấu hình, kết nối MySQL server và tự tạo database <code>phongtap</code> nếu chưa có.</li>
-  <li><code>setup.php</code> nạp <code>schema.php</code> và <code>seed_data.php</code>.</li>
-  <li><code>ensure_schema()</code> tạo 10 bảng theo thứ tự phụ thuộc khóa ngoại, bổ sung cột mới nếu schema cũ thiếu.</li>
-  <li><code>seed_core_data()</code> nạp chuyên môn, giáo viên, gói, lớp, hội viên, đăng ký và doanh thu mẫu.</li>
-  <li><code>seed_initial_accounts()</code> tạo tài khoản mẫu với mật khẩu <code>123456</code>; liên kết tài khoản với hồ sơ giáo viên/hội viên theo email.</li>
-  <li><code>seed_customer_accounts()</code> tạo thêm tài khoản hội viên mẫu. Toàn bộ seed có tính idempotent, chạy lại không nhân đôi dữ liệu.</li>
+  <li><code>connect_mysql.php</code> đọc cấu hình và kết nối trực tiếp tới database <code>phongtap</code>.</li>
+  <li>Cấu trúc bảng và dữ liệu mẫu được cung cấp trong <code>common/mysql/fitzone_phongtap.sql</code> để import thủ công.</li>
 </ol>
 
 <h3>4.5.2. Đăng ký tài khoản hội viên</h3>
@@ -840,9 +836,8 @@ fitness/
   <li>XAMPP với Apache 2.4.58, PHP 8.0.30 và MySQL/MariaDB 10.4; bật cả Apache và MySQL trước khi chạy.</li>
   <li>Mã nguồn đặt tại <code>C:\xampp\htdocs\fitness</code>; truy cập <code>http://localhost/fitness/</code>.</li>
   <li>Thông tin kết nối mặc định trong <code>common/mysql/config.php</code>: host <code>127.0.0.1</code>, port <code>3306</code>, user <code>root</code>, mật khẩu rỗng, database <code>phongtap</code>, charset <code>utf8mb4</code>.</li>
-  <li><code>connect_mysql.php</code> tự tạo database nếu chưa tồn tại. <strong>Bảng và dữ liệu mẫu không tự tạo khi query đầu tiên</strong>; cần chạy <code>setup.php</code> một lần hoặc import file SQL.</li>
+  <li><code>connect_mysql.php</code> kết nối tới database đã được tạo/import từ file SQL.</li>
   <li>Có thể khởi tạo thủ công bằng lệnh:
-    <pre class="code">C:\xampp\php\php.exe C:\xampp\htdocs\fitness\common\mysql\setup.php</pre>
   </li>
   <li>Nếu muốn nạp dữ liệu từ bản dump, import <code>common/mysql/fitzone_phongtap.sql</code> bằng phpMyAdmin hoặc MySQL CLI.</li>
 </ul>
@@ -863,7 +858,7 @@ fitness/
     <tr><td>Tra cứu</td><td><code>instructor/search.php</code>, <code>admin/registrations.php</code></td><td>Tìm học viên trong lớp mình dạy; lọc đăng ký gói theo mã.</td></tr>
     <tr><td>Thống kê</td><td><code>admin/index.php</code>, <code>common/data/admin.php</code></td><td>Đếm hội viên, giáo viên, lớp mở, doanh thu, yêu cầu chờ duyệt, đăng ký lớp hiệu lực.</td></tr>
     <tr><td>Dùng chung</td><td><code>common/components/ui.php</code>, <code>common/partials/</code>, <code>common/menus/</code></td><td>Icon, avatar, badge, money, weekday, progress bar, phân trang, layout, menu theo vai trò.</td></tr>
-    <tr><td>Dữ liệu và khởi tạo</td><td><code>common/mysql/schema.php</code>, <code>seed_data.php</code>, <code>setup.php</code>, file SQL</td><td>Tạo 10 bảng, dữ liệu mẫu, tài khoản mẫu, liên kết hồ sơ.</td></tr>
+    <tr><td>Dữ liệu và khởi tạo</td><td><code>common/mysql/fitzone_phongtap.sql</code></td><td>Tạo database, 10 bảng, dữ liệu mẫu, tài khoản mẫu và các liên kết.</td></tr>
   </tbody>
 </table>
 
@@ -1115,12 +1110,11 @@ json_response(['success' =&gt; false, 'message' =&gt; 'Dữ liệu không hợp 
   <li>Mở XAMPP Control Panel, bấm <strong>Start</strong> cho Apache và MySQL.</li>
   <li>Kiểm tra <code>common/mysql/config.php</code>; mặc định dùng host <code>127.0.0.1</code>, user <code>root</code>, mật khẩu rỗng, database <code>phongtap</code>.</li>
   <li>Chạy script khởi tạo để tạo bảng và nạp dữ liệu mẫu:
-    <pre class="code">C:\xampp\php\php.exe C:\xampp\htdocs\fitness\common\mysql\setup.php</pre>
   </li>
   <li>Mở trình duyệt và truy cập <code>http://localhost/fitness/</code>.</li>
   <li>Đăng nhập bằng tài khoản mẫu ở phụ lục B để kiểm tra từng vai trò.</li>
 </ol>
-<p class="note">Lưu ý: <code>connect_mysql.php</code> chỉ tự tạo database <code>phongtap</code>, không tự tạo bảng. Nếu bỏ qua bước 4, các trang sẽ lỗi vì bảng chưa tồn tại. Có thể thay bước 4 bằng import file <code>common/mysql/fitzone_phongtap.sql</code>.</p>
+<p class="note">Lưu ý: cần import <code>common/mysql/fitzone_phongtap.sql</code> trước khi mở ứng dụng để tạo database, bảng và dữ liệu mẫu.</p>
 
 <h2>A.3. Kiểm tra nhanh sau cài đặt</h2>
 <ul>
@@ -1138,9 +1132,9 @@ json_response(['success' =&gt; false, 'message' =&gt; 'Dữ liệu không hợp 
   <tbody>
     <tr><td>Lỗi kết nối MySQL</td><td>MySQL chưa chạy hoặc sai thông tin trong <code>config.php</code>; kiểm tra XAMPP và mật khẩu root.</td></tr>
     <tr><td>Trang trắng hoặc lỗi 500</td><td>Bật <code>display_errors</code> để xem lỗi; kiểm tra phiên bản PHP và quyền đọc tệp.</td></tr>
-    <tr><td>Unknown table</td><td>Chưa chạy <code>setup.php</code> hoặc chưa import file SQL; chạy lại bước khởi tạo.</td></tr>
+    <tr><td>Unknown table</td><td>Chưa import file SQL; import <code>common/mysql/fitzone_phongtap.sql</code> rồi thử lại.</td></tr>
     <tr><td>Không thấy CSS/JS</td><td>Kiểm tra đường dẫn <code>/fitness/common/assets/...</code> và thư mục vendor.</td></tr>
-    <tr><td>Đăng nhập admin thất bại</td><td>CSDL cũ có thể đã đổi mật khẩu; chạy lại <code>setup.php</code> trên database mới hoặc đặt lại mật khẩu.</td></tr>
+    <tr><td>Đăng nhập admin thất bại</td><td>CSDL chưa được import đúng file SQL hoặc mật khẩu tài khoản mẫu đã thay đổi.</td></tr>
     <tr><td>Dữ liệu bị trùng</td><td>Seed có kiểm tra tồn tại nên chạy lại không nhân đôi; nếu cần, xóa database và khởi tạo lại.</td></tr>
   </tbody>
 </table>

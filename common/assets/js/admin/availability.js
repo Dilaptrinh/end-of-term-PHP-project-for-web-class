@@ -48,8 +48,22 @@
                 throw new Error(result.message || 'Không thể cập nhật đề xuất.');
             }
 
+            // Xóa dòng vừa xử lý khỏi bảng.
+            var row = button.closest('tr');
+            if (row) row.remove();
+
+            // Nếu bảng không còn dòng nào thì hiện thông báo rỗng.
+            var body = document.getElementById('proposals-body');
+            if (body && !body.querySelector('[data-proposal-row]')) {
+                body.innerHTML = '<tr data-empty-row><td colspan="6" class="text-center text-muted-2 py-4">Không có đề xuất đang chờ duyệt.</td></tr>';
+            }
+
+            // Cập nhật số đề xuất còn lại.
+            var count = document.getElementById('proposals-count');
+            if (count && result.remaining !== undefined) {
+                count.textContent = result.remaining + ' đề xuất';
+            }
             alert(result.message);
-            window.location.reload();
         } catch (error) {
             alert(error.message);
         }

@@ -1,8 +1,39 @@
 <?php
+/*
+ * File: admin/classes.php
+ * Chức năng: quản lý lớp học (xem, thêm, sửa, xóa).
+ *
+ * File này vừa là TRANG HTML vừa là API cho AJAX:
+ * 1. POST action=save   -> thêm/sửa lớp, trả JSON cho classes.js.
+ * 2. POST action=delete -> xóa lớp, trả JSON cho classes.js.
+ * 3. GET  action=members -> trả JSON chi tiết lớp cho modal.
+ * 4. GET bình thường     -> render trang danh sách lớp.
+ */
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
+// Tìm một lớp theo ID trong danh sách lớp đang có.
+// Trả về mảng dữ liệu lớp, hoặc null nếu không tìm thấy.
+function class_find(int $id): ?array
+{
+    foreach (data_classes() as $class) {
+        if ((int) $class['id'] === $id) {
+            return $class;
+        }
+    }
+    return null;
+}
+
+/*
+ * PHẦN API CHO AJAX (POST)
+ * classes.js gửi POST lên chính file này với:
+ * - ?action=save&id=0   -> thêm lớp mới
+ * - ?action=save&id=... -> sửa lớp
+ * - ?action=delete&id=.. -> xóa lớp
+ * Server luôn trả JSON để JS cập nhật bảng, không reload trang.
+ */
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    // Chỉ admin đã đăng nhập mới được thao tác.
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
         json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
@@ -12,24 +43,33 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $id = (int) ($_GET['id'] ?? 0);
     $db = common_db();
 
+    // ---------------- XÓA LỚP ----------------
     if ($action === 'delete') {
         if ($id <= 0) {
             json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
         }
+
         $changed = admin_class_delete($id);
+
+        // mode=remove: classes.js biết phải xóa dòng khỏi bảng.
         json_response([
             'success' => $changed,
             'message' => $changed ? 'Đã xóa lớp học.' : 'Không tìm thấy lớp học.',
+            'id' => $id,
         ], $changed ? 200 : 404);
     }
 
+    // Chỉ còn action=save, action khác thì báo lỗi.
     if ($action !== 'save') {
         json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
     }
 
     $input = $_POST;
 
+    // ---------------- KIỂM TRA DỮ LIỆU ----------------
+    // Mảng $errors chứa lỗi theo từng trường. Có lỗi thì trả JSON 422.
     $errors = [];
+    // Các trường bắt buộc không được rỗng.
     foreach (['ten_lop', 'gio_bat_dau', 'gio_ket_thuc', 'ngay_bat_dau', 'ngay_ket_thuc'] as $field) {
         if (trim((string) ($input[$field] ?? '')) === '') {
             $errors[$field] = 'Trường này bắt buộc.';
@@ -42,29 +82,39 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $errors['suc_chua'] = 'Sức chứa không hợp lệ.';
     }
 
+    // Thứ trong tuần phải từ 1 (Thứ 2) đến 7 (Chủ nhật).
     $weekday = (int) ($input['thu_trong_tuan'] ?? 0);
     if ($weekday < 1 || $weekday > 7) {
         $errors['thu_trong_tuan'] = 'Thứ trong tuần không hợp lệ.';
     }
+
+    // Giờ kết thúc phải sau giờ bắt đầu (so sánh chuỗi dạng HH:mm).
     $startTime = (string) ($input['gio_bat_dau'] ?? '');
     $endTime = (string) ($input['gio_ket_thuc'] ?? '');
     if ($startTime !== '' && $endTime !== '' && $startTime >= $endTime) {
         $errors['gio_ket_thuc'] = 'Giờ kết thúc phải sau giờ bắt đầu.';
     }
+
+    // Ngày kết thúc phải sau ngày bắt đầu (so sánh chuỗi dạng YYYY-MM-DD).
     $startDateValue = (string) ($input['ngay_bat_dau'] ?? '');
     $endDateValue = (string) ($input['ngay_ket_thuc'] ?? '');
     if ($startDateValue !== '' && $endDateValue !== '' && $startDateValue > $endDateValue) {
         $errors['ngay_ket_thuc'] = 'Ngày kết thúc phải sau ngày bắt đầu.';
     }
+
+    // Gói tối thiểu chỉ được là basic / standard / premium.
     $requiredPackage = (string) ($input['goi_tap_toi_thieu'] ?? 'basic');
     if (!in_array($requiredPackage, ['basic', 'standard', 'premium'], true)) {
         $errors['goi_tap_toi_thieu'] = 'Gói tối thiểu không hợp lệ.';
     }
+
+    // Trạng thái lớp chỉ được nằm trong danh sách cho phép.
     $statusValue = (string) ($input['trang_thai'] ?? 'dang_mo');
     if (!in_array($statusValue, ['dang_mo', 'cho_duyet', 'tu_choi', 'da_dong', 'da_huy'], true)) {
         $errors['trang_thai'] = 'Trạng thái lớp không hợp lệ.';
     }
 
+    // Kiểm tra giáo viên có tồn tại và chưa bị xóa mềm.
     $teacherStmt = $db->prepare('SELECT id FROM giao_vien WHERE id = ? AND deleted_at IS NULL LIMIT 1');
     $teacherId = (int) ($input['giao_vien_id'] ?? 0);
     $teacherStmt->bind_param('i', $teacherId);
@@ -75,10 +125,13 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $errors['giao_vien_id'] = 'Giáo viên không tồn tại.';
     }
 
+    // Nếu có bất kỳ lỗi nào thì dừng và trả danh sách lỗi.
     if ($errors) {
         json_response(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $errors], 422);
     }
 
+    // Các giá trị đưa vào admin_class_save().
+    // Thứ tự phải khớp với danh sách cột trong admin_class_save() ở queries.php.
     $values = [
         trim((string) $input['ten_lop']),
         $teacherId,
@@ -94,18 +147,40 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $requiredPackage,
         $statusValue,
     ];
+
+    // id = 0 là thêm mới, id > 0 là cập nhật.
     $savedId = admin_class_save($values, $id);
 
+    // Trường hợp THÊM MỚI.
     if ($id === 0) {
-        json_response(['success' => true, 'data' => ['id' => $savedId], 'message' => 'Đã tạo lớp học.'], 201);
+        $class = class_find($savedId);
+
+        json_response([
+            'success' => true,
+            'message' => 'Đã tạo lớp học.',
+            'data' => $class,
+        ], 201);
     }
+
+    // Trường hợp CẬP NHẬT nhưng không tìm thấy lớp.
     if ($savedId === 0) {
         json_response(['success' => false, 'message' => 'Không tìm thấy lớp học.'], 404);
     }
 
-    json_response(['success' => true, 'message' => 'Đã cập nhật lớp học.']);
+    // Trường hợp CẬP NHẬT thành công.
+    $class = class_find($savedId);
+
+    json_response([
+        'success' => true,
+        'message' => 'Đã cập nhật lớp học.',
+        'data' => $class,
+    ]);
 }
 
+/*
+ * API GET: trả JSON chi tiết một lớp + danh sách học viên.
+ * classes.js dùng dữ liệu này để đổ vào modal "Xem chi tiết".
+ */
 $requestAction = (string) ($_GET['action'] ?? '');
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'members') {
     $user = common_user();
@@ -113,11 +188,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'membe
         json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
     }
 
+    // Lấy thông tin lớp.
     $detail = admin_class_detail((int) ($_GET['id'] ?? 0));
     if (!$detail) {
         json_response(['success' => false, 'message' => 'Không tìm thấy lớp học.'], 404);
     }
 
+    // Trả về cả thông tin lớp và danh sách học viên đã đăng ký.
     json_response([
         'success' => true,
         'data' => [
@@ -127,6 +204,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'membe
     ]);
 }
 
+// Từ đây trở xuống là phần render trang HTML bình thường.
+// Chặn người không phải admin.
 require_role('admin');
 
 $menu = require __DIR__ . '/../common/menus/admin.php';
@@ -136,7 +215,11 @@ $activeMenu = 'classes';
 $pageTitle = 'Quản lý lớp học';
 $pageScripts = [];
 
+// Lấy toàn bộ lớp học.
 $allClasses = data_classes();
+
+// Lọc theo mã lớp nếu trên URL có ?class_id=...
+// ctype_digit() kiểm tra chuỗi chỉ gồm chữ số.
 $classId = trim((string) ($_GET['class_id'] ?? ''));
 $classes = $allClasses;
 if ($classId !== '' && ctype_digit($classId)) {
@@ -144,17 +227,9 @@ if ($classId !== '' && ctype_digit($classId)) {
         return (string) $class['id'] === $classId;
     }));
 }
+
+// Danh sách giáo viên để đổ vào select trong form thêm/sửa.
 $instructors = data_instructors();
-$openCount = 0;
-$fullCount = 0;
-foreach ($allClasses as $class) {
-    if ($class['status'] === 'dang_mo') {
-        $openCount++;
-    }
-    if ($class['enrolled'] >= $class['capacity']) {
-        $fullCount++;
-    }
-}
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -168,40 +243,18 @@ require $partials . '/head.php';
 
         <main class="app-content" id="main-content">
             <?php require $partials . '/flash.php'; ?>
+<?php // Tiêu đề trang + nút mở modal thêm lớp. ?>
 <div class="page-head">
     <div>
         <h1>Quản lý lớp học</h1>
-        <p><?= count($classes) ?> lớp · <?= $openCount ?> đang mở · <?= $fullCount ?> đã đầy.</p>
+        <p>Danh sách toàn bộ lớp học trong hệ thống.</p>
     </div>
     <div class="page-head-actions">
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#classFormModal" data-form-mode="create"><?= icon('plus-lg') ?> Thêm lớp học</button>
     </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-sm-4">
-        <div class="stat-card">
-            <div class="stat-label">Tổng lớp học</div>
-            <div class="stat-value"><?= count($classes) ?></div>
-            <div class="stat-foot"><?= $openCount ?> lớp đang mở</div>
-        </div>
-    </div>
-    <div class="col-sm-4">
-        <div class="stat-card">
-            <div class="stat-label">Tổng học viên đăng ký</div>
-            <div class="stat-value"><?= e((string) array_sum(array_column($classes, 'enrolled'))) ?></div>
-            <div class="stat-foot">Sức chứa <?= e((string) array_sum(array_column($classes, 'capacity'))) ?></div>
-        </div>
-    </div>
-    <div class="col-sm-4">
-        <div class="stat-card">
-            <div class="stat-label">Lớp đã đầy</div>
-            <div class="stat-value" style="color:var(--warning);"><?= $fullCount ?></div>
-            <div class="stat-foot">Cần mở thêm lớp mới</div>
-        </div>
-    </div>
-</div>
-
+<?php // Form lọc theo mã lớp (submit bằng GET, tải lại trang với ?class_id=...). ?>
 <form class="filter-bar" method="get" action="<?= e(url('/admin/classes')) ?>">
     <div class="filter-field filter-search">
         <label class="form-label" for="cl-id">Tìm theo mã lớp</label>
@@ -216,6 +269,7 @@ require $partials . '/head.php';
     </div>
 </form>
 
+<?php // Bảng danh sách lớp. Mỗi lớp được in ra một dòng <tr>. ?>
 <div class="app-card">
     <div class="app-table-wrap">
         <table class="app-table" id="classes-table">
@@ -231,11 +285,14 @@ require $partials . '/head.php';
                     <th class="cell-actions">Thao tác</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="classes-body">
+                <?php if (!$classes): ?>
+                    <tr data-empty-row><td colspan="8" class="text-center text-muted-2 py-4">Chưa có lớp học nào.</td></tr>
+                <?php endif; ?>
                 <?php foreach ($classes as $class):
                     $percent = (int) round($class['enrolled'] / max(1, $class['capacity']) * 100);
                 ?>
-                    <tr data-row>
+                    <tr data-row data-class-row="<?= (int) $class['id'] ?>">
                         <td class="cell-strong"><?= e($class['name']) ?><div class="cell-sub">Mã lớp: <?= (int) $class['id'] ?> · <?= e($class['level']) ?></div></td>
                         <td><?= e($class['instructor']) ?></td>
                         <td><?= e(weekday($class['weekday'])) ?><div class="cell-sub"><?= e($class['start'] . ' – ' . $class['end']) ?></div></td>
@@ -283,6 +340,7 @@ require $partials . '/head.php';
     <?= pagination(count($classes), 1, 10, 'lớp học') ?>
 </div>
 
+<?php // Modal dùng chung cho cả THÊM và SỬA lớp. classes.js đổ dữ liệu khi bấm Sửa. ?>
 <div class="modal fade" id="classFormModal" tabindex="-1" aria-labelledby="classFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -371,6 +429,7 @@ require $partials . '/head.php';
     </div>
 </div>
 
+<?php // Modal xem chi tiết. classes.js gọi ?action=members rồi đổ JSON vào đây. ?>
 <div class="modal fade" id="classDetailModal" tabindex="-1" aria-labelledby="classDetailTitle" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -427,5 +486,6 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=3"></script>
+<?php // classes.js xử lý AJAX thêm/sửa/xóa và modal chi tiết. ?>
+<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=8"></script>
 <?php require $partials . '/foot.php'; ?>

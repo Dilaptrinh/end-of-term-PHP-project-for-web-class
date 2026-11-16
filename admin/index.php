@@ -2,6 +2,38 @@
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
+function dashboard_snapshot(): array
+{
+    $registrations = data_package_registrations();
+    $pendingPackages = [];
+    $paidPackages = 0;
+    $totalRevenue = 0;
+    $pendingRevenue = 0;
+    foreach ($registrations as $registration) {
+        if ($registration['payment'] === 'chua_thanh_toan') {
+            $pendingPackages[] = $registration;
+            $pendingRevenue += (int) $registration['price'];
+        }
+        if ($registration['payment'] === 'da_thanh_toan') {
+            $paidPackages++;
+            $totalRevenue += (int) $registration['price'];
+        }
+    }
+
+    $pendingSlotsList = array_values(array_filter(data_classes(), static fn (array $class): bool => $class['status'] === 'cho_duyet'));
+    $pendingSlots = count($pendingSlotsList);
+
+    return [
+        'pendingPackages' => $pendingPackages,
+        'pendingSlotsList' => $pendingSlotsList,
+        'pendingSlots' => $pendingSlots,
+        'pendingTotal' => $pendingSlots + count($pendingPackages),
+        'paidPackages' => $paidPackages,
+        'totalRevenue' => $totalRevenue,
+        'pendingRevenue' => $pendingRevenue,
+    ];
+}
+
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
@@ -18,10 +50,23 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $changed = admin_package_registration_confirm($id);
+    $snapshot = dashboard_snapshot();
+    $pendingCount = count($snapshot['pendingPackages']);
 
     json_response([
         'success' => $changed,
         'message' => $changed ? 'Đã xác nhận thanh toán.' : 'Không tìm thấy đăng ký.',
+        'id' => $id,
+        'pending_rows' => array_slice($snapshot['pendingPackages'], 0, 3),
+        'stats' => [
+            'pending_total' => $snapshot['pendingTotal'],
+            'pending_foot' => $snapshot['pendingSlots'] . ' đề xuất lớp · ' . $pendingCount . ' thanh toán',
+            'pending_sub' => $pendingCount . ' đăng ký cần xác nhận',
+            'pending_payments' => $pendingCount,
+            'paid_packages' => $snapshot['paidPackages'],
+            'paid_revenue' => money($snapshot['totalRevenue']),
+            'pending_revenue' => money($snapshot['pendingRevenue']),
+        ],
     ], $changed ? 200 : 404);
 }
 
@@ -142,8 +187,8 @@ require $partials . '/head.php';
             <div class="d-flex align-items-start">
                 <div>
                     <div class="stat-label">Yêu cầu chờ duyệt</div>
-                    <div class="stat-value" style="color:var(--warning);"><?= $pendingTotal ?></div>
-                    <div class="stat-foot"><?= $pendingSlots ?> đề xuất lớp · <?= count($pendingPackages) ?> thanh toán</div>
+                    <div class="stat-value" style="color:var(--warning);" id="dash-pending-total"><?= $pendingTotal ?></div>
+                    <div class="stat-foot" id="dash-pending-foot"><?= $pendingSlots ?> đề xuất lớp · <?= count($pendingPackages) ?> thanh toán</div>
                 </div>
                 <div class="stat-icon amber ms-auto"><?= icon('bell') ?></div>
             </div>
@@ -155,14 +200,14 @@ require $partials . '/head.php';
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
             <div class="stat-label">Doanh thu đã thu</div>
-            <div class="stat-value" style="font-size:1.35rem;"><?= e(money($totalRevenue)) ?></div>
-            <div class="stat-foot"><?= $paidPackages ?> gói đã thanh toán</div>
+            <div class="stat-value" style="font-size:1.35rem;" id="dash-paid-revenue"><?= e(money($totalRevenue)) ?></div>
+            <div class="stat-foot" id="dash-paid-foot"><?= $paidPackages ?> gói đã thanh toán</div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
             <div class="stat-label">Doanh thu chờ thu</div>
-            <div class="stat-value" style="font-size:1.35rem;"><?= e(money($pendingRevenue)) ?></div>
+            <div class="stat-value" style="font-size:1.35rem;" id="dash-pending-revenue"><?= e(money($pendingRevenue)) ?></div>
             <div class="stat-foot">Gói chưa thanh toán</div>
         </div>
     </div>
@@ -188,7 +233,7 @@ require $partials . '/head.php';
             <div class="app-card-header">
                 <div>
                     <h2>Đăng ký gói chờ thanh toán</h2>
-                    <p class="sub"><?= count($pendingPackages) ?> đăng ký cần xác nhận</p>
+                    <p class="sub" id="dash-pending-sub"><?= count($pendingPackages) ?> đăng ký cần xác nhận</p>
                 </div>
                 <a class="btn btn-ghost btn-sm ms-auto" href="<?= e(url('/admin/registrations')) ?>">Xem tất cả <?= icon('arrow-right') ?></a>
             </div>
@@ -204,21 +249,25 @@ require $partials . '/head.php';
                             <th class="cell-actions">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <?php foreach (array_slice($pendingPackages, 0, 3) as $row): ?>
-                            <tr>
-                                <td><?= e($row['member']) ?></td>
-                                <td><?= e($row['package']) ?></td>
-                                <td class="text-muted-2"><?= e($row['from']) ?> → <?= e($row['to']) ?></td>
-                                <td class="cell-strong"><?= e(money($row['price'])) ?></td>
-                                <td><?= status_badge($row['payment']) ?></td>
-                                <td class="cell-actions">
-                                    <button class="btn btn-primary btn-sm" type="button"
-                                            data-confirm-package="<?= (int) $row['id'] ?>"
-                                            data-confirm-text="Xác nhận đã thanh toán cho <?= e($row['member']) ?>?">Xác nhận</button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                    <tbody id="dash-pending-body">
+                        <?php if (!$pendingPackages): ?>
+                            <tr data-empty-row><td colspan="6" class="text-center text-muted-2 py-4">Không có đăng ký chờ thanh toán.</td></tr>
+                        <?php else: ?>
+                            <?php foreach (array_slice($pendingPackages, 0, 3) as $row): ?>
+                                <tr data-reg-pending-row="<?= (int) $row['id'] ?>">
+                                    <td><?= e($row['member']) ?></td>
+                                    <td><?= e($row['package']) ?></td>
+                                    <td class="text-muted-2"><?= e($row['from']) ?> → <?= e($row['to']) ?></td>
+                                    <td class="cell-strong"><?= e(money($row['price'])) ?></td>
+                                    <td><?= status_badge($row['payment']) ?></td>
+                                    <td class="cell-actions">
+                                        <button class="btn btn-primary btn-sm" type="button"
+                                                data-confirm-package="<?= (int) $row['id'] ?>"
+                                                data-confirm-text="Xác nhận đã thanh toán cho <?= e($row['member']) ?>?">Xác nhận</button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -232,7 +281,7 @@ require $partials . '/head.php';
                 <a class="btn btn-ghost btn-sm ms-auto" href="<?= e(url('/admin/availability')) ?>">Duyệt</a>
             </div>
             <div class="app-card-body">
-                <ul class="app-timeline">
+                <ul class="app-timeline" id="dash-timeline">
                     <?php foreach (array_slice($pendingSlotsList, 0, 2) as $slot): ?>
                         <li>
                             <span class="tl-dot warning"><?= icon('calendar-plus') ?></span>
@@ -241,10 +290,10 @@ require $partials . '/head.php';
                         </li>
                     <?php endforeach; ?>
                     <?php if ($pendingPackages): ?>
-                        <li>
+                        <li id="dash-payment-summary">
                             <span class="tl-dot warning"><?= icon('receipt') ?></span>
-                            <div class="tl-title"><?= count($pendingPackages) ?> thanh toán chờ xác nhận</div>
-                            <div class="tl-meta">Tổng giá trị <?= e(money(array_sum(array_column($pendingPackages, 'price')))) ?></div>
+                            <div class="tl-title" id="dash-payment-title"><?= count($pendingPackages) ?> thanh toán chờ xác nhận</div>
+                            <div class="tl-meta" id="dash-payment-meta">Tổng giá trị <?= e(money(array_sum(array_column($pendingPackages, 'price')))) ?></div>
                         </li>
                     <?php endif; ?>
                 </ul>
@@ -258,5 +307,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/index.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/admin/index.js')) ?>?v=3"></script>
 <?php require $partials . '/foot.php'; ?>

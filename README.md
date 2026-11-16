@@ -1,6 +1,6 @@
 # FitZone — Hệ thống quản lý phòng tập & lớp học
 
-Ứng dụng web viết bằng **PHP thuần + MySQL**, giao diện server-side kết hợp AJAX/JSON API. Hệ thống phân quyền 3 vai trò: **Quản trị viên**, **Giáo viên**, **Hội viên**.
+Ứng dụng web viết bằng **PHP thuần + MySQL**, giao diện server-side kết hợp JavaScript cho các thao tác cần thiết. Hệ thống phân quyền 3 vai trò: **Quản trị viên**, **Giáo viên**, **Hội viên**.
 
 ## Công nghệ
 
@@ -58,7 +58,7 @@ fitness/
     │   └── user.php          # app_user(), app_notifications()
     ├── menus/                # dữ liệu menu theo vai trò
     ├── partials/             # head, sidebar, topbar, flash, foot
-    ├── mysql/                # config, connect, schema, seed_accounts, setup
+    ├── mysql/                # config, connect và file SQL
     └── assets/               # css, js, vendor
 ```
 
@@ -70,11 +70,7 @@ fitness/
 4. Kiểm tra cấu hình ở `common/mysql/config.php` (mặc định `127.0.0.1`, user `root`, mật khẩu rỗng).
 5. Mở trình duyệt: `http://localhost/fitness/`.
 
-Cơ sở dữ liệu `phongtap` sẽ **tự động được tạo** (bảng + tài khoản mẫu) ở lần query đầu tiên nhờ `common_db()`. Có thể khởi tạo thủ công:
-
-```bash
-C:\xampp\php\php.exe common\mysql\setup.php
-```
+Import `common/mysql/fitzone_phongtap.sql` vào MySQL trước khi mở ứng dụng. Ứng dụng chỉ kết nối tới database đã có, không tự tạo database, bảng hoặc dữ liệu mẫu.
 
 ## Tài khoản mẫu
 
@@ -109,7 +105,7 @@ require $partials . '/foot.php';
 - **Dữ liệu** lấy qua các hàm `data_*()` trong `common/data/`, chạy SQL qua `view_db()` → `common_db()`.
 - **Giao diện** ghép từ các partial dùng chung (`head`, `sidebar`, `topbar`, `flash`, `foot`).
 - **Menu** khai báo một nơi duy nhất trong `common/menus/{role}.php`.
-- **AJAX**: `common/assets/js/api.js` gọi API, `common/assets/js/ui.js` tự xử lý form có `data-api-*`.
+- Các thao tác quản trị dùng JavaScript/fetch ở những trang cần cập nhật nhanh; đăng nhập và đăng ký luôn gửi form POST server-side, không dùng AJAX.
 
 ## API chính
 

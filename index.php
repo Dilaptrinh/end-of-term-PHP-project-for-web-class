@@ -17,8 +17,8 @@ $pageScripts = [];
     <link rel="stylesheet" href="<?= e(url('/common/assets/vendor/bootstrap/bootstrap.min.css')) ?>">
     <link rel="stylesheet" href="<?= e(url('/common/assets/vendor/bootstrap-icons/bootstrap-icons.css')) ?>">
     <link rel="stylesheet" href="<?= e(url('/common/assets/css/tokens.css')) ?>">
-    <link rel="stylesheet" href="<?= e(url('/common/assets/css/app.css')) ?>">
-    <link rel="stylesheet" href="<?= e(url('/common/assets/css/pages.css')) ?>">
+    <link rel="stylesheet" href="<?= e(url('/common/assets/css/app.css')) ?>?v=5">
+    <link rel="stylesheet" href="<?= e(url('/common/assets/css/pages.css')) ?>?v=5">
 </head>
 <body>
 <div class="public-shell">
@@ -70,47 +70,6 @@ $pageScripts = [];
             </div>
         </div>
 
-        <div class="hero-visual" aria-hidden="true">
-            <div class="hero-visual-card">
-                <div class="hvc-head">
-                    <span class="dot"></span>
-                    <span class="hvc-title">Lớp học hôm nay</span>
-                    <span class="ms-auto text-tiny" style="color:rgba(255,255,255,.6)"><?= icon('calendar3') ?> 24/10</span>
-                </div>
-                <div class="mini-class">
-                    <span class="time">06:00</span>
-                    <span>
-                        <span class="name d-block">HIIT đốt mỡ</span>
-                        <span class="meta">Nguyễn Đức Anh · P.202</span>
-                    </span>
-                    <span class="pill">Còn 2 chỗ</span>
-                </div>
-                <div class="mini-class">
-                    <span class="time">09:30</span>
-                    <span>
-                        <span class="name d-block">Yoga nâng cao</span>
-                        <span class="meta">Trần Thu Hà · P.101</span>
-                    </span>
-                    <span class="pill">Còn 4 chỗ</span>
-                </div>
-                <div class="mini-class">
-                    <span class="time">16:00</span>
-                    <span>
-                        <span class="name d-block">Cardio &amp; Core</span>
-                        <span class="meta">Lê Ngọc Mai · P.202</span>
-                    </span>
-                    <span class="pill" style="background:rgba(253,224,71,.18);color:#FDE68A;">Sắp đầy</span>
-                </div>
-                <div class="mini-class">
-                    <span class="time">18:00</span>
-                    <span>
-                        <span class="name d-block">Yoga cơ bản</span>
-                        <span class="meta">Trần Thu Hà · P.101</span>
-                    </span>
-                    <span class="pill">Còn 6 chỗ</span>
-                </div>
-            </div>
-        </div>
     </div>
 </section>
 
@@ -240,7 +199,7 @@ $pageScripts = [];
     <footer class="public-footer" id="contact">
         <div class="public-footer-inner">
             <div>
-                <div class="brand"><span class="brand-mark" style="width:32px;height:32px;"><?= icon('activity') ?></span> FitZone</div>
+                <div class="brand"><span class="brand-mark"><?= icon('activity') ?></span> FitZone</div>
                 <p style="font-size:.82rem;max-width:300px;">Phòng tập hiện đại với lớp học đa dạng, giáo viên chuyên nghiệp và trải nghiệm tập luyện được cá nhân hóa.</p>
             </div>
             <div>

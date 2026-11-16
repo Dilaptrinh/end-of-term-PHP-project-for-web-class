@@ -71,8 +71,8 @@ hr { border-color: var(--border-soft); opacity: 1; }
   width: 34px; height: 34px;
   display: grid; place-items: center;
   border-radius: 8px;
-  background: #22C55E;
-  color: #0F172A;
+  background: var(--info);
+  color: #fff;
 }
 .app-sidebar-brand small {
   display: block;
@@ -189,8 +189,8 @@ hr { border-color: var(--border-soft); opacity: 1; }
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: linear-gradient(135deg, #22C55E, #86EFAC);
-  color: #10251A;
+  background: var(--info);
+  color: #fff;
 }
 .app-topbar-nav {
   display: flex;

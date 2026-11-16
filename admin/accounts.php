@@ -2,6 +2,16 @@
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
+function account_find(int $id): ?array
+{
+    foreach (data_accounts() as $account) {
+        if ((int) $account['id'] === $id) {
+            return $account;
+        }
+    }
+    return null;
+}
+
 // API GET: trả chi tiết một tài khoản cho modal bằng JSON.
 $requestAction = (string) ($_GET['action'] ?? '');
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'detail') {
@@ -52,11 +62,15 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
 
         try {
-            admin_account_create($username, $password, $name, $role, $phone, $email);
+            $newId = admin_account_create($username, $password, $name, $role, $phone, $email);
         } catch (mysqli_sql_exception $error) {
             json_response(['success' => false, 'message' => 'Email đã được sử dụng hoặc dữ liệu bị trùng.'], 422);
         }
-        json_response(['success' => true, 'message' => 'Đã tạo tài khoản và hồ sơ liên quan.'], 201);
+        json_response([
+            'success' => true,
+            'message' => 'Đã tạo tài khoản và hồ sơ liên quan.',
+            'data' => account_find($newId),
+        ], 201);
     }
 
     if ($action === 'status') {
@@ -69,7 +83,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if (!admin_account_status($targetId, $active)) {
             json_response(['success' => false, 'message' => 'Không thể thay đổi tài khoản admin hoặc tài khoản không tồn tại.'], 422);
         }
-        json_response(['success' => true, 'message' => $active ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.']);
+        json_response([
+            'success' => true,
+            'message' => $active ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.',
+            'data' => account_find($targetId),
+        ]);
     }
 
     if ($action === 'update') {
@@ -102,7 +120,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         } catch (mysqli_sql_exception $error) {
             json_response(['success' => false, 'message' => 'Email đã được sử dụng hoặc dữ liệu không hợp lệ.'], 422);
         }
-        json_response(['success' => true, 'message' => 'Đã cập nhật tài khoản.']);
+        json_response([
+            'success' => true,
+            'message' => 'Đã cập nhật tài khoản.',
+            'data' => account_find($targetId),
+        ]);
     }
 
     json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
@@ -197,11 +219,11 @@ require $partials . '/head.php';
                 <div class="table-responsive">
                     <table class="table app-table mb-0">
                         <thead><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th class="cell-actions">Thao tác</th></tr></thead>
-                        <tbody>
+                        <tbody id="accounts-body" data-current-id="<?= (int) $account['id'] ?>">
                         <?php if ($accounts === []): ?>
-                            <tr><td colspan="6" class="text-center text-muted-2 py-4">Không tìm thấy tài khoản.</td></tr>
+                            <tr data-empty-row><td colspan="6" class="text-center text-muted-2 py-4">Không tìm thấy tài khoản.</td></tr>
                         <?php else: foreach ($accounts as $item): ?>
-                            <tr>
+                            <tr data-account-row="<?= (int) $item['id'] ?>">
                                 <td class="cell-strong"><?= e($item['name']) ?></td>
                                 <td><?= e($item['username']) ?></td>
                                 <td><?= e(['admin' => 'Admin', 'instructor' => 'Instructor', 'customer' => 'Customer'][$item['role']] ?? $item['role']) ?></td>
@@ -305,5 +327,5 @@ require $partials . '/head.php';
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
-<script src="<?= e(url('/common/assets/js/admin/account.js')) ?>?v=3"></script>
+<script src="<?= e(url('/common/assets/js/admin/accounts.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>
