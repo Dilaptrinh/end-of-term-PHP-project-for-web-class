@@ -1,21 +1,39 @@
 <?php
 require __DIR__ . '/common/bootstrap.php';
 
-if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    $input = $_POST;
+$current = common_user();
+if ($current !== null) {
+    redirect('/' . $current['vai_tro']);
+}
 
-    $username = trim((string) ($input['ten_dang_nhap'] ?? ''));
-    $password = (string) ($input['mat_khau'] ?? '');
-    $confirm = (string) ($input['mat_khau_xac_nhan'] ?? '');
-    $name = trim((string) ($input['ho_ten'] ?? ''));
-    $email = trim((string) ($input['email'] ?? ''));
-    $phone = trim((string) ($input['sdt'] ?? ''));
-    $gender = (string) ($input['gioi_tinh'] ?? 'khac');
-    $birth = trim((string) ($input['ngay_sinh'] ?? ''));
-    $address = trim((string) ($input['dia_chi'] ?? ''));
+$errors = [];
+$old = [
+    'ten_dang_nhap' => '',
+    'ho_ten' => '',
+    'sdt' => '',
+    'email' => '',
+    'ngay_sinh' => '',
+    'gioi_tinh' => 'khac',
+    'dia_chi' => '',
+    'dieu_khoan' => false,
+];
 
-    $errors = [];
-    if (!preg_match('/^[A-Za-z0-9_]{3,50}$/', $username)) {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $old = [
+        'ten_dang_nhap' => trim((string) ($_POST['ten_dang_nhap'] ?? '')),
+        'ho_ten' => trim((string) ($_POST['ho_ten'] ?? '')),
+        'sdt' => trim((string) ($_POST['sdt'] ?? '')),
+        'email' => trim((string) ($_POST['email'] ?? '')),
+        'ngay_sinh' => trim((string) ($_POST['ngay_sinh'] ?? '')),
+        'gioi_tinh' => (string) ($_POST['gioi_tinh'] ?? 'khac'),
+        'dia_chi' => trim((string) ($_POST['dia_chi'] ?? '')),
+        'dieu_khoan' => !empty($_POST['dieu_khoan']),
+    ];
+
+    $password = (string) ($_POST['mat_khau'] ?? '');
+    $confirm = (string) ($_POST['mat_khau_xac_nhan'] ?? '');
+
+    if (!preg_match('/^[A-Za-z0-9_]{3,50}$/', $old['ten_dang_nhap'])) {
         $errors['ten_dang_nhap'] = 'Tên đăng nhập 3–50 ký tự, chỉ chữ/số/gạch dưới.';
     }
     if (strlen($password) < 6) {
@@ -24,55 +42,75 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if ($password !== $confirm) {
         $errors['mat_khau_xac_nhan'] = 'Mật khẩu xác nhận không khớp.';
     }
-    if (mb_strlen($name) < 2) {
+    if (mb_strlen($old['ho_ten']) < 2) {
         $errors['ho_ten'] = 'Họ tên không hợp lệ.';
     }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    if (!filter_var($old['email'], FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = 'Email không hợp lệ.';
     }
-    if ($phone === '') {
+    if ($old['sdt'] === '') {
         $errors['sdt'] = 'Số điện thoại không hợp lệ.';
     }
-    if ($errors) {
-        json_response(['success' => false, 'message' => 'Thông tin đăng ký không hợp lệ.', 'errors' => $errors], 422);
+    if (!in_array($old['gioi_tinh'], ['nam', 'nu', 'khac'], true)) {
+        $errors['gioi_tinh'] = 'Giới tính không hợp lệ.';
+    }
+    if (!$old['dieu_khoan']) {
+        $errors['dieu_khoan'] = 'Bạn cần đồng ý với điều khoản sử dụng.';
     }
 
-    $db = common_db();
+    if (!$errors) {
+        $db = common_db();
 
-    $stmt = $db->prepare('SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
-    $stmt->bind_param('s', $username);
-    $stmt->execute();
-    $exists = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    if ($exists) {
-        json_response(['success' => false, 'message' => 'Tên đăng nhập đã tồn tại.', 'errors' => ['ten_dang_nhap' => 'Tên đăng nhập đã tồn tại.']], 422);
+        $stmt = $db->prepare('SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
+        $stmt->bind_param('s', $old['ten_dang_nhap']);
+        $stmt->execute();
+        $usernameExists = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if ($usernameExists) {
+            $errors['ten_dang_nhap'] = 'Tên đăng nhập đã tồn tại.';
+        }
+
+        $stmt = $db->prepare('SELECT id FROM hoi_vien WHERE email = ? LIMIT 1');
+        $stmt->bind_param('s', $old['email']);
+        $stmt->execute();
+        $emailExists = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if ($emailExists) {
+            $errors['email'] = 'Email đã được sử dụng.';
+        }
+
+        if (!$errors) {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $birth = $old['ngay_sinh'] !== '' ? $old['ngay_sinh'] : null;
+            $address = $old['dia_chi'] !== '' ? $old['dia_chi'] : null;
+
+            try {
+                $db->begin_transaction();
+
+                $stmt = $db->prepare('INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, ho_ten, vai_tro, trang_thai) VALUES (?, ?, ?, "customer", 1)');
+                $stmt->bind_param('sss', $old['ten_dang_nhap'], $hash, $old['ho_ten']);
+                $stmt->execute();
+                $accountId = $stmt->insert_id;
+                $stmt->close();
+
+                $stmt = $db->prepare('INSERT INTO hoi_vien (tai_khoan_id, ho_ten, sdt, email, gioi_tinh, ngay_sinh, dia_chi, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?, "hoat_dong")');
+                $stmt->bind_param('issssss', $accountId, $old['ho_ten'], $old['sdt'], $old['email'], $old['gioi_tinh'], $birth, $address);
+                $stmt->execute();
+                $stmt->close();
+
+                $db->commit();
+
+                $_SESSION['_flash'] = [
+                    'type' => 'success',
+                    'message' => 'Tạo tài khoản thành công. Vui lòng đăng nhập.',
+                ];
+                redirect('/login.php');
+            } catch (mysqli_sql_exception $e) {
+                $db->rollback();
+                $errors['general'] = 'Không thể tạo tài khoản. Tên đăng nhập hoặc email có thể đã tồn tại.';
+            }
+        }
     }
-
-    $stmt = $db->prepare('SELECT id FROM hoi_vien WHERE email = ? LIMIT 1');
-    $stmt->bind_param('s', $email);
-    $stmt->execute();
-    $exists = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    if ($exists) {
-        json_response(['success' => false, 'message' => 'Email đã được sử dụng.', 'errors' => ['email' => 'Email đã được sử dụng.']], 422);
-    }
-
-    $hash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $db->prepare('INSERT INTO tai_khoan (ten_dang_nhap, mat_khau, ho_ten, vai_tro, trang_thai) VALUES (?, ?, ?, "customer", 1)');
-    $stmt->bind_param('sss', $username, $hash, $name);
-    $stmt->execute();
-    $accountId = $stmt->insert_id;
-    $stmt->close();
-
-    $birth = $birth !== '' ? $birth : null;
-    $address = $address !== '' ? $address : null;
-
-    $stmt = $db->prepare('INSERT INTO hoi_vien (tai_khoan_id, ho_ten, sdt, email, gioi_tinh, ngay_sinh, dia_chi, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?, "hoat_dong")');
-    $stmt->bind_param('issssss', $accountId, $name, $phone, $email, $gender, $birth, $address);
-    $stmt->execute();
-    $stmt->close();
-
-    json_response(['success' => true, 'message' => 'Tạo tài khoản thành công.'], 201);
 }
 
 $pageTitle = 'Đăng ký hội viên';
@@ -121,56 +159,71 @@ $pageScripts = [];
     <h1>Tạo tài khoản hội viên</h1>
     <p class="auth-sub">Điền thông tin bên dưới để bắt đầu tập luyện cùng FitZone.</p>
 
-    <form id="register-form">
+    <?php if ($errors): ?>
+        <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <?= icon('exclamation-octagon') ?>
+            <div><?= e($errors['general'] ?? 'Vui lòng kiểm tra lại thông tin đăng ký.') ?></div>
+        </div>
+    <?php endif; ?>
+
+    <form id="register-form" method="post" action="" novalidate>
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label" for="reg-username">Tên đăng nhập <span class="req">*</span></label>
-                <input class="form-control" id="reg-username" name="ten_dang_nhap" type="text" required minlength="3" maxlength="50" pattern="[A-Za-z0-9_]+" placeholder="vd: nguyenvana" autocomplete="username">
+                <input class="form-control<?= isset($errors['ten_dang_nhap']) ? ' is-invalid' : '' ?>" id="reg-username" name="ten_dang_nhap" type="text" value="<?= e($old['ten_dang_nhap']) ?>" required minlength="3" maxlength="50" pattern="[A-Za-z0-9_]+" placeholder="vd: nguyenvana" autocomplete="username">
+                <?php if (isset($errors['ten_dang_nhap'])): ?><div class="invalid-feedback d-block"><?= e($errors['ten_dang_nhap']) ?></div><?php endif; ?>
                 <div class="form-text">Chỉ chữ, số, dấu gạch dưới; tối thiểu 3 ký tự.</div>
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-name">Họ và tên <span class="req">*</span></label>
-                <input class="form-control" id="reg-name" name="ho_ten" type="text" required placeholder="Nguyễn Văn A">
+                <input class="form-control<?= isset($errors['ho_ten']) ? ' is-invalid' : '' ?>" id="reg-name" name="ho_ten" type="text" value="<?= e($old['ho_ten']) ?>" required placeholder="Nguyễn Văn A">
+                <?php if (isset($errors['ho_ten'])): ?><div class="invalid-feedback d-block"><?= e($errors['ho_ten']) ?></div><?php endif; ?>
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-phone">Số điện thoại <span class="req">*</span></label>
-                <input class="form-control" id="reg-phone" name="sdt" type="tel" required placeholder="0901 234 567">
+                <input class="form-control<?= isset($errors['sdt']) ? ' is-invalid' : '' ?>" id="reg-phone" name="sdt" type="tel" value="<?= e($old['sdt']) ?>" required placeholder="0901 234 567">
+                <?php if (isset($errors['sdt'])): ?><div class="invalid-feedback d-block"><?= e($errors['sdt']) ?></div><?php endif; ?>
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-email">Email <span class="req">*</span></label>
-                <input class="form-control" id="reg-email" name="email" type="email" required placeholder="ban@email.com">
+                <input class="form-control<?= isset($errors['email']) ? ' is-invalid' : '' ?>" id="reg-email" name="email" type="email" value="<?= e($old['email']) ?>" required placeholder="ban@email.com">
+                <?php if (isset($errors['email'])): ?><div class="invalid-feedback d-block"><?= e($errors['email']) ?></div><?php endif; ?>
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-birth">Ngày sinh</label>
-                <input class="form-control" id="reg-birth" name="ngay_sinh" type="date">
+                <input class="form-control" id="reg-birth" name="ngay_sinh" type="date" value="<?= e($old['ngay_sinh']) ?>">
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-gender">Giới tính</label>
-                <select class="form-select" id="reg-gender" name="gioi_tinh">
-                    <option value="khac">Khác</option>
-                    <option value="nam">Nam</option>
-                    <option value="nu">Nữ</option>
+                <select class="form-select<?= isset($errors['gioi_tinh']) ? ' is-invalid' : '' ?>" id="reg-gender" name="gioi_tinh">
+                    <option value="khac" <?= $old['gioi_tinh'] === 'khac' ? 'selected' : '' ?>>Khác</option>
+                    <option value="nam" <?= $old['gioi_tinh'] === 'nam' ? 'selected' : '' ?>>Nam</option>
+                    <option value="nu" <?= $old['gioi_tinh'] === 'nu' ? 'selected' : '' ?>>Nữ</option>
                 </select>
+                <?php if (isset($errors['gioi_tinh'])): ?><div class="invalid-feedback d-block"><?= e($errors['gioi_tinh']) ?></div><?php endif; ?>
             </div>
             <div class="col-12">
                 <label class="form-label" for="reg-address">Địa chỉ</label>
-                <input class="form-control" id="reg-address" name="dia_chi" type="text" placeholder="Số nhà, đường, quận/huyện, tỉnh/thành">
+                <input class="form-control" id="reg-address" name="dia_chi" type="text" value="<?= e($old['dia_chi']) ?>" placeholder="Số nhà, đường, quận/huyện, tỉnh/thành">
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-password">Mật khẩu <span class="req">*</span></label>
-                <input class="form-control" id="reg-password" name="mat_khau" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password">
+                <input class="form-control<?= isset($errors['mat_khau']) ? ' is-invalid' : '' ?>" id="reg-password" name="mat_khau" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password">
+                <?php if (isset($errors['mat_khau'])): ?><div class="invalid-feedback d-block"><?= e($errors['mat_khau']) ?></div><?php endif; ?>
                 <div class="form-text">Dùng ít nhất 6 ký tự, nên có chữ và số.</div>
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="reg-confirm">Xác nhận mật khẩu <span class="req">*</span></label>
-                <input class="form-control" id="reg-confirm" name="mat_khau_xac_nhan" type="password" required minlength="6" placeholder="Nhập lại mật khẩu" autocomplete="new-password">
+                <input class="form-control<?= isset($errors['mat_khau_xac_nhan']) ? ' is-invalid' : '' ?>" id="reg-confirm" name="mat_khau_xac_nhan" type="password" required minlength="6" placeholder="Nhập lại mật khẩu" autocomplete="new-password">
+                <?php if (isset($errors['mat_khau_xac_nhan'])): ?><div class="invalid-feedback d-block"><?= e($errors['mat_khau_xac_nhan']) ?></div><?php endif; ?>
             </div>
             <div class="col-12">
                 <div class="form-check">
-                    <input class="form-check-input" id="reg-terms" name="dieu_khoan" type="checkbox" required>
+                    <input class="form-check-input<?= isset($errors['dieu_khoan']) ? ' is-invalid' : '' ?>" id="reg-terms" name="dieu_khoan" type="checkbox" value="1" <?= $old['dieu_khoan'] ? 'checked' : '' ?> required>
                     <label class="form-check-label" for="reg-terms">
                         Tôi đồng ý với <a href="#">điều khoản sử dụng</a> và <a href="#">chính sách bảo mật</a> của FitZone.
                     </label>
+                    <?php if (isset($errors['dieu_khoan'])): ?><div class="invalid-feedback d-block"><?= e($errors['dieu_khoan']) ?></div><?php endif; ?>
                 </div>
             </div>
         </div>
@@ -185,6 +238,4 @@ $pageScripts = [];
     </main>
 </div>
 
-<script src="<?= e(url('/common/assets/js/auth/register.js')) ?>?v=1"></script>
 <?php require __DIR__ . '/common/partials/foot.php'; ?>
-

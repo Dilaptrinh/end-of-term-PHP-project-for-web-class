@@ -3,6 +3,7 @@ require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    // nếu request là post mới chạy trong if , fn strtoupper ( in hoa )
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);

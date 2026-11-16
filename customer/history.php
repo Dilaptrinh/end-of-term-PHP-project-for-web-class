@@ -7,16 +7,54 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
     }
 
-    if (($_GET['action'] ?? '') !== 'cancel') {
-        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 422);
-    }
-
+    $action = (string) ($_GET['action'] ?? '');
     $registrationId = (int) ($_GET['id'] ?? 0);
     if ($registrationId <= 0) {
         json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
     }
 
     $db = common_db();
+
+    if ($action === 'cancel-package') {
+        $stmt = $db->prepare(
+            'SELECT d.id, d.trang_thai, hv.tai_khoan_id
+               FROM dang_ky_goi d
+               JOIN hoi_vien hv ON hv.id = d.hoi_vien_id
+              WHERE d.id = ?
+              LIMIT 1'
+        );
+        $stmt->bind_param('i', $registrationId);
+        $stmt->execute();
+        $packageRegistration = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$packageRegistration) {
+            json_response(['success' => false, 'message' => 'Không tìm thấy đăng ký gói.'], 404);
+        }
+        if ((int) $packageRegistration['tai_khoan_id'] !== (int) $user['id']) {
+            json_response(['success' => false, 'message' => 'Bạn không có quyền hủy đăng ký này.'], 403);
+        }
+        if ($packageRegistration['trang_thai'] !== 'chua_thanh_toan') {
+            json_response(['success' => false, 'message' => 'Chỉ có thể hủy đăng ký gói đang chờ thanh toán.'], 422);
+        }
+
+        $stmt = $db->prepare('UPDATE dang_ky_goi SET trang_thai = "da_huy" WHERE id = ? AND trang_thai = "chua_thanh_toan"');
+        $stmt->bind_param('i', $registrationId);
+        $stmt->execute();
+        $changed = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($changed < 1) {
+            json_response(['success' => false, 'message' => 'Đăng ký gói đã được xử lý hoặc không còn hiệu lực.'], 422);
+        }
+
+        json_response(['success' => true, 'message' => 'Đã hủy đăng ký gói.']);
+    }
+
+    if ($action !== 'cancel') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 422);
+    }
+
     $stmt = $db->prepare('SELECT d.id, hv.tai_khoan_id FROM dang_ky_lop d JOIN hoi_vien hv ON hv.id = d.hoi_vien_id WHERE d.id = ? LIMIT 1');
     $stmt->bind_param('i', $registrationId);
     $stmt->execute();
@@ -92,18 +130,6 @@ require $partials . '/head.php';
 
     <div class="tab-content">
         <div class="tab-pane fade show active" id="pane-packages" role="tabpanel" aria-labelledby="tab-packages" tabindex="0">
-            <div class="table-toolbar">
-                <div class="input-group" style="max-width:260px;">
-                    <span class="input-group-text bg-white border-end-0"><?= icon('calendar3') ?></span>
-                    <input class="form-control border-start-0" type="text" placeholder="Từ ngày — đến ngày" aria-label="Lọc theo ngày">
-                </div>
-                <select class="form-select" aria-label="Trạng thái thanh toán">
-                    <option>Tất cả trạng thái</option>
-                    <option>Đã thanh toán</option>
-                    <option>Chưa thanh toán</option>
-                </select>
-                <button class="btn btn-outline-primary btn-sm ms-auto" type="button"><?= icon('funnel') ?> Lọc</button>
-            </div>
             <div class="app-table-wrap">
                 <table class="app-table">
                     <thead>
@@ -114,6 +140,7 @@ require $partials . '/head.php';
                             <th>Thanh toán</th>
                             <th>Phương thức</th>
                             <th>Ngày thanh toán</th>
+                            <th class="cell-actions">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -125,6 +152,15 @@ require $partials . '/head.php';
                                 <td><?= status_badge($row['payment']) ?></td>
                                 <td><?= e($row['method']) ?></td>
                                 <td class="text-muted-2"><?= e($row['paid_at']) ?></td>
+                                <td class="cell-actions">
+                                    <?php if ($row['payment'] === 'chua_thanh_toan'): ?>
+                                        <button class="btn btn-danger-soft btn-sm" type="button"
+                                                data-cancel-package-id="<?= (int) $row['id'] ?>"
+                                                data-cancel-package-name="<?= e($row['name']) ?>">Hủy</button>
+                                    <?php else: ?>
+                                        <button class="btn btn-ghost btn-sm" type="button" disabled>—</button>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -134,15 +170,6 @@ require $partials . '/head.php';
         </div>
 
         <div class="tab-pane fade" id="pane-classes" role="tabpanel" aria-labelledby="tab-classes" tabindex="0">
-            <div class="table-toolbar">
-                <input class="form-control toolbar-search" type="search" placeholder="Tìm lớp học…" aria-label="Tìm lớp học">
-                <select class="form-select" aria-label="Trạng thái lớp">
-                    <option>Tất cả trạng thái</option>
-                    <option>Đã đăng ký</option>
-                    <option>Đã hủy</option>
-                </select>
-                <button class="btn btn-outline-primary btn-sm ms-auto" type="button"><?= icon('funnel') ?> Lọc</button>
-            </div>
             <div class="app-table-wrap">
                 <table class="app-table">
                     <thead>

@@ -54,7 +54,7 @@ function json_response(array $body, int $status = 200): void
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); // ko mã hóa tiếng việt , ko thêm dấu \
     exit;
 }
 

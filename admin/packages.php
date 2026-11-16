@@ -35,6 +35,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $level = (string) ($input['cap_do'] ?? 'basic');
     $status = (string) ($input['trang_thai'] ?? 'dang_ban');
     $errors = [];
+    //validate
     if (mb_strlen($name) < 2) {
         $errors['ten_goi'] = 'Tên gói không hợp lệ.';
     }
@@ -85,15 +86,14 @@ $pageScripts = [];
 
 $packages = data_packages();
 $selling = 0;
-foreach ($packages as $package) {
-    if ($package['status'] === 'dang_ban') {
-        $selling++;
-    }
-}
+
+
+$selling = count(array_filter($packages ,static fn (array $package):bool => $package['status'] === 'dang_ban'));
 $estimatedRevenue = 0;
-foreach ($packages as $package) {
-    $estimatedRevenue += $package['price'] * $package['sold'];
-}
+
+$estimatedRevenue = array_sum(array_map( static fn (array $package):int => (int) $package['price'] *  $package['sold']
+,$packages));
+
 $bestSeller = $packages[0] ?? ['name' => '—', 'sold' => 0];
 foreach ($packages as $package) {
     if ($package['sold'] > $bestSeller['sold']) {

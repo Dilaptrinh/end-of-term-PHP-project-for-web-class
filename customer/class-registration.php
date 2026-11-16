@@ -159,6 +159,36 @@ foreach ($open as &$class) {
 unset($class);
 $instructors = array_values(array_unique(array_map(static fn ($c) => $c['instructor'], $open)));
 
+$keyword = trim((string) ($_GET['q'] ?? ''));
+$weekdayFilter = (int) ($_GET['weekday'] ?? 0);
+$instructorFilter = trim((string) ($_GET['instructor'] ?? ''));
+$levelFilter = trim((string) ($_GET['level'] ?? ''));
+$levels = ['Cơ bản', 'Trung cấp', 'Nâng cao', 'Mọi trình độ'];
+if ($weekdayFilter < 1 || $weekdayFilter > 7) {
+    $weekdayFilter = 0;
+}
+if (!in_array($levelFilter, $levels, true)) {
+    $levelFilter = '';
+}
+
+$open = array_values(array_filter($open, static function (array $class) use ($keyword, $weekdayFilter, $instructorFilter, $levelFilter): bool {
+    if ($keyword !== ''
+        && mb_stripos($class['name'], $keyword) === false
+        && mb_stripos($class['instructor'], $keyword) === false) {
+        return false;
+    }
+    if ($weekdayFilter > 0 && (int) $class['weekday'] !== $weekdayFilter) {
+        return false;
+    }
+    if ($instructorFilter !== '' && $class['instructor'] !== $instructorFilter) {
+        return false;
+    }
+    if ($levelFilter !== '' && (string) ($class['level'] ?? '') !== $levelFilter) {
+        return false;
+    }
+    return true;
+}));
+
 $partials = __DIR__ . '/../common/partials';
 
 require $partials . '/head.php';
@@ -191,7 +221,7 @@ require $partials . '/head.php';
     <div class="filter-field filter-search">
         <label class="form-label" for="cls-q">Tìm lớp / giáo viên</label>
         <div class="position-relative">
-            <input class="form-control" id="cls-q" name="q" type="search" placeholder="VD: Yoga, Hà…">
+            <input class="form-control" id="cls-q" name="q" type="search" value="<?= e($keyword) ?>" placeholder="VD: Yoga, Hà…">
         </div>
     </div>
     <div class="filter-field">
@@ -199,7 +229,7 @@ require $partials . '/head.php';
         <select class="form-select" id="cls-day" name="weekday">
             <option value="">Tất cả</option>
             <?php for ($d = 1; $d <= 7; $d++): ?>
-                <option value="<?= $d ?>"><?= e(weekday($d)) ?></option>
+                <option value="<?= $d ?>" <?= $weekdayFilter === $d ? 'selected' : '' ?>><?= e(weekday($d)) ?></option>
             <?php endfor; ?>
         </select>
     </div>
@@ -208,7 +238,7 @@ require $partials . '/head.php';
         <select class="form-select" id="cls-teacher" name="instructor">
             <option value="">Tất cả</option>
             <?php foreach ($instructors as $teacher): ?>
-                <option value="<?= e($teacher) ?>"><?= e($teacher) ?></option>
+                <option value="<?= e($teacher) ?>" <?= $instructorFilter === $teacher ? 'selected' : '' ?>><?= e($teacher) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
@@ -216,10 +246,9 @@ require $partials . '/head.php';
         <label class="form-label" for="cls-level">Trình độ</label>
         <select class="form-select" id="cls-level" name="level">
             <option value="">Tất cả</option>
-            <option>Cơ bản</option>
-            <option>Trung cấp</option>
-            <option>Nâng cao</option>
-            <option>Mọi trình độ</option>
+            <?php foreach ($levels as $level): ?>
+                <option value="<?= e($level) ?>" <?= $levelFilter === $level ? 'selected' : '' ?>><?= e($level) ?></option>
+            <?php endforeach; ?>
         </select>
     </div>
     <div class="filter-field" style="min-width:auto;">
@@ -303,6 +332,12 @@ require $partials . '/head.php';
         </div>
     <?php endforeach; ?>
 </div>
+
+<?php if (!$open): ?>
+    <div class="app-card">
+        <div class="app-card-body text-center text-muted-2 py-4">Không tìm thấy lớp phù hợp với bộ lọc.</div>
+    </div>
+<?php endif; ?>
 
 <div class="app-card mt-3">
     <?= pagination(count($open), 1, 12, 'lớp học') ?>

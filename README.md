@@ -13,8 +13,8 @@
 
 ### Công khai
 - Trang chủ giới thiệu phòng tập, gói tập và lớp học nổi bật.
-- Đăng ký hội viên mới (gửi bằng AJAX tới API).
-- Đăng nhập một cổng, tự chuyển về đúng khu vực theo vai trò.
+- Đăng ký hội viên mới bằng form POST server-side, kiểm tra và thông báo lỗi tại chỗ.
+- Đăng nhập một cổng bằng form POST, tự chuyển về đúng khu vực theo vai trò.
 
 ### Hội viên (`customer`)
 - Tổng quan hồ sơ, chỉ số cơ thể, lớp đã đăng ký.

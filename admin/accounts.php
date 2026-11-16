@@ -11,6 +11,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction 
     }
     $detail = admin_account_detail((int) ($_GET['id'] ?? 0));
     json_response($detail ? ['success' => true, 'data' => $detail] : ['success' => false, 'message' => 'Không tìm thấy tài khoản.'], $detail ? 200 : 404);
+    //detail có người trả về data chi tiết , ko có trả message ko tìm thấy
 }
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
@@ -33,7 +34,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $role = post_string('vai_tro');
         $phone = post_string('sdt');
         $email = post_string('email');
-
+        //validate input create user
         if (!preg_match('/^[A-Za-z0-9_]{3,50}$/', $username) || mb_strlen($name) < 2) {
             json_response(['success' => false, 'message' => 'Tên đăng nhập hoặc họ tên không hợp lệ.'], 422);
         }

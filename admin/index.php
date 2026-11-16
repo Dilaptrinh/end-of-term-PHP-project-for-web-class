@@ -42,8 +42,8 @@ foreach ($registrations as $registration) {
     }
 }
 $classes = data_classes();
-$packages = data_packages();
 $members = data_members();
+$classRegistrations = data_class_registrations();
 $pendingSlots = count(array_filter($classes, static fn (array $class): bool => $class['status'] === 'cho_duyet'));
 $pendingSlotsList = array_values(array_filter($classes, static fn (array $class): bool => $class['status'] === 'cho_duyet'));
 $pendingTotal = $pendingSlots + count($pendingPackages);
@@ -51,6 +51,30 @@ $openClasses = 0;
 foreach ($classes as $class) {
     if ($class['status'] === 'dang_mo') {
         $openClasses++;
+    }
+}
+$activeMembers = 0;
+foreach ($members as $member) {
+    if ($member['status'] === 'hoat_dong') {
+        $activeMembers++;
+    }
+}
+$activeClassRegistrations = 0;
+foreach ($classRegistrations as $registration) {
+    if ($registration['status'] === 'dang_ky') {
+        $activeClassRegistrations++;
+    }
+}
+$paidPackages = 0;
+$totalRevenue = 0;
+$pendingRevenue = 0;
+foreach ($registrations as $registration) {
+    if ($registration['payment'] === 'da_thanh_toan') {
+        $paidPackages++;
+        $totalRevenue += (int) $registration['price'];
+    }
+    if ($registration['payment'] === 'chua_thanh_toan') {
+        $pendingRevenue += (int) $registration['price'];
     }
 }
 
@@ -123,6 +147,37 @@ require $partials . '/head.php';
                 </div>
                 <div class="stat-icon amber ms-auto"><?= icon('bell') ?></div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-label">Doanh thu đã thu</div>
+            <div class="stat-value" style="font-size:1.35rem;"><?= e(money($totalRevenue)) ?></div>
+            <div class="stat-foot"><?= $paidPackages ?> gói đã thanh toán</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-label">Doanh thu chờ thu</div>
+            <div class="stat-value" style="font-size:1.35rem;"><?= e(money($pendingRevenue)) ?></div>
+            <div class="stat-foot">Gói chưa thanh toán</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-label">Đăng ký lớp đang hiệu lực</div>
+            <div class="stat-value"><?= $activeClassRegistrations ?></div>
+            <div class="stat-foot"><?= count($classRegistrations) ?> lượt đăng ký</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-label">Hội viên hoạt động</div>
+            <div class="stat-value"><?= $activeMembers ?></div>
+            <div class="stat-foot"><?= count($members) ?> hội viên trong hệ thống</div>
         </div>
     </div>
 </div>

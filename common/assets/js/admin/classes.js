@@ -17,10 +17,12 @@
             form.reset();
             form.dataset.id = '';
             form.querySelector('[data-field="capacity"]').value = '20';
+            form.querySelector('#cf-status').value = 'dang_mo';
             return;
         }
 
         form.dataset.id = trigger.dataset.classId || '';
+        form.querySelector('#cf-status').value = trigger.dataset.classStatus || 'dang_mo';
         form.querySelector('[data-field="name"]').value = trigger.dataset.className || '';
         form.querySelector('[data-field="room"]').value = trigger.dataset.classRoom || '';
         form.querySelector('[data-field="day"]').value = trigger.dataset.classDay || '1';

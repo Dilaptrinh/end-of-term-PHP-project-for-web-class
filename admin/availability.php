@@ -1,7 +1,10 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
-
+//data_class trong data_shared
+//json_response trong common function
+//common_user() trong bootstraps
+//in_array() kiểm tra 1 giá trị trong mảng ko , tham số true so sánh nghiệm ngặc '===' , false '=='
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {

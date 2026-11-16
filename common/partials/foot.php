@@ -78,7 +78,7 @@
     });
 
     window.addEventListener('resize', function () {
-        if (window.innerWidth >= 992) closeSidebar();
+        if (window.innerWidth >= 1200) closeSidebar();
     });
 
     document.addEventListener('click', function (event) {

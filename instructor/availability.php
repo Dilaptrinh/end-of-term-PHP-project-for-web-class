@@ -20,6 +20,36 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Không tìm thấy hồ sơ giáo viên.'], 404);
     }
 
+    $instructorId = (int) $instructor['id'];
+    $action = (string) ($_GET['action'] ?? '');
+
+    if ($action === 'cancel') {
+        $classId = (int) ($_GET['id'] ?? 0);
+        if ($classId <= 0) {
+            json_response(['success' => false, 'message' => 'ID đề xuất không hợp lệ.'], 422);
+        }
+
+        $stmt = $db->prepare(
+            'UPDATE lop_hoc
+                SET trang_thai = "da_huy"
+              WHERE id = ? AND giao_vien_id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL'
+        );
+        $stmt->bind_param('ii', $classId, $instructorId);
+        $stmt->execute();
+        $changed = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($changed < 1) {
+            json_response(['success' => false, 'message' => 'Không tìm thấy đề xuất đang chờ duyệt.'], 422);
+        }
+
+        json_response(['success' => true, 'message' => 'Đã hủy đề xuất lớp học.']);
+    }
+
+    if ($action !== '' && $action !== 'create') {
+        json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    }
+
     $name = trim((string) ($input['ten_lop'] ?? ''));
     $weekday = (int) ($input['thu_trong_tuan'] ?? 0);
     $start = trim((string) ($input['gio_bat_dau'] ?? ''));
@@ -43,7 +73,6 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Thời gian lớp học không hợp lệ.'], 422);
     }
 
-    $instructorId = (int) $instructor['id'];
     $specialtyStmt = $db->prepare(
         'SELECT cm.id
            FROM giao_vien_chuyen_mon gvcm
@@ -164,10 +193,37 @@ require $partials . '/head.php';
                     </div>
                 </div>
                 <div class="col-lg-7">
-                    <div class="app-card"><div class="app-card-header"><h2>Đề xuất của tôi</h2></div><div class="app-table-wrap"><table class="app-table"><thead><tr><th>Lớp học</th><th>Lịch</th><th>Sức chứa</th><th>Trạng thái</th></tr></thead><tbody>
-                    <?php if (!$classes): ?><tr><td colspan="4" class="text-center text-muted-2 py-4">Chưa có đề xuất lớp.</td></tr>
-                    <?php else: foreach ($classes as $class): ?><tr><td class="cell-strong"><?= e($class['name']) ?><div class="cell-sub"><?= e($class['level']) ?></div></td><td><?= e(weekday($class['weekday'])) ?><div class="cell-sub"><?= e($class['start'] . ' – ' . $class['end']) ?><br><?= e($class['from'] . ' - ' . $class['to']) ?></div></td><td><?= (int) $class['capacity'] ?></td><td><?= status_badge($class['status']) ?></td></tr><?php endforeach; endif; ?>
-                    </tbody></table></div></div>
+                    <div class="app-card">
+                        <div class="app-card-header"><h2>Đề xuất của tôi</h2></div>
+                        <div class="app-table-wrap">
+                            <table class="app-table">
+                                <thead>
+                                    <tr><th>Lớp học</th><th>Lịch</th><th>Sức chứa</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr>
+                                </thead>
+                                <tbody>
+                                <?php if (!$classes): ?>
+                                    <tr><td colspan="5" class="text-center text-muted-2 py-4">Chưa có đề xuất lớp.</td></tr>
+                                <?php else: foreach ($classes as $class): ?>
+                                    <tr>
+                                        <td class="cell-strong"><?= e($class['name']) ?><div class="cell-sub"><?= e($class['level']) ?></div></td>
+                                        <td><?= e(weekday($class['weekday'])) ?><div class="cell-sub"><?= e($class['start'] . ' – ' . $class['end']) ?><br><?= e($class['from'] . ' - ' . $class['to']) ?></div></td>
+                                        <td><?= (int) $class['capacity'] ?></td>
+                                        <td><?= status_badge($class['status']) ?></td>
+                                        <td class="cell-actions">
+                                            <?php if ($class['status'] === 'cho_duyet'): ?>
+                                                <button class="btn btn-danger-soft btn-sm" type="button"
+                                                        data-cancel-proposal-id="<?= (int) $class['id'] ?>"
+                                                        data-cancel-proposal-name="<?= e($class['name']) ?>">Hủy</button>
+                                            <?php else: ?>
+                                                <button class="btn btn-ghost btn-sm" type="button" disabled>—</button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -196,6 +252,29 @@ document.getElementById('class-proposal-form').addEventListener('submit', async 
         form.reset();
         window.location.reload();
     } catch (error) { alert(error.message); }
+});
+
+document.addEventListener('click', async function (event) {
+    var button = event.target.closest('[data-cancel-proposal-id]');
+    if (!button) return;
+
+    if (!confirm('Hủy đề xuất lớp "' + button.dataset.cancelProposalName + '"?')) return;
+
+    try {
+        var response = await fetch(window.location.pathname + '?action=cancel&id=' + button.dataset.cancelProposalId, {
+            method: 'POST',
+            headers: {'Accept': 'application/json'},
+            credentials: 'same-origin'
+        });
+        var result = await response.json().catch(function () {
+            return {success: false, message: 'Phản hồi không hợp lệ từ máy chủ.'};
+        });
+        if (!response.ok || !result.success) throw new Error(result.message || 'Không thể hủy đề xuất.');
+        alert(result.message);
+        window.location.reload();
+    } catch (error) {
+        alert(error.message);
+    }
 });
 </script>
 <?php require $partials . '/foot.php'; ?>

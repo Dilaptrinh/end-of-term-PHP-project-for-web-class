@@ -8,6 +8,4 @@ return [
     ['label' => 'Đăng ký', 'icon' => 'receipt', 'href' => '/admin/registrations', 'key' => 'registrations'],
     ['label' => 'Duyệt đề xuất lớp', 'icon' => 'calendar-check', 'href' => '/admin/availability', 'key' => 'availability'],
     ['label' => 'Tài khoản', 'icon' => 'person-gear', 'href' => '/admin/account', 'key' => 'account'],
-    ['group' => 'Phân tích'],
-    ['label' => 'Thống kê', 'icon' => 'bar-chart-line', 'href' => '/admin/reports', 'key' => 'reports'],
 ];

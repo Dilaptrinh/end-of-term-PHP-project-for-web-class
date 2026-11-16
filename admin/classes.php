@@ -61,7 +61,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $errors['goi_tap_toi_thieu'] = 'Gói tối thiểu không hợp lệ.';
     }
     $statusValue = (string) ($input['trang_thai'] ?? 'dang_mo');
-    if (!in_array($statusValue, ['dang_mo', 'cho_duyet', 'tu_choi', 'da_dong'], true)) {
+    if (!in_array($statusValue, ['dang_mo', 'cho_duyet', 'tu_choi', 'da_dong', 'da_huy'], true)) {
         $errors['trang_thai'] = 'Trạng thái lớp không hợp lệ.';
     }
 
@@ -266,6 +266,7 @@ require $partials . '/head.php';
                                            data-class-capacity="<?= e((string) $class['capacity']) ?>"
                                            data-class-level="<?= e($class['level']) ?>"
                                            data-class-package="<?= e($class['required_package']) ?>"
+                                           data-class-status="<?= e($class['status']) ?>"
                                            data-class-desc="<?= e($class['desc']) ?>"><?= icon('pencil') ?> Sửa lớp</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" type="button"
@@ -286,6 +287,7 @@ require $partials . '/head.php';
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form id="class-form">
+                <input type="hidden" name="trang_thai" id="cf-status" value="dang_mo">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="classFormTitle">Thêm lớp học</h2>

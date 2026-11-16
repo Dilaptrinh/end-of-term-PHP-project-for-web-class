@@ -1,35 +1,37 @@
 <?php
 require __DIR__ . '/common/bootstrap.php';
 
+$current = common_user();
+if ($current !== null) {
+    redirect('/' . $current['vai_tro']);
+}
+
+$username = '';
+$error = '';
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    header('Content-Type: application/json; charset=utf-8');
+    $username = trim((string) ($_POST['username'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
 
-    $raw = file_get_contents('php://input') ?: '';
-    $input = json_decode($raw, true);
-    if (!is_array($input)) {
-        $input = $_POST;
+    if ($username === '' || $password === '') {
+        $error = 'Vui lòng nhập tên đăng nhập và mật khẩu.';
+    } else {
+        $stmt = common_db()->prepare('SELECT id, mat_khau, trang_thai, vai_tro FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
+        $stmt->bind_param('s', $username);
+        $stmt->execute();
+        $account = $stmt->get_result()->fetch_assoc() ?: null;
+        $stmt->close();
+
+        if (!$account || (int) $account['trang_thai'] !== 1 || !password_verify($password, (string) $account['mat_khau'])) {
+            $error = 'Tên đăng nhập hoặc mật khẩu không đúng.';
+        } elseif (!in_array($account['vai_tro'], ['admin', 'instructor', 'customer'], true)) {
+            $error = 'Tài khoản không có vai trò hợp lệ.';
+        } else {
+            session_regenerate_id(true);
+            $_SESSION['tai_khoan_id'] = (int) $account['id'];
+            redirect('/' . $account['vai_tro']);
+        }
     }
-
-    $username = trim((string) ($input['ten_dang_nhap'] ?? $input['username'] ?? ''));
-    $password = (string) ($input['mat_khau'] ?? $input['password'] ?? '');
-
-    $stmt = common_db()->prepare('SELECT id, mat_khau, trang_thai, vai_tro FROM tai_khoan WHERE ten_dang_nhap = ? LIMIT 1');
-    $stmt->bind_param('s', $username);
-    $stmt->execute();
-    $account = $stmt->get_result()->fetch_assoc() ?: null;
-    $stmt->close();
-
-    if (!$account || (int) $account['trang_thai'] !== 1 || !password_verify($password, (string) $account['mat_khau'])) {
-        http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Tên đăng nhập hoặc mật khẩu không đúng.'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    session_regenerate_id(true);
-    $_SESSION['tai_khoan_id'] = (int) $account['id'];
-
-    echo json_encode(['success' => true, 'data' => ['vai_tro' => $account['vai_tro']], 'message' => 'Đăng nhập thành công.'], JSON_UNESCAPED_UNICODE);
-    exit;
 }
 
 $pageTitle = 'Đăng nhập';
@@ -78,14 +80,19 @@ $pageScripts = [];
     <h1>Chào mừng trở lại</h1>
     <p class="auth-sub">Đăng nhập một cổng cho hội viên, giáo viên và quản trị viên.</p>
 
-    <form id="login-form" class="mt-3" novalidate
-          data-login-url="<?= e(url('/login.php')) ?>"
-          data-redirect-admin="<?= e(url('/admin')) ?>"
-          data-redirect-instructor="<?= e(url('/instructor')) ?>"
-          data-redirect-customer="<?= e(url('/customer')) ?>">
+    <?php require __DIR__ . '/common/partials/flash.php'; ?>
+
+    <?php if ($error !== ''): ?>
+        <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <?= icon('exclamation-octagon') ?>
+            <div><?= e($error) ?></div>
+        </div>
+    <?php endif; ?>
+
+    <form id="login-form" class="mt-3" method="post" action="" novalidate>
         <div class="mb-3">
             <label class="form-label" for="login-username">Tên đăng nhập <span class="req">*</span></label>
-            <input class="form-control" id="login-username" name="username" type="text" placeholder="Nhập tên đăng nhập" required autocomplete="username">
+            <input class="form-control" id="login-username" name="username" type="text" placeholder="Nhập tên đăng nhập" value="<?= e($username) ?>" required autocomplete="username" autofocus>
         </div>
 
         <div class="mb-3">
@@ -119,6 +126,5 @@ $pageScripts = [];
     </main>
 </div>
 
-<script src="<?= e(url('/common/assets/js/auth/login.js')) ?>?v=4"></script>
+<script src="<?= e(url('/common/assets/js/auth/login.js')) ?>?v=5"></script>
 <?php require __DIR__ . '/common/partials/foot.php'; ?>
-

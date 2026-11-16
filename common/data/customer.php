@@ -69,7 +69,7 @@ function data_customer_packages(): array
     $conn = view_db();
     $id = view_member_id();
     $stmt = $conn->prepare(
-        'SELECT gt.ten_goi AS name,
+        'SELECT d.id AS id, gt.ten_goi AS name,
                 DATE_FORMAT(d.ngay_bat_dau, "%d/%m/%Y") AS `from`,
                 DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS `to`,
                 d.gia_tai_thoi_diem AS price, d.trang_thai AS payment,
@@ -83,7 +83,7 @@ function data_customer_packages(): array
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    return view_cast_ints($rows, ['price']);
+    return view_cast_ints($rows, ['id', 'price']);
 }
 
 function data_customer_class_history(): array
