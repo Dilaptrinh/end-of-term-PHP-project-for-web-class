@@ -5,8 +5,6 @@
     var accountsBody = document.getElementById('accounts-body');
     var currentId = accountsBody ? Number(accountsBody.dataset.currentId || 0) : 0;
 
-    // HTML template
-
     var roleLabels = {
         admin: 'Admin',
         instructor: 'Instructor',

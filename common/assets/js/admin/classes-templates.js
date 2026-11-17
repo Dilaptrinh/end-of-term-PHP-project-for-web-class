@@ -1,9 +1,4 @@
-/*
- * FILE: common/assets/js/admin/classes-templates.js
- *
- * Chỉ chứa HTML template của trang Quản lý lớp học.
- * classes.js dùng window.ClassTemplates để render.
- */
+
 (function () {
     'use strict';
 

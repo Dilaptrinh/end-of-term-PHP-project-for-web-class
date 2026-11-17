@@ -1,10 +1,4 @@
-/*
- * FILE: common/assets/js/instructor/instructor-classes.js
- * Trang dùng: instructor/classes.php
- *
- * Bấm "Học viên": AJAX lấy danh sách học viên (HTML do PHP render)
- * rồi gắn vào modal, không tải lại trang.
- */
+
 (function () {
     'use strict';
 

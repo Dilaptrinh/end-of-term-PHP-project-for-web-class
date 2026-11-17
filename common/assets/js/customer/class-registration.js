@@ -1,11 +1,4 @@
-/*
- * FILE: common/assets/js/customer/class-registration.js
- * Trang dùng: customer/class-registration.php
- *
- * - Đổ dữ liệu lớp vào modal khi bấm Đăng ký.
- * - Lọc "Chỉ lớp còn chỗ" (client-side, không gọi server).
- * - Đăng ký lớp bằng AJAX và cập nhật dữ liệu do máy chủ trả về.
- */
+
 (function () {
     'use strict';
 

@@ -1,10 +1,4 @@
-/*
- * FILE: common/assets/js/customer/package-registration.js
- * Trang dùng: customer/package-registration.php
- *
- * Đăng ký gói bằng AJAX: cập nhật nút thành "Chờ thanh toán" ngay,
- * không tải lại trang.
- */
+
 (function () {
     'use strict';
 

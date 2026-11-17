@@ -6,8 +6,6 @@
     var form = document.getElementById('package-form');
     var tbody = document.getElementById('packages-body');
 
-    // HTML template
-
     var statusLabels = {
         dang_ban: ['Đang bán', 'success'],
         ngung_ban: ['Ngừng bán', 'muted']

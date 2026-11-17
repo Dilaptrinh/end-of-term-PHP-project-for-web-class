@@ -1,10 +1,7 @@
 (function () {
     'use strict';
 
-    // Dùng cho trang admin/account.php ("Tài khoản của tôi").
     var endpoint = window.location.pathname;
-
-    // Cập nhật họ tên admin
 
     var profileForm = document.getElementById('profile-form');
     if (profileForm) {
@@ -13,7 +10,6 @@
 
             var name = document.getElementById('admin-name').value.trim();
 
-            // Tạo dữ liệu gửi lên server.
             var formData = new FormData();
             formData.append('ho_ten', name);
 
@@ -31,7 +27,6 @@
                     throw new Error(result.message || 'Có lỗi xảy ra.');
                 }
 
-                // Cập nhật tên trên giao diện, không reload.
                 document.getElementById('account-name').textContent = name;
                 alert(result.message);
             } catch (error) {
@@ -39,8 +34,6 @@
             }
         });
     }
-
-    // Đổi mật khẩu
 
     var passwordForm = document.getElementById('password-form');
     if (passwordForm) {
@@ -51,7 +44,6 @@
             var newPassword = document.getElementById('pw-new').value;
             var confirmPassword = document.getElementById('pw-confirm').value;
 
-            // Append từng trường cho dễ đọc.
             var formData = new FormData();
             formData.append('mat_khau_cu', oldPassword);
             formData.append('mat_khau_moi', newPassword);

@@ -1,12 +1,10 @@
 (function () {
     'use strict';
 
-    // Địa chỉ trang hiện tại: /fitness/admin/classes
     var pageUrl = window.location.pathname;
     var classesBody = document.getElementById('classes-body');
     var tpl = window.ClassTemplates;
 
-    // Gửi request lên server và trả về JSON.
     async function callApi(url, options) {
         var response = await fetch(url, options);
         var result = await response.json();
@@ -269,7 +267,6 @@
         });
     }
 
-    // Render bảng ban đầu từ JSON PHP in ra.
     var initial = document.getElementById('class-init');
     if (initial && classesBody) {
         var rows = JSON.parse(initial.textContent || '[]');
@@ -283,7 +280,6 @@
         }
     }
 
-    // Khởi động các chức năng của trang.
     setupClassForm();
     setupClassDeletion();
     setupClassDetails();
