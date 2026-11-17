@@ -92,7 +92,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $stmt->close();
 
     if ($existing) {
-        json_response(['success' => false, 'message' => 'Bạn đã đăng ký lớp này rồi.'], 422);
+        json_response([
+            'success' => false,
+            'message' => 'Bạn đã đăng ký lớp này rồi.',
+            'class_id' => $classId,
+        ], 422);
     }
 
     $stmt = $db->prepare(
@@ -131,7 +135,25 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $stmt->execute();
     $stmt->close();
 
-    json_response(['success' => true, 'message' => 'Đã đăng ký lớp học.'], 201);
+    $stmt = $db->prepare('SELECT COUNT(*) AS total FROM dang_ky_lop WHERE lop_hoc_id = ? AND trang_thai = "dang_ky"');
+    $stmt->bind_param('i', $classId);
+    $stmt->execute();
+    $enrolled = (int) ($stmt->get_result()->fetch_assoc()['total'] ?? 0);
+    $stmt->close();
+
+    $available = max(0, (int) $class['suc_chua'] - $enrolled);
+    json_response([
+        'success' => true,
+        'message' => 'Đã đăng ký lớp học.',
+        'class_id' => $classId,
+        'enrolled' => $enrolled,
+        'capacity' => (int) $class['suc_chua'],
+        'available' => $available,
+        'is_full' => $available === 0,
+        'availability_text' => $available === 0 ? 'Lớp đã đầy' : 'Còn ' . $available . ' chỗ',
+        'availability_label' => $available === 0 ? 'Hết chỗ' : 'Còn ' . $available . ' chỗ',
+        'availability_class' => $available === 0 ? 'text-danger' : 'text-success',
+    ], 201);
 }
 
 require_role('customer');
@@ -144,6 +166,7 @@ $pageTitle = 'Đăng ký lớp học';
 $pageScripts = [];
 
 $classes = data_classes();
+$registeredIds = array_map(static fn (array $c): int => (int) $c['id'], data_customer_classes());
 $member = data_current_member();
 $currentPackage = $member['package'] ?? 'Chưa có gói';
 $packageExpiry = $member['package_expiry'] ?? '—';
@@ -157,21 +180,23 @@ foreach ($open as &$class) {
     }
 }
 unset($class);
-$instructors = array_values(array_unique(array_map(static fn ($c) => $c['instructor'], $open)));
 
 $keyword = trim((string) ($_GET['q'] ?? ''));
 $weekdayFilter = (int) ($_GET['weekday'] ?? 0);
-$instructorFilter = trim((string) ($_GET['instructor'] ?? ''));
-$levelFilter = trim((string) ($_GET['level'] ?? ''));
-$levels = ['Cơ bản', 'Trung cấp', 'Nâng cao', 'Mọi trình độ'];
+$packageFilter = trim((string) ($_GET['package'] ?? ''));
+$packageNames = [
+    'basic' => 'Basic - Cơ bản',
+    'standard' => 'Standard - Trung cấp',
+    'premium' => 'Premium - Tất cả lớp',
+];
 if ($weekdayFilter < 1 || $weekdayFilter > 7) {
     $weekdayFilter = 0;
 }
-if (!in_array($levelFilter, $levels, true)) {
-    $levelFilter = '';
+if (!isset($packageNames[$packageFilter])) {
+    $packageFilter = '';
 }
 
-$open = array_values(array_filter($open, static function (array $class) use ($keyword, $weekdayFilter, $instructorFilter, $levelFilter): bool {
+$open = array_values(array_filter($open, static function (array $class) use ($keyword, $weekdayFilter, $packageFilter): bool {
     if ($keyword !== ''
         && mb_stripos($class['name'], $keyword) === false
         && mb_stripos($class['instructor'], $keyword) === false) {
@@ -180,10 +205,7 @@ $open = array_values(array_filter($open, static function (array $class) use ($ke
     if ($weekdayFilter > 0 && (int) $class['weekday'] !== $weekdayFilter) {
         return false;
     }
-    if ($instructorFilter !== '' && $class['instructor'] !== $instructorFilter) {
-        return false;
-    }
-    if ($levelFilter !== '' && (string) ($class['level'] ?? '') !== $levelFilter) {
+    if ($packageFilter !== '' && ($class['required_package'] ?? 'basic') !== $packageFilter) {
         return false;
     }
     return true;
@@ -234,20 +256,11 @@ require $partials . '/head.php';
         </select>
     </div>
     <div class="filter-field">
-        <label class="form-label" for="cls-teacher">Giáo viên</label>
-        <select class="form-select" id="cls-teacher" name="instructor">
+        <label class="form-label" for="cls-package">Gói tập</label>
+        <select class="form-select" id="cls-package" name="package">
             <option value="">Tất cả</option>
-            <?php foreach ($instructors as $teacher): ?>
-                <option value="<?= e($teacher) ?>" <?= $instructorFilter === $teacher ? 'selected' : '' ?>><?= e($teacher) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="filter-field">
-        <label class="form-label" for="cls-level">Trình độ</label>
-        <select class="form-select" id="cls-level" name="level">
-            <option value="">Tất cả</option>
-            <?php foreach ($levels as $level): ?>
-                <option value="<?= e($level) ?>" <?= $levelFilter === $level ? 'selected' : '' ?>><?= e($level) ?></option>
+            <?php foreach ($packageNames as $packageValue => $packageName): ?>
+                <option value="<?= e($packageValue) ?>" <?= $packageFilter === $packageValue ? 'selected' : '' ?>><?= e($packageName) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
@@ -277,8 +290,12 @@ require $partials . '/head.php';
         $tone = $available === 0 ? 'red' : ($percent >= 80 ? 'amber' : '');
         $requiredLevel = $packageLevels[$class['required_package'] ?? 'basic'] ?? 1;
         $allowed = $requiredLevel <= $currentPackageLevel;
+        $isRegistered = in_array((int) $class['id'], $registeredIds, true);
     ?>
-        <div class="col-md-6 col-xl-4" data-class-card data-available="<?= $available > 0 ? '1' : '0' ?>">
+        <div class="col-md-6 col-xl-4" data-class-card
+             data-class-id="<?= (int) $class['id'] ?>"
+             data-capacity="<?= (int) $class['capacity'] ?>"
+             data-available="<?= $available > 0 ? '1' : '0' ?>">
             <article class="class-card">
                 <div class="class-card-top">
                     <div class="day-chip">
@@ -299,34 +316,39 @@ require $partials . '/head.php';
                         <div class="item"><?= icon('clock') ?> <?= e($class['start'] . ' – ' . $class['end']) ?></div>
                         <div class="item"><?= icon('geo-alt') ?> <?= e($class['room']) ?></div>
                         <div class="item"><?= icon('calendar3') ?> <?= e(weekday($class['weekday'])) ?></div>
-                        <div class="item"><?= icon('people') ?> <?= e((string) $class['enrolled'] . '/' . (string) $class['capacity']) ?></div>
+                        <div class="item"><?= icon('people') ?> <span data-enrolled><?= e((string) $class['enrolled'] . '/' . (string) $class['capacity']) ?></span></div>
                     </div>
                     <div class="class-capacity">
-                        <span><?= $available === 0 ? 'Lớp đã đầy' : 'Còn ' . $available . ' chỗ' ?></span>
+                        <span data-available-text><?= $available === 0 ? 'Lớp đã đầy' : 'Còn ' . $available . ' chỗ' ?></span>
                         <span><?= $percent ?>%</span>
                     </div>
                     <?= progress_bar($percent, $tone) ?>
                     <p class="text-muted-2 text-tiny mt-2 mb-0"><?= e($class['desc']) ?></p>
                 </div>
                 <div class="class-card-foot">
-                    <span class="availability <?= $available === 0 ? 'text-danger' : 'text-success' ?>">
+                    <span class="availability <?= $available === 0 ? 'text-danger' : 'text-success' ?>" data-available-label>
                         <?= $available === 0 ? 'Hết chỗ' : ($class['status'] === 'sap_mo' ? 'Đăng ký trước · còn ' . $available . ' chỗ' : 'Còn ' . $available . ' chỗ') ?>
                     </span>
-                    <?php if (!$allowed): ?>
-                        <span class="availability text-warning">Cần gói cao hơn</span>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Nâng cấp gói</button>
-                    <?php elseif ($available === 0): ?>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Đã đầy</button>
-                    <?php else: ?>
-                        <button class="btn btn-primary btn-sm" type="button"
-                                data-bs-toggle="modal" data-bs-target="#registerClassModal"
-                                data-class-id="<?= (int) $class['id'] ?>"
-                                data-class-name="<?= e($class['name']) ?>"
-                                data-class-meta="<?= e(weekday($class['weekday']) . ' · ' . $class['start'] . ' – ' . $class['end'] . ' · ' . $class['room']) ?>"
-                                data-class-teacher="<?= e($class['instructor']) ?>">
-                            Đăng ký
-                        </button>
-                    <?php endif; ?>
+                    <span data-class-action>
+                        <?php if ($isRegistered): ?>
+                            <span class="availability text-success">Đã đăng ký</span>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Đã đăng ký</button>
+                        <?php elseif (!$allowed): ?>
+                            <span class="availability text-warning">Cần gói cao hơn</span>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Nâng cấp gói</button>
+                        <?php elseif ($available === 0): ?>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Đã đầy</button>
+                        <?php else: ?>
+                            <button class="btn btn-primary btn-sm" type="button"
+                                    data-bs-toggle="modal" data-bs-target="#registerClassModal"
+                                    data-class-id="<?= (int) $class['id'] ?>"
+                                    data-class-name="<?= e($class['name']) ?>"
+                                    data-class-meta="<?= e(weekday($class['weekday']) . ' · ' . $class['start'] . ' – ' . $class['end'] . ' · ' . $class['room']) ?>"
+                                    data-class-teacher="<?= e($class['instructor']) ?>">
+                                Đăng ký
+                            </button>
+                        <?php endif; ?>
+                    </span>
                 </div>
             </article>
         </div>
@@ -383,5 +405,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/customer/class-registration.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/customer/class-registration.js')) ?>?v=3"></script>
 <?php require $partials . '/foot.php'; ?>

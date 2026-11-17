@@ -19,8 +19,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $action = (string) ($_GET['action'] ?? '');
-    $id = (int) ($_GET['id'] ?? 0);
-    $db = common_db();
+    $id = post_int('id') ?: (int) ($_GET['id'] ?? 0);
 
     if ($action === 'delete') {
         if ($id <= 0) {
@@ -75,22 +74,23 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $status,
     ];
     $savedId = admin_package_save($values, $id);
+    $savedPackage = $savedId > 0 ? package_find($savedId) : null;
 
-    if ($id === 0) {
+    if ($id === 0 && $savedPackage !== null) {
         json_response([
             'success' => true,
             'message' => 'Đã tạo gói tập.',
-            'data' => package_find($savedId),
+            'data' => $savedPackage,
         ], 201);
     }
-    if ($savedId === 0) {
+    if ($savedPackage === null) {
         json_response(['success' => false, 'message' => 'Không tìm thấy gói tập.'], 404);
     }
 
     json_response([
         'success' => true,
         'message' => 'Đã cập nhật gói tập.',
-        'data' => package_find($savedId),
+        'data' => $savedPackage,
     ]);
 }
 
@@ -104,6 +104,20 @@ $pageTitle = 'Quản lý gói tập';
 $pageScripts = [];
 
 $packages = data_packages();
+$packageFilter = trim((string) ($_GET['package_id'] ?? ''));
+$statusFilter = trim((string) ($_GET['status'] ?? ''));
+if ($packageFilter !== '' && !ctype_digit($packageFilter)) {
+    $packageFilter = '';
+}
+if (!in_array($statusFilter, ['', 'dang_ban', 'ngung_ban'], true)) {
+    $statusFilter = '';
+}
+$packages = array_values(array_filter($packages, static function (array $package) use ($packageFilter, $statusFilter): bool {
+    if ($packageFilter !== '' && (string) $package['id'] !== $packageFilter) {
+        return false;
+    }
+    return $statusFilter === '' || $package['status'] === $statusFilter;
+}));
 
 $partials = __DIR__ . '/../common/partials';
 
@@ -127,24 +141,28 @@ require $partials . '/head.php';
     </div>
 </div>
 
-<div class="filter-bar" id="package-filters">
+<form class="filter-bar" method="get" action="<?= e(url('/admin/packages')) ?>">
     <div class="filter-field filter-search">
         <label class="form-label" for="pk-q">Tìm theo mã gói</label>
-        <input class="form-control" id="pk-q" type="number" min="1" inputmode="numeric" placeholder="Nhập mã gói...">
+        <input class="form-control" id="pk-q" name="package_id" type="number" min="1" inputmode="numeric" value="<?= e($packageFilter) ?>" placeholder="Nhập mã gói...">
     </div>
     <div class="filter-field">
         <label class="form-label" for="pk-status">Trạng thái</label>
-        <select class="form-select" id="pk-status">
-            <option>Tất cả</option>
-            <option>Đang bán</option>
-            <option>Ngừng bán</option>
+        <select class="form-select" id="pk-status" name="status">
+            <option value="">Tất cả</option>
+            <option value="dang_ban" <?= $statusFilter === 'dang_ban' ? 'selected' : '' ?>>Đang bán</option>
+            <option value="ngung_ban" <?= $statusFilter === 'ngung_ban' ? 'selected' : '' ?>>Ngừng bán</option>
         </select>
+    </div>
+    <div class="filter-field" style="min-width:auto;">
+        <label class="form-label">&nbsp;</label>
+        <button class="btn btn-primary" type="submit"><?= icon('search') ?> Tìm</button>
     </div>
     <div class="filter-field ms-auto" style="min-width:auto;">
         <label class="form-label">&nbsp;</label>
-        <button class="btn btn-ghost" type="button" id="pk-reset"><?= icon('arrow-counterclockwise') ?> Đặt lại</button>
+        <a class="btn btn-ghost" href="<?= e(url('/admin/packages')) ?>"><?= icon('arrow-counterclockwise') ?> Đặt lại</a>
     </div>
-</div>
+</form>
 
 <div class="app-card">
     <div class="app-card-header">
@@ -153,34 +171,11 @@ require $partials . '/head.php';
     <div class="app-table-wrap">
         <table class="app-table" id="packages-table">
             <thead><tr><th>Gói tập</th><th>Thời hạn</th><th>Giá bán</th><th>Đã bán</th><th>Doanh thu</th><th>Trạng thái</th><th class="cell-actions">Thao tác</th></tr></thead>
-            <tbody id="packages-body">
-            <?php if (!$packages): ?>
-                <tr data-empty-row><td colspan="7" class="text-center text-muted-2 py-4">Chưa có gói tập nào.</td></tr>
-            <?php endif; ?>
-            <?php foreach ($packages as $package): ?>
-                <tr data-row data-package-id="<?= (int) $package['id'] ?>" data-package-status="<?= e($package['status']) ?>">
-                    <td class="cell-strong"><?= e($package['name']) ?><div class="cell-sub"><?= e(truncate((string) $package['desc'], 46)) ?></div></td>
-                    <td><?= e((string) $package['days']) ?> ngày</td>
-                    <td class="cell-strong"><?= e(money($package['price'])) ?></td>
-                    <td><?= e((string) $package['sold']) ?></td>
-                    <td class="cell-strong"><?= e(money($package['price'] * $package['sold'])) ?></td>
-                    <td><?= status_badge($package['status']) ?></td>
-                    <td class="cell-actions">
-                        <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#packageFormModal"
-                                data-package-id="<?= (int) $package['id'] ?>"
-                                data-package-name="<?= e($package['name']) ?>"
-                                data-package-days="<?= (int) $package['days'] ?>"
-                                data-package-price="<?= (int) $package['price'] ?>"
-                                data-package-desc="<?= e($package['desc'] ?? '') ?>"
-                                data-package-status="<?= e($package['status']) ?>"><?= icon('pencil') ?></button>
-                        <button class="btn btn-ghost btn-sm text-danger" type="button" data-delete-id="<?= (int) $package['id'] ?>" data-delete-name="<?= e($package['name']) ?>"><?= icon('trash3') ?></button>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
+            <tbody id="packages-body"></tbody>
         </table>
     </div>
 </div>
+<script type="application/json" id="package-init"><?= json_encode($packages, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
 
 <div class="modal fade" id="packageFormModal" tabindex="-1" aria-labelledby="packageFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -241,5 +236,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
+<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=12"></script>
 <?php require $partials . '/foot.php'; ?>
-<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=5"></script>

@@ -4,9 +4,7 @@
     // Dùng cho trang admin/account.php ("Tài khoản của tôi").
     var endpoint = window.location.pathname;
 
-    // ---------------------------------------------
     // Cập nhật họ tên admin
-    // ---------------------------------------------
 
     var profileForm = document.getElementById('profile-form');
     if (profileForm) {
@@ -42,9 +40,7 @@
         });
     }
 
-    // ---------------------------------------------
     // Đổi mật khẩu
-    // ---------------------------------------------
 
     var passwordForm = document.getElementById('password-form');
     if (passwordForm) {

@@ -38,21 +38,6 @@ function admin_username_exists(string $username): bool
     return (bool) $row;
 }
 
-function admin_class_proposal_update(int $id, string $status, string $room = '', string $requiredPackage = 'basic'): bool
-{
-    if ($status === 'dang_mo') {
-        $stmt = common_db()->prepare('UPDATE lop_hoc SET phong_hoc = ?, goi_tap_toi_thieu = ?, trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
-        $stmt->bind_param('sssi', $room, $requiredPackage, $status, $id);
-    } else {
-        $stmt = common_db()->prepare('UPDATE lop_hoc SET trang_thai = ? WHERE id = ? AND trang_thai = "cho_duyet" AND deleted_at IS NULL');
-        $stmt->bind_param('si', $status, $id);
-    }
-    $stmt->execute();
-    $changed = $stmt->affected_rows;
-    $stmt->close();
-    return $changed > 0;
-}
-
 function admin_class_save(array $values, int $id = 0): int
 {
     $db = common_db();
@@ -98,6 +83,16 @@ function admin_class_delete(int $id): bool
     $changed = $stmt->affected_rows;
     $stmt->close();
     return $changed > 0;
+}
+
+function admin_instructor_exists(int $id): bool
+{
+    $stmt = common_db()->prepare('SELECT id FROM giao_vien WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $exists = (bool) $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $exists;
 }
 
 function admin_class_detail(int $id): ?array

@@ -151,7 +151,7 @@ require $partials . '/head.php';
         <p>Cập nhật hồ sơ cá nhân và bảo mật tài khoản của bạn.</p>
     </div>
     <div class="page-head-actions">
-        <a class="btn btn-ghost" href="<?= e(url('/customer')) ?>"><?= icon('arrow-left') ?> Về tổng quan</a>
+        <a class="btn btn-ghost" href="<?= e(url('/customer')) ?>"><?= icon('arrow-left') ?> Về lịch tập</a>
         <a class="btn btn-danger-soft" href="<?= e(url('/common/logout.php')) ?>"><?= icon('box-arrow-right') ?> Đăng xuất</a>
     </div>
 </div>

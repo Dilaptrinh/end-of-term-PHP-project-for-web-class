@@ -22,13 +22,12 @@ $classes = array_values(array_filter(
         }
     }
 ));
-$requests = array_values(array_filter($classes, static fn (array $class): bool => $class['status'] === 'cho_duyet'));
-$danh_sach_cho_duyet = $requests;
-$pending = count($danh_sach_cho_duyet);
-
 $approved = count(array_filter($classes, static fn (array $class): bool => $class['status'] === 'dang_mo'));
 
 $students = (int) ($instructor['students'] ?? 0);
+$totalEnrollments = array_sum(array_map(static fn (array $class): int => (int) $class['enrolled'], $classes));
+$totalCapacity = array_sum(array_map(static fn (array $class): int => (int) $class['capacity'], $classes));
+$fillRate = $totalCapacity > 0 ? (int) round($totalEnrollments / $totalCapacity * 100) : 0;
 
 $partials = __DIR__ . '/../common/partials';
 require $partials . '/head.php';
@@ -44,38 +43,12 @@ require $partials . '/head.php';
                     <h1>Xin chào, <?= e($instructor['name'] ?? 'Giáo viên') ?></h1>
                     <p>Tổng quan lớp học, học viên và lịch dạy của bạn.</p>
                 </div>
-                <div class="page-head-actions">
-                    <a class="btn btn-primary" href="<?= e(url('/instructor/availability')) ?>"><?= icon('calendar-plus') ?> Đề xuất lớp</a>
-                </div>
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Lớp đang dạy</div><div class="stat-value"><?= count($classes) ?></div><div class="stat-foot">Theo phân công hiện tại</div></div></div>
-                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Học viên</div><div class="stat-value"><?= $students ?></div><div class="stat-foot">Đang đăng ký lớp</div></div></div>
+                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Học viên đang học</div><div class="stat-value"><?= $students ?></div><div class="stat-foot">Số người riêng biệt</div></div></div>
                 <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Lớp đã mở</div><div class="stat-value text-success"><?= $approved ?></div><div class="stat-foot">Học viên có thể đăng ký</div></div></div>
-                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Đề xuất chờ duyệt</div><div class="stat-value" style="color:var(--warning);"><?= $pending ?></div><div class="stat-foot">Đang chờ admin xử lý</div></div></div>
-            </div>
-            <div class="app-card">
-                <div class="app-card-header">
-                    <div><h2>Lớp đang phụ trách</h2><p class="sub">Dữ liệu lấy trực tiếp từ cơ sở dữ liệu</p></div>
-                    <a class="btn btn-ghost btn-sm ms-auto" href="<?= e(url('/instructor/classes')) ?>">Xem tất cả <?= icon('arrow-right') ?></a>
-                </div>
-                <div class="app-table-wrap">
-                    <table class="app-table">
-                        <thead><tr><th>Lớp học</th><th>Lịch</th><th>Phòng</th><th>Sĩ số</th><th>Trạng thái</th></tr></thead>
-                        <tbody>
-                        <?php foreach ($classes as $class): ?>
-                            <tr>
-                                <td class="cell-strong"><?= e($class['name']) ?><div class="cell-sub"><?= e($class['level']) ?></div></td>
-                                <td><?= e(weekday($class['weekday'])) ?><div class="cell-sub"><?= e($class['start'] . ' – ' . $class['end']) ?></div></td>
-                                <td><?= e($class['room']) ?></td>
-                                <td><?= e($class['enrolled'] . '/' . $class['capacity']) ?></td>
-                                <td><?= status_badge($class['status']) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                        <?php if (!$classes): ?><tr><td colspan="5" class="text-muted-2">Chưa có lớp được phân công.</td></tr><?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                <div class="col-sm-6 col-xl-3"><div class="stat-card"><div class="stat-label">Tỷ lệ lấp đầy</div><div class="stat-value text-success"><?= $fillRate ?>%</div><div class="stat-foot"><?= $totalEnrollments ?>/<?= $totalCapacity ?> chỗ đã đăng ký</div></div></div>
             </div>
         </main>
     </div>

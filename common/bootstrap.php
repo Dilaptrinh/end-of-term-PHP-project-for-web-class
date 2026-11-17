@@ -73,7 +73,7 @@ function require_role(string $role): array
         exit;
     }
     if ($user['vai_tro'] !== $role) {
-        header('Location: ' . common_url('/' . $user['vai_tro'] . '/index.php'));
+        header('Location: ' . common_url('/' . $user['vai_tro']));
         exit;
     }
 return $user;

@@ -59,12 +59,4 @@ function data_package_registrations(): array
     return view_cast_ints(view_db()->query($sql)->fetch_all(MYSQLI_ASSOC), ['id', 'price']);
 }
 
-function data_revenue(): array
-{
-    $rows = view_db()->query('SELECT thang, so_tien FROM doanh_thu WHERE nam = 2026 ORDER BY thang')->fetch_all(MYSQLI_ASSOC);
-    $result = [];
-    foreach ($rows as $row) {
-        $result[] = ['month' => 'T' . $row['thang'], 'value' => (int) round($row['so_tien'] / 1000000)];
-    }
-    return $result;
-}
+

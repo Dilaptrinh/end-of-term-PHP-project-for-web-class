@@ -1,263 +1,201 @@
 (function () {
     'use strict';
 
-    // Dùng cho trang admin/accounts.php ("Quản lý tài khoản").
-    var endpoint = window.location.pathname;
+    var pageUrl = window.location.pathname;
     var accountsBody = document.getElementById('accounts-body');
+    var currentId = accountsBody ? Number(accountsBody.dataset.currentId || 0) : 0;
 
-    // ---------------------------------------------
-    // Hàm dựng HTML cho bảng tài khoản
-    // ---------------------------------------------
+    // HTML template
+
+    var roleLabels = {
+        admin: 'Admin',
+        instructor: 'Instructor',
+        customer: 'Customer'
+    };
 
     function escapeHtml(value) {
-        return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
-            return {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            }[char];
+        var characters = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
+            return characters[character];
         });
     }
 
-    // Dựng HTML cho một dòng tài khoản.
-    function renderAccountRow(item) {
-        var roleLabels = { admin: 'Admin', instructor: 'Instructor', customer: 'Customer' };
-        var currentId = accountsBody ? Number(accountsBody.dataset.currentId || 0) : 0;
+    function renderRow(item) {
         var isActive = item.status === 'hoat_dong';
-
-        var statusHtml = isActive
-            ? '<span class="badge-status success">Đang hoạt động</span>'
-            : '<span class="badge-status secondary">Bị khóa</span>';
-
-        var statusButton = '';
-        if (item.role !== 'admin' || Number(item.id) !== currentId) {
-            statusButton =
-                '<button class="btn btn-sm btn-outline-secondary" type="button" ' +
-                    'data-account-status="' + Number(item.id) + '" ' +
-                    'data-status="' + (isActive ? '0' : '1') + '">' +
-                    (isActive ? 'Khóa' : 'Mở khóa') +
-                '</button>';
-        }
+        var actionLabel = isActive ? 'Khóa' : 'Mở khóa';
+        var canToggle = item.role !== 'admin' || Number(item.id) !== currentId;
 
         return '<tr data-account-row="' + Number(item.id) + '">' +
             '<td class="cell-strong">' + escapeHtml(item.name) + '</td>' +
             '<td>' + escapeHtml(item.username) + '</td>' +
             '<td>' + escapeHtml(roleLabels[item.role] || item.role) + '</td>' +
-            '<td>' + statusHtml + '</td>' +
+            '<td>' + (isActive
+                ? '<span class="badge-status success">Đang hoạt động</span>'
+                : '<span class="badge-status secondary">Bị khóa</span>') + '</td>' +
             '<td>' + escapeHtml(item.created) + '</td>' +
             '<td class="cell-actions">' +
-                '<button class="btn btn-sm btn-outline-primary" type="button" ' +
-                    'data-account-detail="' + Number(item.id) + '">Chi tiết</button>' +
-                statusButton +
+                '<button class="btn btn-sm btn-outline-primary" type="button" data-account-detail="' + Number(item.id) + '">Chi tiết</button>' +
+                (canToggle
+                    ? '<form method="post" action="' + escapeHtml(pageUrl) + '?action=status" class="d-inline" onsubmit="return confirm(\'' + actionLabel + ' tài khoản này?\');">' +
+                        '<input type="hidden" name="id" value="' + Number(item.id) + '">' +
+                        '<input type="hidden" name="trang_thai" value="' + (isActive ? '0' : '1') + '">' +
+                        '<button class="btn btn-sm btn-outline-secondary" type="submit">' + actionLabel + '</button>' +
+                    '</form>'
+                    : '') +
             '</td>' +
         '</tr>';
     }
 
-    // Thêm một dòng tài khoản mới vào cuối bảng.
-    function appendAccountRow(html) {
-        if (!accountsBody || !html) return;
-
-        // Bỏ dòng "Không tìm thấy tài khoản" nếu đang có.
-        var emptyRow = accountsBody.querySelector('[data-empty-row]');
-        if (emptyRow) emptyRow.remove();
-
-        accountsBody.insertAdjacentHTML('beforeend', html);
+    function renderEmptyRow() {
+        return '<tr data-empty-row><td colspan="6" class="text-center text-muted-2 py-4">Không tìm thấy tài khoản.</td></tr>';
     }
 
-    // Thay dòng tài khoản cũ bằng dòng mới.
-    function replaceAccountRow(oldRow, html) {
-        if (!oldRow || !html) return;
-        oldRow.outerHTML = html;
+    function renderDetail(data, specialties) {
+        var role = data.vai_tro;
+        var isActive = Number(data.trang_thai) === 1;
+        var specialtyIds = String(data.specialty_ids || '').split(',').map(Number);
+        var html = '<div class="account-detail-hero mb-3">' +
+                '<div><h3 class="mb-1">' + escapeHtml(data.ho_ten) + '</h3>' +
+                '<div class="text-muted-2">' + escapeHtml((roleLabels[role] || role) + ' · ' + data.ten_dang_nhap) + '</div></div>' +
+            '</div>' +
+            '<input type="hidden" name="id" value="' + Number(data.id) + '">' +
+            '<div class="row g-3">' +
+                '<div class="col-md-6"><label class="form-label">Họ tên</label><input class="form-control" name="ho_ten" value="' + escapeHtml(data.ho_ten) + '" required></div>' +
+                '<div class="col-md-6"><label class="form-label">Tên đăng nhập</label><input class="form-control" value="' + escapeHtml(data.ten_dang_nhap) + '" disabled></div>' +
+                '<div class="col-md-6"><label class="form-label">Email</label><input class="form-control" name="email" type="email" value="' + escapeHtml(data.email) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Số điện thoại</label><input class="form-control" name="sdt" value="' + escapeHtml(data.sdt) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Trạng thái</label><select class="form-select" name="trang_thai">' +
+                    '<option value="1"' + (isActive ? ' selected' : '') + '>Đang hoạt động</option>' +
+                    '<option value="0"' + (isActive ? '' : ' selected') + '>Bị khóa</option>' +
+                '</select></div>';
+
+        if (role === 'customer') {
+            html += '<div class="col-md-6"><label class="form-label">Ngày sinh</label><input class="form-control" name="ngay_sinh" type="date" value="' + escapeHtml(data.ngay_sinh) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Mục tiêu</label><input class="form-control" name="muc_tieu" value="' + escapeHtml(data.muc_tieu) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Chiều cao (cm)</label><input class="form-control" name="chieu_cao" type="number" step="0.1" value="' + escapeHtml(data.chieu_cao) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Cân nặng (kg)</label><input class="form-control" name="can_nang" type="number" step="0.1" value="' + escapeHtml(data.can_nang) + '"></div>' +
+                '<div class="col-12"><label class="form-label">Địa chỉ</label><input class="form-control" name="dia_chi" value="' + escapeHtml(data.dia_chi) + '"></div>';
+        } else if (role === 'instructor') {
+            html += '<div class="col-12"><label class="form-label">Giới thiệu Instructor</label><textarea class="form-control" name="gioi_thieu" rows="3">' + escapeHtml(data.gioi_thieu) + '</textarea></div>' +
+                '<div class="col-12"><label class="form-label">Chuyên môn</label><div class="row g-2">' +
+                (specialties || []).map(function (specialty) {
+                    var checked = specialtyIds.indexOf(Number(specialty.id)) !== -1 ? ' checked' : '';
+
+                    return '<div class="col-md-4"><label class="form-check">' +
+                        '<input class="form-check-input" type="checkbox" name="chuyen_mon_ids[]" value="' + Number(specialty.id) + '"' + checked + '>' +
+                        '<span class="form-check-label">' + escapeHtml(specialty.name) + '</span></label></div>';
+                }).join('') +
+                '</div></div>';
+        }
+
+        return html + '</div>';
     }
 
-    // ---------------------------------------------
-    // Tạo tài khoản
-    // ---------------------------------------------
-
-    var createForm = document.getElementById('account-create-form');
-    var roleField = document.getElementById('new-account-role');
-    var profileFields = document.querySelectorAll('.account-profile-field');
-
-    // Ẩn/hiện ô hồ sơ khi chọn vai trò Admin / Instructor / Customer.
-    function updateProfileFields() {
-        var needsProfile = roleField.value !== 'admin';
-
-        profileFields.forEach(function (field) {
-            field.hidden = !needsProfile;
-
-            field.querySelectorAll('input').forEach(function (input) {
-                input.required = needsProfile;
+    function callApi(url, options) {
+        return fetch(url, Object.assign({
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        }, options || {})).then(function (response) {
+            return response.json().then(function (result) {
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Có lỗi xảy ra.');
+                }
+                return result;
             });
         });
     }
 
-    if (createForm && roleField) {
-        roleField.addEventListener('change', updateProfileFields);
-        updateProfileFields();
+    // Render bảng ban đầu từ JSON PHP in ra.
+    var initial = document.getElementById('account-init');
+    if (initial && accountsBody) {
+        var rows = JSON.parse(initial.textContent || '[]');
 
-        createForm.addEventListener('submit', async function (event) {
-            event.preventDefault();
+        accountsBody.innerHTML = rows.map(renderRow).join('');
+        if (!rows.length) {
+            accountsBody.innerHTML = renderEmptyRow();
+        }
+    }
 
-            try {
-                var response = await fetch(endpoint + '?action=create', {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json' },
-                    body: new FormData(createForm),
-                    credentials: 'same-origin'
-                });
+    // Ẩn/hiện trường hồ sơ theo vai trò khi tạo tài khoản.
+    var roleSelect = document.getElementById('new-account-role');
+    var profileFields = document.querySelectorAll('.account-profile-field');
 
-                var result = await response.json();
+    function updateCreateFields() {
+        var isAdmin = roleSelect.value === 'admin';
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Không thể tạo tài khoản.');
-                }
+        profileFields.forEach(function (field) {
+            field.hidden = isAdmin;
 
-                // Server trả dữ liệu tài khoản mới, JS tự dựng dòng.
-                appendAccountRow(renderAccountRow(result.data));
-                createForm.reset();
-
-                var createModal = document.getElementById('accountCreateModal');
-                if (createModal) bootstrap.Modal.getOrCreateInstance(createModal).hide();
-
-                alert(result.message);
-            } catch (error) {
-                alert(error.message);
-            }
+            field.querySelectorAll('input').forEach(function (input) {
+                input.required = !isAdmin;
+            });
         });
     }
 
-    // ---------------------------------------------
-    // Modal xem chi tiết tài khoản
-    // ---------------------------------------------
+    if (roleSelect && profileFields.length) {
+        roleSelect.addEventListener('change', updateCreateFields);
+        updateCreateFields();
+    }
+
+    // Xem chi tiết tài khoản
+
+    var detailModal = document.getElementById('accountDetailModal');
+    var detailBody = document.getElementById('account-detail-body');
+    var detailForm = document.getElementById('account-detail-form');
 
     document.addEventListener('click', async function (event) {
         var button = event.target.closest('[data-account-detail]');
-        if (!button) return;
-
-        var modalElement = document.getElementById('accountDetailModal');
-        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        if (!button || !detailBody) return;
 
         try {
-            var response = await fetch(endpoint + '?action=detail&id=' + button.dataset.accountDetail, {
-                headers: { 'Accept': 'application/json' },
-                credentials: 'same-origin'
-            });
+            var result = await callApi(
+                pageUrl + '?action=detail&id=' + encodeURIComponent(button.dataset.accountDetail)
+            );
 
-            var result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || 'Không thể tải chi tiết.');
-            }
-
-            var data = result.data;
-            var roleNames = { admin: 'Admin', instructor: 'Instructor', customer: 'Customer' };
-            var form = document.getElementById('account-detail-form');
-
-            form.dataset.id = data.id;
-            document.getElementById('account-detail-title').textContent = data.ho_ten;
-            document.getElementById('account-detail-subtitle').textContent = roleNames[data.vai_tro] + ' · ' + data.ten_dang_nhap;
-            document.getElementById('detail-role').value = data.vai_tro;
-            document.getElementById('detail-name').value = data.ho_ten || '';
-            document.getElementById('detail-username').value = data.ten_dang_nhap || '';
-            document.getElementById('detail-email').value = data.email || '';
-            document.getElementById('detail-phone').value = data.sdt || '';
-            document.getElementById('detail-status').value = Number(data.trang_thai) === 1 ? '1' : '0';
-            document.getElementById('detail-birth').value = data.ngay_sinh || '';
-            document.getElementById('detail-goal').value = data.muc_tieu || '';
-            document.getElementById('detail-height').value = data.chieu_cao || '';
-            document.getElementById('detail-weight').value = data.can_nang || '';
-            document.getElementById('detail-address').value = data.dia_chi || '';
-            document.getElementById('detail-intro').value = data.gioi_thieu || '';
-
-            // Chọn các chuyên môn của Instructor.
-            document.querySelectorAll('#detail-specialty input[name="chuyen_mon_ids[]"]').forEach(function (checkbox) {
-                checkbox.checked = (data.specialty_ids || '').split(',').indexOf(checkbox.value) !== -1;
-            });
-
-            // Chỉ hiện ô dành riêng cho Customer / Instructor.
-            document.querySelectorAll('[data-detail-customer]').forEach(function (field) {
-                field.hidden = data.vai_tro !== 'customer';
-            });
-
-            document.querySelectorAll('[data-detail-instructor]').forEach(function (field) {
-                field.hidden = data.vai_tro !== 'instructor';
-            });
+            detailBody.innerHTML = renderDetail(result.data, result.specialties);
+            bootstrap.Modal.getOrCreateInstance(detailModal).show();
         } catch (error) {
             alert(error.message);
         }
     });
 
-    // Lưu thay đổi trong modal chi tiết.
-    var detailForm = document.getElementById('account-detail-form');
+    // Lưu thay đổi trong modal chi tiết
+
     if (detailForm) {
         detailForm.addEventListener('submit', async function (event) {
             event.preventDefault();
 
+            var idInput = detailForm.querySelector('input[name="id"]');
+            var id = idInput ? idInput.value : '';
+            var submitButton = detailForm.querySelector('[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
+
             try {
-                var response = await fetch(endpoint + '?action=update&id=' + detailForm.dataset.id, {
+                var result = await callApi(pageUrl + '?action=update', {
                     method: 'POST',
-                    headers: { 'Accept': 'application/json' },
-                    body: new FormData(detailForm),
-                    credentials: 'same-origin'
+                    body: new FormData(detailForm)
                 });
 
-                var result = await response.json();
+                bootstrap.Modal.getOrCreateInstance(detailModal).hide();
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Không thể cập nhật tài khoản.');
+                var oldRow = accountsBody && accountsBody.querySelector('[data-account-row="' + id + '"]');
+                if (oldRow && result.data) {
+                    oldRow.outerHTML = renderRow(result.data);
                 }
-
-                var oldRow = null;
-                if (accountsBody) {
-                    oldRow = accountsBody.querySelector('[data-account-row="' + detailForm.dataset.id + '"]');
-                }
-
-                replaceAccountRow(oldRow, renderAccountRow(result.data));
-
-                var detailModal = document.getElementById('accountDetailModal');
-                if (detailModal) bootstrap.Modal.getOrCreateInstance(detailModal).hide();
 
                 alert(result.message);
             } catch (error) {
                 alert(error.message);
+            } finally {
+                if (submitButton) submitButton.disabled = false;
             }
         });
     }
-
-    // ---------------------------------------------
-    // Khóa / mở khóa tài khoản
-    // ---------------------------------------------
-
-    document.addEventListener('click', async function (event) {
-        var button = event.target.closest('[data-account-status]');
-        if (!button) return;
-
-        var question = button.dataset.status === '1' ? 'Mở khóa tài khoản này?' : 'Khóa tài khoản này?';
-        if (!confirm(question)) return;
-
-        var formData = new FormData();
-        formData.append('trang_thai', button.dataset.status);
-
-        try {
-            var response = await fetch(endpoint + '?action=status&id=' + button.dataset.accountStatus, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json' },
-                body: formData,
-                credentials: 'same-origin'
-            });
-
-            var result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || 'Không thể cập nhật trạng thái.');
-            }
-
-            replaceAccountRow(button.closest('tr'), renderAccountRow(result.data));
-            alert(result.message);
-        } catch (error) {
-            alert(error.message);
-        }
-    });
 })();

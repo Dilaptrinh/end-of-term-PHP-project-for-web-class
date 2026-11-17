@@ -1,39 +1,52 @@
+/*
+ * FILE: common/assets/js/instructor/instructor-classes.js
+ * Trang dùng: instructor/classes.php
+ *
+ * Bấm "Học viên": AJAX lấy danh sách học viên (HTML do PHP render)
+ * rồi gắn vào modal, không tải lại trang.
+ */
 (function () {
     'use strict';
 
-    const modal = document.getElementById('classStudentsModal');
-    const list = document.getElementById('class-students-list');
+    var pageUrl = window.location.pathname;
+    var modal = document.getElementById('classStudentsModal');
+    var list = document.getElementById('class-students-list');
+    var title = document.getElementById('classStudentsTitle');
+
     if (!modal || !list) return;
 
-    modal.addEventListener('show.bs.modal', function (event) {
-        const trigger = event.relatedTarget;
-        const classId = Number(trigger?.dataset.classId || 0);
-        const groups = window.INSTRUCTOR_CLASS_STUDENTS || {};
-        const rows = groups[classId] || [];
-        const title = document.getElementById('classStudentsTitle');
-        if (title && trigger?.dataset.className) {
+    modal.addEventListener('show.bs.modal', async function (event) {
+        var trigger = event.relatedTarget;
+        var classId = trigger && trigger.dataset.classId;
+        if (!classId) return;
+
+        if (title && trigger.dataset.className) {
             title.textContent = 'Học viên lớp ' + trigger.dataset.className;
         }
 
-        if (!rows.length) {
-            list.innerHTML = '<tr><td colspan="4" class="text-muted-2">Lớp chưa có học viên.</td></tr>';
-            return;
+        list.innerHTML = '<tr><td colspan="4" class="text-muted-2">Đang tải học viên…</td></tr>';
+
+        try {
+            var response = await fetch(pageUrl + '?action=members&id=' + encodeURIComponent(classId), {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            });
+            var result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Không thể tải học viên.');
+            }
+
+            list.innerHTML = result.html;
+        } catch (error) {
+            list.textContent = '';
+            var row = document.createElement('tr');
+            var cell = document.createElement('td');
+            cell.colSpan = 4;
+            cell.className = 'text-danger';
+            cell.textContent = error.message;
+            row.appendChild(cell);
+            list.appendChild(row);
         }
-
-        list.innerHTML = rows.map(function (student) {
-            return '<tr>' +
-                '<td><div class="user-inline"><span><span class="d-block user-name">' + escapeHtml(student.name) + '</span>' +
-                '<span class="d-block user-sub">HV-' + String(student.member_id).padStart(4, '0') + '</span></span></div></td>' +
-                '<td class="text-muted-2">' + escapeHtml(student.phone || '—') + '</td>' +
-                '<td class="text-muted-2">' + escapeHtml(student.email || '—') + '</td>' +
-                '<td class="text-muted-2">' + escapeHtml(student.registered || '—') + '</td>' +
-                '</tr>';
-        }).join('');
     });
-
-    function escapeHtml(value) {
-        const div = document.createElement('div');
-        div.textContent = value == null ? '' : String(value);
-        return div.innerHTML;
-    }
 })();

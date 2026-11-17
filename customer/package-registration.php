@@ -55,6 +55,22 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Bạn đã gửi yêu cầu cho gói này và đang chờ thanh toán.'], 422);
     }
 
+    // Gói đang còn hiệu lực thì không cho đăng ký trùng.
+    $stmt = $db->prepare(
+        'SELECT id FROM dang_ky_goi
+          WHERE hoi_vien_id = ? AND goi_tap_id = ? AND trang_thai = "da_thanh_toan"
+            AND ngay_ket_thuc >= CURDATE()
+          LIMIT 1'
+    );
+    $stmt->bind_param('ii', $memberId, $packageId);
+    $stmt->execute();
+    $active = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($active) {
+        json_response(['success' => false, 'message' => 'Gói này đang còn hiệu lực.'], 422);
+    }
+
     $from = new DateTimeImmutable('today');
     $to = $from->modify('+' . ((int) $package['thoi_han_ngay'] - 1) . ' days');
     $fromValue = $from->format('Y-m-d');
@@ -70,7 +86,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $stmt->execute();
     $stmt->close();
 
-    json_response(['success' => true, 'message' => 'Đã gửi yêu cầu đăng ký. Vui lòng thanh toán tại quầy.'], 201);
+    json_response([
+        'success' => true,
+        'message' => 'Đã gửi yêu cầu đăng ký. Vui lòng thanh toán tại quầy.',
+        'goi_tap_id' => $packageId,
+    ], 201);
 }
 
 require_role('customer');
@@ -84,6 +104,30 @@ $packages = array_values(array_filter(
     data_packages(),
     static fn (array $package): bool => $package['status'] === 'dang_ban'
 ));
+
+// Trạng thái đăng ký gói của hội viên: active (còn hạn) / pending (chờ thanh toán).
+$memberId = (int) (data_current_member()['id'] ?? 0);
+$packageStates = [];
+if ($memberId > 0) {
+    $stmt = common_db()->prepare(
+        'SELECT goi_tap_id, trang_thai, ngay_ket_thuc FROM dang_ky_goi WHERE hoi_vien_id = ?'
+    );
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    $today = date('Y-m-d');
+    foreach ($rows as $row) {
+        $pid = (int) $row['goi_tap_id'];
+        if ($row['trang_thai'] === 'da_thanh_toan' && $row['ngay_ket_thuc'] >= $today) {
+            $packageStates[$pid] = 'active';
+        } elseif ($row['trang_thai'] === 'chua_thanh_toan' && ($packageStates[$pid] ?? '') !== 'active') {
+            $packageStates[$pid] = 'pending';
+        }
+    }
+}
+
 $partials = __DIR__ . '/../common/partials';
 
 require $partials . '/head.php';
@@ -105,8 +149,8 @@ require $partials . '/head.php';
             </div>
 
             <div class="row g-3">
-                <?php foreach ($packages as $package): ?>
-                    <div class="col-md-6 col-xl-4">
+                <?php foreach ($packages as $package): $state = $packageStates[(int) $package['id']] ?? ''; ?>
+                    <div class="col-md-6 col-xl-4" data-package-card data-package-id="<?= (int) $package['id'] ?>">
                         <article class="app-card h-100">
                             <div class="app-card-header">
                                 <div>
@@ -119,11 +163,21 @@ require $partials . '/head.php';
                                     <strong><?= e(money($package['price'])) ?></strong>
                                     <span><?= (int) $package['days'] ?> ngày</span>
                                 </div>
-                                <button class="btn btn-primary w-100" type="button"
-                                        data-package-register="<?= (int) $package['id'] ?>"
-                                        data-package-name="<?= e($package['name']) ?>">
-                                    <?= icon('check-lg') ?> Đăng ký gói
-                                </button>
+                                <span data-package-action>
+                                    <?php if ($state === 'active'): ?>
+                                        <span class="badge-status success">Đang sử dụng</span>
+                                        <button class="btn btn-outline-secondary w-100 mt-2" type="button" disabled>Đang sử dụng</button>
+                                    <?php elseif ($state === 'pending'): ?>
+                                        <span class="badge-status warning">Chờ thanh toán</span>
+                                        <button class="btn btn-outline-secondary w-100 mt-2" type="button" disabled>Chờ thanh toán</button>
+                                    <?php else: ?>
+                                        <button class="btn btn-primary w-100" type="button"
+                                                data-package-register="<?= (int) $package['id'] ?>"
+                                                data-package-name="<?= e($package['name']) ?>">
+                                            <?= icon('check-lg') ?> Đăng ký gói
+                                        </button>
+                                    <?php endif; ?>
+                                </span>
                             </div>
                         </article>
                     </div>
@@ -136,28 +190,5 @@ require $partials . '/head.php';
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
-<script>
-document.addEventListener('click', async function (event) {
-    var button = event.target.closest('[data-package-register]');
-    if (!button) return;
-    if (!confirm('Đăng ký gói "' + button.dataset.packageName + '"?')) return;
-
-    try {
-        var formData = new FormData();
-        formData.append('goi_tap_id', button.dataset.packageRegister);
-        var response = await fetch(window.location.pathname, {
-            method: 'POST',
-            headers: {'Accept': 'application/json'},
-            body: formData,
-            credentials: 'same-origin'
-        });
-        var result = await response.json();
-        if (!response.ok || !result.success) throw new Error(result.message || 'Không thể đăng ký gói tập.');
-        alert(result.message);
-        window.location.href = <?= json_encode(url('/customer/history')) ?>;
-    } catch (error) {
-        alert(error.message);
-    }
-});
-</script>
+<script src="<?= e(url('/common/assets/js/customer/package-registration.js')) ?>?v=1"></script>
 <?php require $partials . '/foot.php'; ?>

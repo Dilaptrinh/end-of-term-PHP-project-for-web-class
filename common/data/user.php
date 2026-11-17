@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Thông tin người đang đăng nhập + thông báo cho khung app.
+ * Thông tin người đang đăng nhập cho khung app.
  * Tách khỏi menu để topbar không phải kéo theo logic menu.
  */
 
@@ -62,39 +62,4 @@ if (!function_exists('app_user')) {
     }
 }
 
-if (!function_exists('app_notifications')) {
-    /**
-     * @return array<int,array<string,string>>
-     */
-    function app_notifications(string $role): array
-    {
-        $conn = view_db();
 
-        if ($role === 'admin') {
-            $pending = (int) $conn->query("SELECT COUNT(*) AS c FROM lop_hoc WHERE trang_thai = 'cho_duyet' AND deleted_at IS NULL")->fetch_assoc()['c'];
-            $unpaid = (int) $conn->query("SELECT COUNT(*) AS c FROM dang_ky_goi WHERE trang_thai = 'chua_thanh_toan'")->fetch_assoc()['c'];
-            $latest = $conn->query('SELECT ho_ten FROM hoi_vien ORDER BY id DESC LIMIT 1')->fetch_assoc();
-
-            return [
-                ['icon' => 'calendar-check', 'title' => $pending . ' đề xuất lớp chờ duyệt', 'time' => 'Cập nhật từ CSDL', 'tone' => 'warning'],
-                ['icon' => 'receipt', 'title' => $unpaid . ' đăng ký gói chưa thanh toán', 'time' => 'Cập nhật từ CSDL', 'tone' => 'primary'],
-                ['icon' => 'person-plus', 'title' => 'Hội viên mới nhất: ' . ($latest['ho_ten'] ?? '—'), 'time' => 'Cập nhật từ CSDL', 'tone' => 'success'],
-            ];
-        }
-
-        if ($role === 'instructor') {
-            $pending = (int) $conn->query("SELECT COUNT(*) AS c FROM lop_hoc WHERE trang_thai = 'cho_duyet' AND deleted_at IS NULL")->fetch_assoc()['c'];
-            $classes = (int) $conn->query('SELECT COUNT(*) AS c FROM lop_hoc')->fetch_assoc()['c'];
-
-            return [
-                ['icon' => 'calendar-check', 'title' => $pending . ' đề xuất lớp đang chờ duyệt', 'time' => 'Cập nhật từ CSDL', 'tone' => 'warning'],
-                ['icon' => 'journal-bookmark', 'title' => $classes . ' lớp học trong hệ thống', 'time' => 'Cập nhật từ CSDL', 'tone' => 'primary'],
-            ];
-        }
-
-        $packages = (int) $conn->query('SELECT COUNT(*) AS c FROM goi_tap')->fetch_assoc()['c'];
-        return [
-            ['icon' => 'journal-plus', 'title' => $packages . ' gói tập đang mở bán', 'time' => 'Cập nhật từ CSDL', 'tone' => 'primary'],
-        ];
-    }
-}

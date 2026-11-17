@@ -8,7 +8,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     $action = (string) ($_GET['action'] ?? '');
-    $registrationId = (int) ($_GET['id'] ?? 0);
+    $registrationId = post_int('id') ?: (int) ($_GET['id'] ?? 0);
     if ($registrationId <= 0) {
         json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
     }
@@ -214,5 +214,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/customer/history.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/customer/history.js')) ?>?v=2"></script>
 <?php require $partials . '/foot.php'; ?>

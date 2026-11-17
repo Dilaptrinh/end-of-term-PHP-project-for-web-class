@@ -4,9 +4,13 @@
     var endpoint = window.location.pathname;
 
     async function sendCancel(action, id) {
+        var formData = new FormData();
+        formData.append('id', id);
+
         var res = await fetch(endpoint + '?action=' + action + '&id=' + id, {
             method: 'POST',
             headers: { 'Accept': 'application/json' },
+            body: formData,
             credentials: 'same-origin'
         });
         var json = await res.json().catch(function () {

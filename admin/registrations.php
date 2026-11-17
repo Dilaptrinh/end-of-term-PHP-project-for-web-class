@@ -2,24 +2,14 @@
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
-function package_registration_find(int $id): ?array
-{
-    foreach (data_package_registrations() as $registration) {
-        if ((int) $registration['id'] === $id) {
-            return $registration;
-        }
-    }
-    return null;
-}
-
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
-        json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
+        redirect('/login.php');
     }
 
     $action = (string) ($_GET['action'] ?? '');
-    $id = (int) ($_GET['id'] ?? 0);
+    $id = post_int('id');
     $db = common_db();
 
     if ($action === 'create-package') {
@@ -31,13 +21,15 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $payMethod = trim((string) ($input['phuong_thuc_thanh_toan'] ?? ''));
 
         if ($memberId <= 0 || $packageId <= 0 || $from === '' || $to === '') {
-            json_response(['success' => false, 'message' => 'Vui lòng chọn hội viên, gói tập và thời hạn.'], 422);
+            $_SESSION['_flash'] = ['type' => 'danger', 'message' => 'Vui lòng chọn hội viên, gói tập và thời hạn.'];
+            redirect('/admin/registrations');
         }
 
         $fromDate = DateTimeImmutable::createFromFormat('!Y-m-d', $from);
         $toDate = DateTimeImmutable::createFromFormat('!Y-m-d', $to);
         if (!$fromDate || !$toDate || $fromDate > $toDate) {
-            json_response(['success' => false, 'message' => 'Thời hạn gói tập không hợp lệ.'], 422);
+            $_SESSION['_flash'] = ['type' => 'danger', 'message' => 'Thời hạn gói tập không hợp lệ.'];
+            redirect('/admin/registrations');
         }
 
         $memberStmt = $db->prepare('SELECT id FROM hoi_vien WHERE id = ? AND deleted_at IS NULL LIMIT 1');
@@ -46,38 +38,39 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $memberExists = $memberStmt->get_result()->fetch_assoc();
         $memberStmt->close();
         if (!$memberExists) {
-            json_response(['success' => false, 'message' => 'Hội viên không tồn tại.'], 404);
+            $_SESSION['_flash'] = ['type' => 'danger', 'message' => 'Hội viên không tồn tại.'];
+            redirect('/admin/registrations');
         }
 
         $newId = admin_package_registration_create($memberId, $packageId, $from, $to, $payMethod !== '' ? $payMethod : null);
         if ($newId === 0) {
-            json_response(['success' => false, 'message' => 'Gói tập không tồn tại.'], 404);
+            $_SESSION['_flash'] = ['type' => 'danger', 'message' => 'Gói tập không tồn tại.'];
+            redirect('/admin/registrations');
         }
 
-        json_response([
-            'success' => true,
-            'message' => 'Đã tạo đăng ký gói.',
-            'data' => package_registration_find($newId),
-        ], 201);
+        $_SESSION['_flash'] = ['type' => 'success', 'message' => 'Đã tạo đăng ký gói.'];
+        redirect('/admin/registrations');
     }
 
     if ($action === 'confirm-package' || $action === 'cancel-package') {
         if ($id <= 0) {
-            json_response(['success' => false, 'message' => 'ID không hợp lệ.'], 422);
+            $_SESSION['_flash'] = ['type' => 'danger', 'message' => 'ID không hợp lệ.'];
+            redirect('/admin/registrations');
         }
         $changed = $action === 'confirm-package'
             ? admin_package_registration_confirm($id)
             : admin_package_registration_cancel($id);
-        json_response([
-            'success' => $changed,
-            'message' => $changed
-                ? ($action === 'confirm-package' ? 'Đã xác nhận thanh toán.' : 'Đã hủy đăng ký gói.')
-                : 'Không tìm thấy đăng ký hoặc đăng ký đã được xử lý.',
-            'data' => $changed ? package_registration_find($id) : null,
-        ], $changed ? 200 : 404);
+        $_SESSION['_flash'] = $changed
+            ? [
+                'type' => 'success',
+                'message' => $action === 'confirm-package' ? 'Đã xác nhận thanh toán.' : 'Đã hủy đăng ký gói.',
+            ]
+            : ['type' => 'danger', 'message' => 'Không tìm thấy đăng ký hoặc đăng ký đã được xử lý.'];
+        redirect('/admin/registrations');
     }
 
-    json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
+    $_SESSION['_flash'] = ['type' => 'danger', 'message' => 'Thao tác không hợp lệ.'];
+    redirect('/admin/registrations');
 }
 
 require_role('admin');
@@ -97,6 +90,18 @@ if ($packageFilterId !== '') {
         return (string) $registration['id'] === $packageFilterId;
     }));
 }
+
+// Lọc theo trạng thái thanh toán: chua_thanh_toan, da_thanh_toan, da_huy.
+$paymentFilter = trim((string) ($_GET['payment'] ?? ''));
+$paymentOptions = ['chua_thanh_toan', 'da_thanh_toan', 'da_huy'];
+if ($paymentFilter !== '' && in_array($paymentFilter, $paymentOptions, true)) {
+    $packageRegs = array_values(array_filter($packageRegs, static function (array $registration) use ($paymentFilter): bool {
+        return $registration['payment'] === $paymentFilter;
+    }));
+} else {
+    $paymentFilter = '';
+}
+
 $members = data_members();
 $packages = data_packages();
 
@@ -133,6 +138,12 @@ require $partials . '/head.php';
         <div class="tab-pane fade show active" id="reg-packages" role="tabpanel" tabindex="0">
             <form class="table-toolbar" method="get" action="<?= e(url('/admin/registrations')) ?>">
                 <input class="form-control toolbar-search" name="package_id" type="search" inputmode="numeric" value="<?= e($packageId) ?>" placeholder="Nhập mã đăng ký, VD: 1" aria-label="Tìm theo mã đăng ký">
+                <select class="form-select" name="payment" aria-label="Lọc theo trạng thái thanh toán">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="chua_thanh_toan" <?= $paymentFilter === 'chua_thanh_toan' ? 'selected' : '' ?>>Chưa thanh toán</option>
+                    <option value="da_thanh_toan" <?= $paymentFilter === 'da_thanh_toan' ? 'selected' : '' ?>>Đã thanh toán</option>
+                    <option value="da_huy" <?= $paymentFilter === 'da_huy' ? 'selected' : '' ?>>Đã hủy</option>
+                </select>
                 <button class="btn btn-primary" type="submit"><?= icon('funnel') ?> Lọc</button>
                 <a class="btn btn-ghost" href="<?= e(url('/admin/registrations')) ?>">Xóa lọc</a>
             </form>
@@ -165,16 +176,16 @@ require $partials . '/head.php';
                                 <td class="text-muted-2 text-tiny"><?= e($reg['staff']) ?><?php if ($reg['paid_at'] !== '—'): ?><br><?= e($reg['paid_at']) ?><?php endif; ?></td>
                                 <td class="cell-actions">
                                     <?php if ($reg['payment'] === 'chua_thanh_toan'): ?>
-                                        <button class="btn btn-primary btn-sm" type="button"
-                                                data-reg-action="confirm-package"
-                                                data-reg-id="<?= (int) $reg['id'] ?>"
-                                                data-reg-confirm="Xác nhận thanh toán <?= e(money($reg['price'])) ?> cho <?= e($reg['member']) ?>?"><?= icon('check-lg') ?> Xác nhận</button>
-                                        <button class="btn btn-danger-soft btn-sm" type="button"
-                                                data-reg-action="cancel-package"
-                                                data-reg-id="<?= (int) $reg['id'] ?>"
-                                                data-reg-confirm="Hủy đăng ký của <?= e($reg['member']) ?>?">Hủy</button>
+                                        <form method="post" action="<?= e(url('/admin/registrations')) ?>?action=confirm-package" class="d-inline" onsubmit="return confirm('Xác nhận thanh toán cho đăng ký này?');">
+                                            <input type="hidden" name="id" value="<?= (int) $reg['id'] ?>">
+                                            <button class="btn btn-primary btn-sm" type="submit"><?= icon('check-lg') ?> Xác nhận</button>
+                                        </form>
+                                        <form method="post" action="<?= e(url('/admin/registrations')) ?>?action=cancel-package" class="d-inline" onsubmit="return confirm('Hủy đăng ký này?');">
+                                            <input type="hidden" name="id" value="<?= (int) $reg['id'] ?>">
+                                            <button class="btn btn-danger-soft btn-sm" type="submit">Hủy</button>
+                                        </form>
                                     <?php else: ?>
-                                        <button class="btn btn-ghost btn-sm" type="button" data-detail="<?= e($reg['member'] . ' · ' . $reg['package'] . ' · ' . money($reg['price'])) ?>"><?= icon('eye') ?> Xem</button>
+                                        <span class="text-muted-2 text-tiny">—</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -191,7 +202,7 @@ require $partials . '/head.php';
 <div class="modal fade" id="registrationFormModal" tabindex="-1" aria-labelledby="registrationFormTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="registration-form">
+            <form id="registration-form" method="post" action="<?= e(url('/admin/registrations')) ?>?action=create-package">
                 <div class="modal-header">
                     <div>
                         <h2 class="modal-title" id="registrationFormTitle">Tạo đăng ký gói</h2>
@@ -252,5 +263,4 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/registrations.js')) ?>?v=5"></script>
 <?php require $partials . '/foot.php'; ?>

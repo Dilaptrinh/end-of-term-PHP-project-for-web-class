@@ -2,17 +2,13 @@
 require __DIR__ . '/../common/bootstrap.php';
 require __DIR__ . '/queries.php';
 
-function account_find(int $id): ?array
+function account_flash_redirect(string $type, string $message): never
 {
-    foreach (data_accounts() as $account) {
-        if ((int) $account['id'] === $id) {
-            return $account;
-        }
-    }
-    return null;
+    $_SESSION['_flash'] = ['type' => $type, 'message' => $message];
+    redirect('/admin/accounts');
 }
 
-// API GET: trả chi tiết một tài khoản cho modal bằng JSON.
+// API GET: trả JSON chi tiết tài khoản cho modal (JS render HTML).
 $requestAction = (string) ($_GET['action'] ?? '');
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'detail') {
     $user = common_user();
@@ -20,15 +16,20 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction 
         json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
     }
     $detail = admin_account_detail((int) ($_GET['id'] ?? 0));
-    json_response($detail ? ['success' => true, 'data' => $detail] : ['success' => false, 'message' => 'Không tìm thấy tài khoản.'], $detail ? 200 : 404);
-    //detail có người trả về data chi tiết , ko có trả message ko tìm thấy
+    if (!$detail) {
+        json_response(['success' => false, 'message' => 'Không tìm thấy tài khoản.'], 404);
+    }
+    json_response([
+        'success' => true,
+        'data' => $detail,
+        'specialties' => data_specialties(),
+    ]);
 }
 
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    // API POST: xử lý tạo, cập nhật và khóa/mở khóa tài khoản.
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
-        json_response(['success' => false, 'message' => 'Chưa đăng nhập.'], 401);
+        redirect('/login');
     }
 
     $accountId = (int) $user['id'];
@@ -46,53 +47,45 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $email = post_string('email');
         //validate input create user
         if (!preg_match('/^[A-Za-z0-9_]{3,50}$/', $username) || mb_strlen($name) < 2) {
-            json_response(['success' => false, 'message' => 'Tên đăng nhập hoặc họ tên không hợp lệ.'], 422);
+            account_flash_redirect('danger', 'Tên đăng nhập hoặc họ tên không hợp lệ.');
         }
         if (!in_array($role, ['admin', 'instructor', 'customer'], true)) {
-            json_response(['success' => false, 'message' => 'Vai trò không hợp lệ.'], 422);
+            account_flash_redirect('danger', 'Vai trò không hợp lệ.');
         }
         if (strlen($password) < 6) {
-            json_response(['success' => false, 'message' => 'Mật khẩu phải có ít nhất 6 ký tự.'], 422);
+            account_flash_redirect('danger', 'Mật khẩu phải có ít nhất 6 ký tự.');
         }
         if (in_array($role, ['instructor', 'customer'], true) && ($phone === '' || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
-            json_response(['success' => false, 'message' => 'Giáo viên và hội viên cần số điện thoại, email hợp lệ.'], 422);
+            account_flash_redirect('danger', 'Giáo viên và hội viên cần số điện thoại, email hợp lệ.');
         }
         if (admin_username_exists($username)) {
-            json_response(['success' => false, 'message' => 'Tên đăng nhập đã tồn tại.'], 422);
+            account_flash_redirect('danger', 'Tên đăng nhập đã tồn tại.');
         }
 
         try {
-            $newId = admin_account_create($username, $password, $name, $role, $phone, $email);
+            admin_account_create($username, $password, $name, $role, $phone, $email);
         } catch (mysqli_sql_exception $error) {
-            json_response(['success' => false, 'message' => 'Email đã được sử dụng hoặc dữ liệu bị trùng.'], 422);
+            account_flash_redirect('danger', 'Email đã được sử dụng hoặc dữ liệu bị trùng.');
         }
-        json_response([
-            'success' => true,
-            'message' => 'Đã tạo tài khoản và hồ sơ liên quan.',
-            'data' => account_find($newId),
-        ], 201);
+        account_flash_redirect('success', 'Đã tạo tài khoản và hồ sơ liên quan.');
     }
 
     if ($action === 'status') {
         // Đổi trạng thái đăng nhập của tài khoản.
-        $targetId = (int) ($_GET['id'] ?? 0);
+        $targetId = post_int('id') ?: (int) ($_GET['id'] ?? 0);
         $active = post_int('trang_thai');
         if ($targetId <= 0 || !in_array($active, [0, 1], true)) {
-            json_response(['success' => false, 'message' => 'Dữ liệu trạng thái không hợp lệ.'], 422);
+            account_flash_redirect('danger', 'Dữ liệu trạng thái không hợp lệ.');
         }
         if (!admin_account_status($targetId, $active)) {
-            json_response(['success' => false, 'message' => 'Không thể thay đổi tài khoản admin hoặc tài khoản không tồn tại.'], 422);
+            account_flash_redirect('danger', 'Không thể thay đổi tài khoản admin hoặc tài khoản không tồn tại.');
         }
-        json_response([
-            'success' => true,
-            'message' => $active ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.',
-            'data' => account_find($targetId),
-        ]);
+        account_flash_redirect('success', $active ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.');
     }
 
     if ($action === 'update') {
         // Cập nhật thông tin chung và thông tin hồ sơ theo role.
-        $targetId = (int) ($_GET['id'] ?? 0);
+        $targetId = post_int('id') ?: (int) ($_GET['id'] ?? 0);
         $name = post_string('ho_ten');
         $phone = post_string('sdt');
         $email = post_string('email');
@@ -120,11 +113,16 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         } catch (mysqli_sql_exception $error) {
             json_response(['success' => false, 'message' => 'Email đã được sử dụng hoặc dữ liệu không hợp lệ.'], 422);
         }
-        json_response([
-            'success' => true,
-            'message' => 'Đã cập nhật tài khoản.',
-            'data' => account_find($targetId),
-        ]);
+
+        // Trả JSON dòng đã cập nhật; JS render HTML.
+        $row = null;
+        foreach (data_accounts() as $item) {
+            if ((int) $item['id'] === $targetId) {
+                $row = $item;
+                break;
+            }
+        }
+        json_response(['success' => true, 'message' => 'Đã cập nhật tài khoản.', 'data' => $row]);
     }
 
     json_response(['success' => false, 'message' => 'Thao tác không hợp lệ.'], 404);
@@ -139,7 +137,6 @@ $pageTitle = 'Quản lý tài khoản';
 $pageScripts = [];
 $account = common_user(); // common/bootstrap.php: lấy Admin đang đăng nhập.
 $accounts = data_accounts(); // common/data/admin.php: lấy danh sách tài khoản.
-$specialties = data_specialties(); // common/data/shared.php: lấy danh sách chuyên môn.
 $roleFilter = (string) ($_GET['role'] ?? '');
 $statusFilter = (string) ($_GET['status'] ?? '');
 $keyword = trim((string) ($_GET['q'] ?? ''));
@@ -166,6 +163,7 @@ $page = max(1, (int) ($_GET['page'] ?? 1));
 $totalPages = max(1, (int) ceil($totalAccounts / $perPage));
 $page = min($page, $totalPages);
 $accounts = array_slice($accounts, ($page - 1) * $perPage, $perPage);
+// Modal chi tiết được nạp bằng AJAX, nội dung HTML do PHP render.
 $partials = __DIR__ . '/../common/partials';
 
 require $partials . '/head.php';
@@ -193,7 +191,7 @@ require $partials . '/head.php';
                             <label class="form-label" for="account-q">Tìm kiếm</label>
                             <input class="form-control" id="account-q" name="q" value="<?= e($keyword) ?>" placeholder="Họ tên hoặc tên đăng nhập">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label" for="account-role">Vai trò</label>
                             <select class="form-select" id="account-role" name="role">
                                 <option value="">Tất cả vai trò</option>
@@ -202,7 +200,7 @@ require $partials . '/head.php';
                                 <option value="customer" <?= $roleFilter === 'customer' ? 'selected' : '' ?>>Customer</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label" for="account-status">Trạng thái</label>
                             <select class="form-select" id="account-status" name="status">
                                 <option value="">Tất cả trạng thái</option>
@@ -210,7 +208,8 @@ require $partials . '/head.php';
                                 <option value="bi_khoa" <?= $statusFilter === 'bi_khoa' ? 'selected' : '' ?>>Bị khóa</option>
                             </select>
                         </div>
-                        <div class="col-md-1"><button class="btn btn-outline-primary w-100" type="submit"><?= icon('search') ?></button></div>
+                        <div class="col-md-1"><button class="btn btn-outline-primary w-100" type="submit" title="Tìm"><?= icon('search') ?></button></div>
+                        <div class="col-md-1"><a class="btn btn-ghost w-100" href="<?= e(url('/admin/accounts')) ?>" title="Đặt lại"><?= icon('arrow-counterclockwise') ?></a></div>
                     </form>
                 </div>
             </div>
@@ -219,29 +218,10 @@ require $partials . '/head.php';
                 <div class="table-responsive">
                     <table class="table app-table mb-0">
                         <thead><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th class="cell-actions">Thao tác</th></tr></thead>
-                        <tbody id="accounts-body" data-current-id="<?= (int) $account['id'] ?>">
-                        <?php if ($accounts === []): ?>
-                            <tr data-empty-row><td colspan="6" class="text-center text-muted-2 py-4">Không tìm thấy tài khoản.</td></tr>
-                        <?php else: foreach ($accounts as $item): ?>
-                            <tr data-account-row="<?= (int) $item['id'] ?>">
-                                <td class="cell-strong"><?= e($item['name']) ?></td>
-                                <td><?= e($item['username']) ?></td>
-                                <td><?= e(['admin' => 'Admin', 'instructor' => 'Instructor', 'customer' => 'Customer'][$item['role']] ?? $item['role']) ?></td>
-                                <td><?= $item['status'] === 'hoat_dong' ? badge('Đang hoạt động', 'success') : badge('Bị khóa', 'secondary') ?></td>
-                                <td><?= e($item['created']) ?></td>
-                                <td class="cell-actions">
-                                    <button class="btn btn-sm btn-outline-primary" type="button" data-account-detail="<?= (int) $item['id'] ?>">Chi tiết</button>
-                                    <?php if ($item['role'] !== 'admin' || (int) $item['id'] !== (int) $account['id']): ?>
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-account-status="<?= (int) $item['id'] ?>" data-status="<?= $item['status'] === 'hoat_dong' ? '0' : '1' ?>">
-                                            <?= $item['status'] === 'hoat_dong' ? 'Khóa' : 'Mở khóa' ?>
-                                        </button>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; endif; ?>
-                        </tbody>
+                        <tbody id="accounts-body" data-current-id="<?= (int) $account['id'] ?>"></tbody>
                     </table>
                 </div>
+                <script type="application/json" id="account-init"><?= json_encode($accounts, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
                 <?php if ($totalPages > 1): ?>
                     <div class="app-card-body border-top">
                         <nav aria-label="Phân trang tài khoản">
@@ -273,33 +253,7 @@ require $partials . '/head.php';
         <div class="modal-content">
             <div class="modal-header"><h2 class="modal-title fs-5">Chi tiết tài khoản</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
             <form id="account-detail-form">
-                <div class="modal-body">
-                    <div class="account-detail-hero mb-3">
-                        <div><h3 class="mb-1" id="account-detail-title">Chi tiết tài khoản</h3><div class="text-muted-2" id="account-detail-subtitle"></div></div>
-                    </div>
-                    <input type="hidden" name="vai_tro" id="detail-role">
-                    <div class="row g-3">
-                        <div class="col-md-6"><label class="form-label">Họ tên</label><input class="form-control" name="ho_ten" id="detail-name" required></div>
-                        <div class="col-md-6"><label class="form-label">Tên đăng nhập</label><input class="form-control" id="detail-username" disabled></div>
-                        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" name="email" id="detail-email" type="email"></div>
-                        <div class="col-md-6"><label class="form-label">Số điện thoại</label><input class="form-control" name="sdt" id="detail-phone"></div>
-                        <div class="col-md-6"><label class="form-label">Trạng thái</label><select class="form-select" name="trang_thai" id="detail-status"><option value="1">Đang hoạt động</option><option value="0">Bị khóa</option></select></div>
-                        <div class="col-md-6" data-detail-customer><label class="form-label">Ngày sinh</label><input class="form-control" name="ngay_sinh" id="detail-birth" type="date"></div>
-                        <div class="col-md-6" data-detail-customer><label class="form-label">Mục tiêu</label><input class="form-control" name="muc_tieu" id="detail-goal"></div>
-                        <div class="col-md-6" data-detail-customer><label class="form-label">Chiều cao (cm)</label><input class="form-control" name="chieu_cao" id="detail-height" type="number" step="0.1"></div>
-                        <div class="col-md-6" data-detail-customer><label class="form-label">Cân nặng (kg)</label><input class="form-control" name="can_nang" id="detail-weight" type="number" step="0.1"></div>
-                        <div class="col-12" data-detail-customer><label class="form-label">Địa chỉ</label><input class="form-control" name="dia_chi" id="detail-address"></div>
-                        <div class="col-12" data-detail-instructor><label class="form-label">Giới thiệu Instructor</label><textarea class="form-control" name="gioi_thieu" id="detail-intro" rows="3"></textarea></div>
-                        <div class="col-12" data-detail-instructor>
-                            <label class="form-label">Chuyên môn</label>
-                            <div class="row g-2" id="detail-specialty">
-                                <?php foreach ($specialties as $specialty): ?>
-                                    <div class="col-md-4"><label class="form-check"><input class="form-check-input" type="checkbox" name="chuyen_mon_ids[]" value="<?= (int) $specialty['id'] ?>"><span class="form-check-label"><?= e($specialty['name']) ?></span></label></div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <div class="modal-body" id="account-detail-body"></div>
                 <div class="modal-footer"><button class="btn btn-ghost" type="button" data-bs-dismiss="modal">Đóng</button><button class="btn btn-primary" type="submit">Lưu thay đổi</button></div>
             </form>
         </div>
@@ -309,7 +263,7 @@ require $partials . '/head.php';
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header"><h2 class="modal-title fs-5">Tạo tài khoản</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
-            <form id="account-create-form">
+            <form id="account-create-form" method="post" action="<?= e(url('/admin/accounts')) ?>?action=create">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6"><label class="form-label" for="new-account-name">Họ và tên <span class="req">*</span></label><input class="form-control" id="new-account-name" name="ho_ten" required></div>
@@ -327,5 +281,5 @@ require $partials . '/head.php';
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
-<script src="<?= e(url('/common/assets/js/admin/accounts.js')) ?>?v=1"></script>
+<script src="<?= e(url('/common/assets/js/admin/accounts.js')) ?>?v=6"></script>
 <?php require $partials . '/foot.php'; ?>

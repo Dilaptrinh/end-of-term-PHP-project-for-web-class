@@ -1,13 +1,10 @@
 (function () {
     'use strict';
 
-    // Địa chỉ trang hiện tại: /fitness/admin/classes.php
+    // Địa chỉ trang hiện tại: /fitness/admin/classes
     var pageUrl = window.location.pathname;
     var classesBody = document.getElementById('classes-body');
-
-    // ---------------------------------------------
-    // Hàm dùng chung
-    // ---------------------------------------------
+    var tpl = window.ClassTemplates;
 
     // Gửi request lên server và trả về JSON.
     async function callApi(url, options) {
@@ -25,10 +22,7 @@
     function showEmptyRow() {
         if (!classesBody) return;
 
-        classesBody.innerHTML =
-            '<tr data-empty-row>' +
-                '<td colspan="8" class="text-center text-muted-2 py-4">Chưa có lớp học nào.</td>' +
-            '</tr>';
+        classesBody.innerHTML = tpl.emptyRow();
     }
 
     // Thêm lớp mới vào cuối bảng.
@@ -41,7 +35,7 @@
         classesBody.insertAdjacentHTML('beforeend', html);
     }
 
-    // Thay dòng lớp cũ bằng dòng mới server trả về.
+    // Thay dòng lớp cũ bằng dòng mới.
     function replaceClassRow(oldRow, html) {
         if (!oldRow || !html) return;
         oldRow.outerHTML = html;
@@ -58,75 +52,7 @@
         }
     }
 
-    // Dựng thanh phần trăm sĩ số.
-    function progressBar(percent) {
-        var variant = percent >= 100 ? 'red' : (percent >= 80 ? 'amber' : '');
-        var className = 'app-progress' + (variant ? ' ' + variant : '');
-
-        return '<div class="' + className + '" role="progressbar" aria-valuenow="' + percent +
-            '" aria-valuemin="0" aria-valuemax="100"><span style="width:' + percent + '%"></span></div>';
-    }
-
-    // Dựng HTML cho một dòng lớp học.
-    function renderClassRow(item) {
-        var enrolled = Number(item.enrolled || 0);
-        var capacity = Number(item.capacity || 0);
-        var percent = Math.round(enrolled / Math.max(1, capacity) * 100);
-        var dayName = weekdays[Number(item.weekday)] || '—';
-
-        return '<tr data-row data-class-row="' + Number(item.id) + '">' +
-            '<td class="cell-strong">' + escapeHtml(item.name) +
-                '<div class="cell-sub">Mã lớp: ' + Number(item.id) + ' · ' + escapeHtml(item.level) + '</div></td>' +
-            '<td>' + escapeHtml(item.instructor) + '</td>' +
-            '<td>' + escapeHtml(dayName) +
-                '<div class="cell-sub">' + escapeHtml(item.start + ' – ' + item.end) + '</div></td>' +
-            '<td>' + escapeHtml(item.room) + '</td>' +
-            '<td style="min-width:130px;">' +
-                '<div class="d-flex justify-content-between text-tiny mb-1">' +
-                    '<span>' + enrolled + '/' + capacity + '</span><span>' + percent + '%</span>' +
-                '</div>' + progressBar(percent) +
-            '</td>' +
-            '<td class="text-muted-2 text-tiny">' + escapeHtml(item.from) + '<br>' + escapeHtml(item.to) + '</td>' +
-            '<td>' + statusBadge(item.status) + '</td>' +
-            '<td class="cell-actions">' +
-                '<div class="dropdown">' +
-                    '<button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" aria-label="Thao tác">' +
-                        '<i class="bi bi-three-dots"></i></button>' +
-                    '<ul class="dropdown-menu dropdown-menu-end">' +
-                        '<li><button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#classDetailModal" ' +
-                            'data-class-id="' + Number(item.id) + '" ' +
-                            'data-class-name="' + escapeHtml(item.name) + '">' +
-                            '<i class="bi bi-info-circle"></i> Xem chi tiết</button></li>' +
-                        '<li><hr class="dropdown-divider"></li>' +
-                        '<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#classFormModal" ' +
-                            'data-form-mode="edit" ' +
-                            'data-class-id="' + Number(item.id) + '" ' +
-                            'data-class-name="' + escapeHtml(item.name) + '" ' +
-                            'data-class-instructor="' + Number(item.giao_vien_id) + '" ' +
-                            'data-class-day="' + Number(item.weekday) + '" ' +
-                            'data-class-start="' + escapeHtml(item.start) + '" ' +
-                            'data-class-end="' + escapeHtml(item.end) + '" ' +
-                            'data-class-room="' + escapeHtml(item.room) + '" ' +
-                            'data-class-capacity="' + capacity + '" ' +
-                            'data-class-level="' + escapeHtml(item.level) + '" ' +
-                            'data-class-package="' + escapeHtml(item.required_package) + '" ' +
-                            'data-class-status="' + escapeHtml(item.status) + '" ' +
-                            'data-class-desc="' + escapeHtml(item.desc) + '">' +
-                            '<i class="bi bi-pencil"></i> Sửa lớp</a></li>' +
-                        '<li><hr class="dropdown-divider"></li>' +
-                        '<li><button class="dropdown-item text-danger" type="button" ' +
-                            'data-delete-id="' + Number(item.id) + '" ' +
-                            'data-delete-name="' + escapeHtml(item.name) + '">' +
-                            '<i class="bi bi-trash3"></i> Xóa lớp</button></li>' +
-                    '</ul>' +
-                '</div>' +
-            '</td>' +
-        '</tr>';
-    }
-
-    // ---------------------------------------------
     // Form thêm / sửa lớp học
-    // ---------------------------------------------
 
     function getField(form, name) {
         return form.querySelector('[data-field="' + name + '"]');
@@ -171,10 +97,14 @@
     // Đổ dữ liệu của lớp vào form (dùng khi sửa).
     function fillClassForm(form, button) {
         var defaults = formDefaults();
-
         form.dataset.id = button.dataset.classId || '';
-        document.getElementById('cf-status').value =
-            button.dataset.classStatus || defaults.status;
+
+        // Lớp cũ có thể ở trạng thái đề xuất (đã bỏ luồng đó); đưa về đang mở.
+        var status = button.dataset.classStatus || defaults.status;
+        if (['dang_mo', 'da_dong', 'da_huy'].indexOf(status) === -1) {
+            status = 'dang_mo';
+        }
+        document.getElementById('cf-status').value = status;
 
         setField(form, 'name', button.dataset.className || '');
         setField(form, 'room', button.dataset.classRoom || '');
@@ -229,13 +159,14 @@
                     credentials: 'same-origin'
                 });
 
-                // Server trả dữ liệu lớp mới, JS tự dựng lại dòng.
-                var html = renderClassRow(result.data);
+                if (!result.data) {
+                    throw new Error('Không tìm thấy lớp học.');
+                }
 
                 if (id === '0') {
-                    appendClassRow(html);
+                    appendClassRow(tpl.row(result.data, pageUrl));
                 } else {
-                    replaceClassRow(oldRow, html);
+                    replaceClassRow(oldRow, tpl.row(result.data, pageUrl));
                 }
 
                 bootstrap.Modal.getOrCreateInstance(modal).hide();
@@ -246,9 +177,7 @@
         });
     }
 
-    // ---------------------------------------------
     // Xóa lớp học
-    // ---------------------------------------------
 
     function setupClassDeletion() {
         document.addEventListener('click', async function (event) {
@@ -261,9 +190,13 @@
             }
 
             try {
+                var formData = new FormData();
+                formData.append('id', button.dataset.deleteId);
+
                 var result = await callApi(pageUrl + '?action=delete&id=' + button.dataset.deleteId, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json' },
+                    body: formData,
                     credentials: 'same-origin'
                 });
 
@@ -275,115 +208,19 @@
         });
     }
 
-    // ---------------------------------------------
     // Modal xem chi tiết lớp học
-    // ---------------------------------------------
 
-    var statusLabels = {
-        dang_mo: ['Đang mở', 'success'],
-        cho_duyet: ['Chờ duyệt', 'warning'],
-        tu_choi: ['Từ chối', 'danger'],
-        da_dong: ['Đã đóng', 'muted'],
-        dang_ky: ['Đã đăng ký', 'primary'],
-        da_huy: ['Đã hủy', 'danger'],
-        cho_xac_nhan: ['Chờ xác nhận', 'warning'],
-        hoan_thanh: ['Hoàn thành', 'success']
-    };
-
-    var weekdays = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
-
-    var genders = {
-        nam: 'Nam',
-        nu: 'Nữ',
-        khac: 'Khác'
-    };
-
-    // Chuyển ký tự đặc biệt thành mã HTML để tránh lỗi hiển thị.
-    function escapeHtml(value) {
-        var characters = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-
-        return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
-            return characters[character];
-        });
-    }
-
-    function statusBadge(status) {
-        var item = statusLabels[status] || [status || '—', 'muted'];
-
-        return '<span class="badge-status ' + item[1] + '">' +
-            escapeHtml(item[0]) +
-            '</span>';
-    }
-
-    function infoCard(label, value) {
-        return '<div class="col-sm-6 col-lg-3">' +
-            '<div class="border rounded-3 p-3 h-100">' +
-            '<div class="text-tiny text-muted-2 mb-1">' + label + '</div>' +
-            '<div class="fw-semibold">' + value + '</div>' +
-            '</div>' +
-            '</div>';
-    }
-
-    // Vẽ nội dung chi tiết lớp + danh sách học viên.
     function renderClassDetails(elements, data) {
         var classInfo = data.class || {};
         var members = Array.isArray(data.members) ? data.members : [];
-        var schedule = (weekdays[classInfo.weekday] || '—') +
-            ' · ' + (classInfo.start || '—') +
-            ' – ' + (classInfo.end || '—');
 
         elements.subtitle.textContent =
             'Mã lớp #' + classInfo.id + ' · ' +
             (classInfo.instructor || 'Chưa phân công');
 
-        elements.info.innerHTML = [
-            infoCard('Giáo viên', escapeHtml(classInfo.instructor || '—')),
-            infoCard('Lịch học', escapeHtml(schedule)),
-            infoCard('Phòng học', escapeHtml(classInfo.room || 'Chưa xếp')),
-            infoCard('Sĩ số', escapeHtml(String(classInfo.enrolled) + '/' + String(classInfo.capacity))),
-            infoCard('Trình độ', escapeHtml(classInfo.level || '—')),
-            infoCard('Gói tối thiểu', escapeHtml(String(classInfo.required_package || 'basic').toUpperCase())),
-            infoCard('Thời gian', escapeHtml((classInfo.from || '—') + ' – ' + (classInfo.to || '—'))),
-            infoCard('Trạng thái', statusBadge(classInfo.status)),
-            '<div class="col-12">' +
-                '<div class="border rounded-3 p-3">' +
-                    '<div class="text-tiny text-muted-2 mb-1">Mô tả lớp học</div>' +
-                    '<div>' + escapeHtml(classInfo.desc || 'Chưa có mô tả.') + '</div>' +
-                '</div>' +
-            '</div>'
-        ].join('');
-
-        elements.memberCount.textContent = members.length + ' học viên';
-
-        if (members.length === 0) {
-            elements.memberBody.innerHTML =
-                '<tr>' +
-                    '<td colspan="6" class="text-center text-muted-2 py-4">' +
-                        'Chưa có học viên đăng ký lớp này.' +
-                    '</td>' +
-                '</tr>';
-        } else {
-            elements.memberBody.innerHTML = members.map(function (member, index) {
-                return '<tr>' +
-                    '<td>' + (index + 1) + '</td>' +
-                    '<td class="cell-strong">' +
-                        escapeHtml(member.name) +
-                        '<div class="cell-sub">' + escapeHtml(genders[member.gender] || '—') + '</div>' +
-                    '</td>' +
-                    '<td>' + escapeHtml(member.phone || '—') + '</td>' +
-                    '<td>' + escapeHtml(member.email || '—') + '</td>' +
-                    '<td>' + escapeHtml(member.registered || '—') + '</td>' +
-                    '<td>' + statusBadge(member.status) + '</td>' +
-                '</tr>';
-            }).join('');
-        }
-
+        elements.info.innerHTML = tpl.detail(classInfo);
+        elements.memberCount.textContent = tpl.memberCount(members.length);
+        elements.memberBody.innerHTML = tpl.memberRows(members);
         elements.body.classList.remove('d-none');
     }
 
@@ -430,6 +267,20 @@
                 elements.loading.classList.add('d-none');
             }
         });
+    }
+
+    // Render bảng ban đầu từ JSON PHP in ra.
+    var initial = document.getElementById('class-init');
+    if (initial && classesBody) {
+        var rows = JSON.parse(initial.textContent || '[]');
+
+        classesBody.innerHTML = rows.map(function (row) {
+            return tpl.row(row, pageUrl);
+        }).join('');
+
+        if (!rows.length) {
+            showEmptyRow();
+        }
     }
 
     // Khởi động các chức năng của trang.

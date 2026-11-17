@@ -17,21 +17,20 @@
 - Đăng nhập một cổng bằng form POST, tự chuyển về đúng khu vực theo vai trò.
 
 ### Hội viên (`customer`)
-- Tổng quan hồ sơ, chỉ số cơ thể, lớp đã đăng ký.
-- Đăng ký lớp học, xem lịch tập, lịch sử gói tập/lớp học.
+- Tổng quan lượt đăng ký, lớp đang học, gói hiện tại và hạn sử dụng.
+- Đăng ký gói, đăng ký/hủy lớp, xem lịch tập và lịch sử gói/lớp.
 - Cập nhật hồ sơ, đổi mật khẩu.
 
 ### Giáo viên (`instructor`)
-- Tổng quan lịch dạy.
-- Đăng ký lịch rảnh, gửi yêu cầu chờ duyệt.
-- Xem lớp đang dạy, danh sách học viên.
-- Tra cứu học viên, quản lý tài khoản.
+- Tổng quan lịch dạy và tỷ lệ lấp đầy lớp.
+- Xem lớp đang dạy/đã dạy xong, danh sách học viên theo từng lớp.
+- Cập nhật hồ sơ, chuyên môn, đổi mật khẩu.
 
 ### Quản trị viên (`admin`)
-- Tổng quan, thống kê doanh thu.
-- CRUD hội viên, giáo viên, gói tập, lớp học, đăng ký.
-- Duyệt/từ chối/hủy lịch dạy.
-- Quản lý tài khoản, tra cứu toàn hệ thống.
+- Tổng quan, thống kê doanh thu và thanh toán chờ xử lý.
+- Quản lý tài khoản, gói tập, lớp học và đăng ký gói.
+- Xem chi tiết lớp, danh sách học viên, xác nhận thanh toán.
+- Cập nhật tài khoản quản trị và đổi mật khẩu.
 
 ## Cấu trúc dự án
 
@@ -40,13 +39,12 @@ fitness/
 ├── index.php                 # Trang chủ
 ├── login.php                 # Đăng nhập
 ├── register.php              # Đăng ký hội viên
-├── admin/                    # 10 trang quản trị
-├── instructor/               # 6 trang giáo viên
-├── customer/                 # 5 trang hội viên
+├── admin/                    # 6 trang quản trị
+├── instructor/               # 5 trang giáo viên
+├── customer/                 # 6 trang hội viên
 └── common/
     ├── bootstrap.php         # session, nạp hàm, common_db/common_user/require_role
     ├── functions.php         # url(), redirect(), e(), base_url()
-    ├── api.php               # JSON API (router đơn giản)
     ├── components/ui.php     # hàm sinh HTML: icon, avatar, badge, money,...
     ├── data/
     │   ├── data.php          # loader nạp toàn bộ data layer
@@ -55,7 +53,7 @@ fitness/
     │   ├── admin.php         # dữ liệu admin
     │   ├── customer.php      # dữ liệu hội viên
     │   ├── instructor.php    # dữ liệu giáo viên
-    │   └── user.php          # app_user(), app_notifications()
+    │   └── user.php          # app_user()
     ├── menus/                # dữ liệu menu theo vai trò
     ├── partials/             # head, sidebar, topbar, flash, foot
     ├── mysql/                # config, connect và file SQL
@@ -79,7 +77,7 @@ Mật khẩu chung: `123456`
 | Vai trò | Tên đăng nhập |
 | --- | --- |
 | Quản trị viên | `admin` |
-| Giáo viên | `thuha`, `ducanh`, `ngocmai`, `quocbao`, `hongnhung` |
+| Giáo viên | `thuha`, `ducanh`, `ngocmai`, `quocbao`, `hongnhung`, `namm` |
 | Hội viên | `hoangnam` |
 
 ## Luồng hoạt động
@@ -105,32 +103,29 @@ require $partials . '/foot.php';
 - **Dữ liệu** lấy qua các hàm `data_*()` trong `common/data/`, chạy SQL qua `view_db()` → `common_db()`.
 - **Giao diện** ghép từ các partial dùng chung (`head`, `sidebar`, `topbar`, `flash`, `foot`).
 - **Menu** khai báo một nơi duy nhất trong `common/menus/{role}.php`.
-- Các thao tác quản trị dùng JavaScript/fetch ở những trang cần cập nhật nhanh; đăng nhập và đăng ký luôn gửi form POST server-side, không dùng AJAX.
+- Các thao tác quản trị dùng `fetch` tới chính trang hiện tại kèm `?action=...`; một số form như tạo tài khoản, tạo/xác nhận/hủy đăng ký gói dùng POST server-side + flash message.
 
-## API chính
+## Endpoint chính
 
-Base: `/fitness/common/api.php/api/...`
+Các trang vừa render HTML vừa xử lý AJAX qua tham số `?action=...`:
 
-| Method | Endpoint | Quyền |
+| Trang | Action tiêu biểu | Quyền |
 | --- | --- | --- |
-| POST | `/auth/login` | Công khai |
-| POST | `/auth/logout` | Đăng nhập |
-| POST | `/register` | Công khai |
-| PUT | `/profile` | Đăng nhập |
-| POST | `/profile/password` | Đăng nhập |
-| GET/POST/PUT/DELETE | `/members`, `/instructors`, `/packages`, `/classes` | Đăng nhập (ghi: admin) |
-| POST | `/registrations/classes` | Hội viên |
-| POST | `/registrations/classes/{id}/cancel` | Đăng nhập |
-| POST | `/registrations/packages/{id}/confirm` \| `/cancel` | Admin |
-| GET/POST | `/availability` | Đăng nhập / Giáo viên |
-| POST | `/availability/{id}/approve` \| `/reject` \| `/cancel` | Admin / Giáo viên |
+| `admin/accounts.php` | `detail`, `create`, `update`, `status` | Admin |
+| `admin/packages.php` | `save`, `delete`; lọc `package_id`, `status` | Admin |
+| `admin/classes.php` | `save`, `delete`, `members`; lọc `class_id` | Admin |
+| `admin/registrations.php` | `create-package`, `confirm-package`, `cancel-package`; lọc `package_id`, `payment` | Admin |
+| `instructor/classes.php` | `members`; lọc `status=current\|completed` | Giáo viên |
+| `customer/package-registration.php` | Đăng ký gói bằng POST `goi_tap_id` | Hội viên |
+| `customer/class-registration.php` | `register`; lọc `q`, `weekday`, `package` | Hội viên |
+| `customer/history.php` | `cancel`, `cancel-package` | Hội viên |
 
 ## Quy ước code
 
 - Không viết SQL trong view; đặt ở `common/data/`.
 - Dữ liệu menu chỉ sửa ở `common/menus/`.
 - UI helper dùng chung ở `common/components/ui.php`.
-- API dùng `bootstrap.php` và trả JSON qua `api_json()`.
+- Endpoint AJAX dùng `bootstrap.php` và trả JSON qua `json_response()`.
 - Mật khẩu lưu bằng `password_hash()`.
 
 ## Ghi chú
