@@ -229,7 +229,7 @@ require $partials . '/head.php';
         <p>Chọn lớp phù hợp với lịch của bạn.</p>
     </div>
     <div class="page-head-actions">
-        <a class="btn btn-outline-primary" href="<?= e(url('/customer/schedule')) ?>"><?= icon('calendar-week') ?> Lịch của tôi</a>
+        <a class="btn btn-outline-primary" href="<?= e(url('/customer')) ?>"><?= icon('calendar-week') ?> Lịch của tôi</a>
     </div>
 </div>
 

@@ -122,7 +122,7 @@ require $partials . '/head.php';
         <p>Thông tin cá nhân, chuyên môn và bảo mật tài khoản giáo viên.</p>
     </div>
     <div class="page-head-actions">
-        <a class="btn btn-ghost" href="<?= e(url('/instructor')) ?>"><?= icon('arrow-left') ?> Về tổng quan</a>
+        <a class="btn btn-ghost" href="<?= e(url('/instructor')) ?>"><?= icon('arrow-left') ?> Về lịch dạy</a>
         <a class="btn btn-danger-soft" href="<?= e(url('/common/logout.php')) ?>"><?= icon('box-arrow-right') ?> Đăng xuất</a>
     </div>
 </div>

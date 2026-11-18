@@ -523,8 +523,6 @@ doanh_thu (tháng, năm, số tiền) ── bảng tổng hợp độc lập   
 <ol>
   <li>Dashboard admin tính số hội viên, giáo viên, lớp đang mở, yêu cầu chờ duyệt (đề xuất lớp + đăng ký gói chưa thanh toán).</li>
   <li>Tính doanh thu đã thu và chờ thu trực tiếp từ <code>dang_ky_goi</code>; hiển thị danh sách đăng ký gói chờ thanh toán và đề xuất lớp chờ duyệt.</li>
-  <li>Dashboard giáo viên tính số lớp phụ trách, số học viên, số lớp đã mở, số đề xuất chờ duyệt.</li>
-  <li>Dashboard hội viên hiển thị thông tin tài khoản, chỉ số cơ thể, mục tiêu, số lớp đã đăng ký và danh sách lớp.</li>
   <li><code>app_notifications()</code> sinh thông báo nhanh từ CSDL cho admin, giáo viên và hội viên (số đề xuất chờ, số gói chưa thanh toán, hội viên mới nhất, số gói đang mở bán).</li>
 </ol>
 
@@ -555,14 +553,16 @@ fitness/
 │   ├── packages.php, classes.php
 │   ├── registrations.php, availability.php
 │   └── queries.php                          # truy vấn ghi dùng chung
-├── instructor/                              # 7 tệp giáo viên
-│   ├── index.php, schedule.php, history.php
-│   ├── availability.php, classes.php
-│   └── search.php, account.php
-├── customer/                                # 6 tệp hội viên
-│   ├── index.php, package-registration.php
-│   ├── class-registration.php, schedule.php
-│   └── history.php, account.php
+├── instructor/                              # 3 tệp giáo viên
+│   ├── index.php                            # lịch dạy
+│   ├── classes.php
+│   └── account.php
+├── customer/                                # 5 tệp hội viên
+│   ├── index.php                            # lịch tập
+│   ├── package-registration.php
+│   ├── class-registration.php
+│   ├── history.php
+│   └── account.php
 ├── common/
 │   ├── bootstrap.php, functions.php, logout.php, index.php
 │   ├── components/ui.php
@@ -853,7 +853,7 @@ fitness/
     <tr><td>Lớp học</td><td><code>admin/classes.php</code>, <code>admin/queries.php</code></td><td>CRUD lớp, validate giờ/ngày/giáo viên/sức chứa/gói tối thiểu, xem chi tiết và học viên.</td></tr>
     <tr><td>Đề xuất lớp</td><td><code>instructor/availability.php</code>, <code>admin/availability.php</code></td><td>Giáo viên gửi đề xuất theo chuyên môn; admin duyệt kèm phòng/gói hoặc từ chối.</td></tr>
     <tr><td>Đăng ký lớp</td><td><code>customer/class-registration.php</code>, <code>customer/history.php</code></td><td>Kiểm tra gói, cấp độ, sức chứa, trùng lớp, trùng khung giờ; hủy đăng ký đúng chủ sở hữu.</td></tr>
-    <tr><td>Lịch và lịch sử</td><td><code>customer/schedule.php</code>, <code>customer/history.php</code>, <code>instructor/schedule.php</code>, <code>instructor/history.php</code></td><td>Lịch tháng, lịch sử gói/lớp, lịch sử lớp đã kết thúc.</td></tr>
+    <tr><td>Lịch và lịch sử</td><td><code>customer/index.php</code>, <code>customer/history.php</code>, <code>instructor/index.php</code></td><td>Lịch tập/lịch dạy theo tháng và lịch sử gói/lớp của hội viên.</td></tr>
     <tr><td>Lớp và học viên (giáo viên)</td><td><code>instructor/classes.php</code>, <code>common/data/instructor.php</code></td><td>Danh sách lớp đang dạy, sĩ số, danh sách học viên kèm liên hệ và ngày đăng ký.</td></tr>
     <tr><td>Tra cứu</td><td><code>instructor/search.php</code>, <code>admin/registrations.php</code></td><td>Tìm học viên trong lớp mình dạy; lọc đăng ký gói theo mã.</td></tr>
     <tr><td>Thống kê</td><td><code>admin/index.php</code>, <code>common/data/admin.php</code></td><td>Đếm hội viên, giáo viên, lớp mở, doanh thu, yêu cầu chờ duyệt, đăng ký lớp hiệu lực.</td></tr>

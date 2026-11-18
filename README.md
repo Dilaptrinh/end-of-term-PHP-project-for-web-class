@@ -17,13 +17,11 @@
 - Đăng nhập một cổng bằng form POST, tự chuyển về đúng khu vực theo vai trò.
 
 ### Hội viên (`customer`)
-- Tổng quan lượt đăng ký, lớp đang học, gói hiện tại và hạn sử dụng.
 - Đăng ký gói, đăng ký/hủy lớp, xem lịch tập và lịch sử gói/lớp.
 - Cập nhật hồ sơ, đổi mật khẩu.
 
 ### Giáo viên (`instructor`)
-- Tổng quan lịch dạy và tỷ lệ lấp đầy lớp.
-- Xem lớp đang dạy/đã dạy xong, danh sách học viên theo từng lớp.
+- Xem lịch dạy và lớp đang dạy, danh sách học viên theo từng lớp.
 - Cập nhật hồ sơ, chuyên môn, đổi mật khẩu.
 
 ### Quản trị viên (`admin`)
@@ -40,8 +38,8 @@ fitness/
 ├── login.php                 # Đăng nhập
 ├── register.php              # Đăng ký hội viên
 ├── admin/                    # 6 trang quản trị
-├── instructor/               # 5 trang giáo viên
-├── customer/                 # 6 trang hội viên
+├── instructor/               # 3 trang giáo viên
+├── customer/                 # 5 trang hội viên
 └── common/
     ├── bootstrap.php         # session, nạp hàm, common_db/common_user/require_role
     ├── functions.php         # url(), redirect(), e(), base_url()
@@ -90,8 +88,8 @@ require_role('customer');
 
 $menu = require __DIR__ . '/../common/menus/customer.php';
 $appRole = 'customer';
-$activeMenu = 'dashboard';
-$pageTitle = 'Trang chủ hội viên';
+$activeMenu = 'schedule';
+$pageTitle = 'Lịch tập';
 $pageScripts = [];
 $partials = __DIR__ . '/../common/partials';
 
