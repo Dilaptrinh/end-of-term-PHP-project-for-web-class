@@ -1,36 +1,6 @@
 <?php
 require __DIR__ . '/../common/bootstrap.php';
-require_role('instructor');
 
-// Render danh sách học viên của lớp bằng PHP cho modal.
-function instructor_students_html(array $students): string
-{
-    if ($students === []) {
-        return '<tr><td colspan="4" class="text-muted-2">Lớp chưa có học viên.</td></tr>';
-    }
-
-    ob_start();
-    foreach ($students as $student):
-        ?>
-        <tr>
-            <td>
-                <div class="user-inline">
-                    <span>
-                        <span class="d-block user-name"><?= e($student['name']) ?></span>
-                        <span class="d-block user-sub"><?= e(sprintf('HV-%04d', (int) $student['member_id'])) ?></span>
-                    </span>
-                </div>
-            </td>
-            <td class="text-muted-2"><?= e($student['phone'] ?: '—') ?></td>
-            <td class="text-muted-2"><?= e($student['email'] ?: '—') ?></td>
-            <td class="text-muted-2"><?= e($student['registered'] ?: '—') ?></td>
-        </tr>
-        <?php
-    endforeach;
-    return (string) ob_get_clean();
-}
-
-// API AJAX: trả danh sách học viên của một lớp (chỉ lớp mình dạy).
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && ($_GET['action'] ?? '') === 'members') {
     require_api_role('instructor');
 
@@ -52,9 +22,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && ($_GET['action'] ?? '') =
 
     json_response([
         'success' => true,
-        'html' => instructor_students_html(data_students_for_class($classId)),
+        'data' => data_students_for_class($classId),
     ]);
 }
+
+require_role('instructor');
 
 $menu = require __DIR__ . '/../common/menus/instructor.php';
 
@@ -218,5 +190,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/instructor/instructor-classes.js')) ?>?v=9"></script>
+<script src="<?= e(url('/common/assets/js/instructor/instructor-classes.js')) ?>?v=10"></script>
 <?php require $partials . '/foot.php'; ?>

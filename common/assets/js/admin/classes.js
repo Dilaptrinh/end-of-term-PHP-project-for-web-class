@@ -1,10 +1,137 @@
 (function () {
     'use strict';
 
-    var pageUrl = window.location.pathname;
     var classesBody = document.getElementById('classes-body');
-    var tpl = window.ClassTemplates;
 
+    var statusLabels = {
+        dang_mo: ['Đang mở', 'success'],
+        da_dong: ['Đã đóng', 'muted'],
+        dang_ky: ['Đã đăng ký', 'primary'],
+        da_huy: ['Đã hủy', 'danger']
+    };
+
+    var weekdays = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+    var genders = { nam: 'Nam', nu: 'Nữ', khac: 'Khác' };
+
+    // Escape ký tự HTML.
+    function escapeHtml(value) {
+        var characters = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
+            return characters[character];
+        });
+    }
+
+    // Tạo badge trạng thái.
+    function statusBadge(status) {
+        var item = statusLabels[status] || [status || '—', 'muted'];
+
+        return '<span class="badge-status ' + item[1] + '">' + escapeHtml(item[0]) + '</span>';
+    }
+
+    // Tạo một dòng lớp trong bảng.
+    function row(item) {
+        return '<tr data-row data-class-row="' + Number(item.id) + '">' +
+            '<td class="cell-strong">' + escapeHtml(item.name) + '<div class="cell-sub">Mã lớp: ' + Number(item.id) + ' · ' + escapeHtml(item.level) + '</div></td>' +
+            '<td>' + escapeHtml(item.instructor) + '</td>' +
+            '<td>' + escapeHtml(weekdays[item.weekday] || '—') + '<div class="cell-sub">' + escapeHtml(item.start + ' – ' + item.end) + '</div></td>' +
+            '<td>' + escapeHtml(item.room) + '</td>' +
+            '<td>' + escapeHtml(String(item.enrolled) + '/' + String(item.capacity)) + '</td>' +
+            '<td class="text-muted-2 text-tiny">' + escapeHtml(item.from) + '<br>' + escapeHtml(item.to) + '</td>' +
+            '<td>' + statusBadge(item.status) + '</td>' +
+            '<td class="cell-actions">' +
+                '<div class="d-inline-flex gap-1">' +
+                    '<button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#classDetailModal"' +
+                        ' data-class-id="' + Number(item.id) + '"' +
+                        ' data-class-name="' + escapeHtml(item.name) + '" title="Xem chi tiết" aria-label="Xem chi tiết"><i class="bi bi-info-circle"></i></button>' +
+                    '<button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#classFormModal"' +
+                        ' data-form-mode="edit"' +
+                        ' data-class-id="' + Number(item.id) + '"' +
+                        ' data-class-name="' + escapeHtml(item.name) + '"' +
+                        ' data-class-instructor="' + Number(item.giao_vien_id || 0) + '"' +
+                        ' data-class-day="' + Number(item.weekday) + '"' +
+                        ' data-class-start="' + escapeHtml(item.start) + '"' +
+                        ' data-class-end="' + escapeHtml(item.end) + '"' +
+                        ' data-class-room="' + escapeHtml(item.room) + '"' +
+                        ' data-class-capacity="' + Number(item.capacity) + '"' +
+                        ' data-class-level="' + escapeHtml(item.level) + '"' +
+                        ' data-class-package="' + escapeHtml(item.required_package) + '"' +
+                        ' data-class-status="' + escapeHtml(item.status) + '"' +
+                        ' data-class-desc="' + escapeHtml(item.desc) + '" title="Sửa lớp" aria-label="Sửa lớp"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="btn btn-ghost btn-sm text-danger" type="button"' +
+                        ' data-delete-id="' + Number(item.id) + '"' +
+                        ' data-delete-name="' + escapeHtml(item.name) + '" title="Xóa lớp" aria-label="Xóa lớp"><i class="bi bi-trash3"></i></button>' +
+                '</div>' +
+            '</td>' +
+        '</tr>';
+    }
+
+    // Tạo một ô thông tin.
+    function infoCard(label, value) {
+        return '<div class="col-sm-6 col-lg-3">' +
+            '<div class="border rounded-3 p-3 h-100">' +
+                '<div class="text-tiny text-muted-2 mb-1">' + label + '</div>' +
+                '<div class="fw-semibold">' + value + '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // Tạo phần thông tin lớp trong modal chi tiết.
+    function detail(classInfo) {
+        var schedule = (weekdays[classInfo.weekday] || '—') +
+            ' · ' + (classInfo.start || '—') +
+            ' – ' + (classInfo.end || '—');
+
+        return [
+            infoCard('Giáo viên', escapeHtml(classInfo.instructor || '—')),
+            infoCard('Lịch học', escapeHtml(schedule)),
+            infoCard('Phòng học', escapeHtml(classInfo.room || 'Chưa xếp')),
+            infoCard('Sĩ số', escapeHtml(String(classInfo.enrolled) + '/' + String(classInfo.capacity))),
+            infoCard('Trình độ', escapeHtml(classInfo.level || '—')),
+            infoCard('Gói tối thiểu', escapeHtml(String(classInfo.required_package || 'basic').toUpperCase())),
+            infoCard('Thời gian', escapeHtml((classInfo.from || '—') + ' – ' + (classInfo.to || '—'))),
+            infoCard('Trạng thái', statusBadge(classInfo.status)),
+            '<div class="col-12">' +
+                '<div class="border rounded-3 p-3">' +
+                    '<div class="text-tiny text-muted-2 mb-1">Mô tả lớp học</div>' +
+                    '<div>' + escapeHtml(classInfo.desc || 'Chưa có mô tả.') + '</div>' +
+                '</div>' +
+            '</div>'
+        ].join('');
+    }
+
+    // Tạo danh sách học viên trong modal chi tiết.
+    function memberRows(members) {
+        if (!members.length) {
+            return '<tr><td colspan="6" class="text-center text-muted-2 py-4">Chưa có học viên đăng ký lớp này.</td></tr>';
+        }
+
+        return members.map(function (member, index) {
+            return '<tr>' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td class="cell-strong">' + escapeHtml(member.name) +
+                    '<div class="cell-sub">' + escapeHtml(genders[member.gender] || '—') + '</div>' +
+                '</td>' +
+                '<td>' + escapeHtml(member.phone || '—') + '</td>' +
+                '<td>' + escapeHtml(member.email || '—') + '</td>' +
+                '<td>' + escapeHtml(member.registered || '—') + '</td>' +
+                '<td>' + statusBadge(member.status) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    // Tạo dòng bảng trống.
+    function emptyRow() {
+        return '<tr data-empty-row><td colspan="8" class="text-center text-muted-2 py-4">Chưa có lớp học nào.</td></tr>';
+    }
+
+    // Gọi API và trả JSON.
     async function callApi(url, options) {
         var response = await fetch(url, options);
         var result = await response.json();
@@ -16,30 +143,30 @@
         return result;
     }
 
-    // Hiện dòng thông báo khi bảng không còn lớp nào.
+    // Hiện dòng bảng trống.
     function showEmptyRow() {
         if (!classesBody) return;
 
-        classesBody.innerHTML = tpl.emptyRow();
+        classesBody.innerHTML = emptyRow();
     }
 
-    // Thêm lớp mới vào cuối bảng.
+    // Thêm dòng lớp mới.
     function appendClassRow(html) {
         if (!classesBody || !html) return;
 
-        var emptyRow = classesBody.querySelector('[data-empty-row]');
-        if (emptyRow) emptyRow.remove();
+        var empty = classesBody.querySelector('[data-empty-row]');
+        if (empty) empty.remove();
 
         classesBody.insertAdjacentHTML('beforeend', html);
     }
 
-    // Thay dòng lớp cũ bằng dòng mới.
+    // Thay dòng lớp cũ.
     function replaceClassRow(oldRow, html) {
         if (!oldRow || !html) return;
         oldRow.outerHTML = html;
     }
 
-    // Xóa dòng lớp khỏi bảng.
+    // Xóa dòng lớp.
     function removeClassRow(row) {
         if (!row) return;
 
@@ -50,20 +177,30 @@
         }
     }
 
-    // Form thêm / sửa lớp học
+    // Map tên field sang name của input.
+    var fieldNames = {
+        name: 'ten_lop',
+        level: 'trinh_do',
+        package: 'goi_tap_toi_thieu',
+        instructor: 'giao_vien_id',
+        room: 'phong_hoc',
+        day: 'thu_trong_tuan',
+        start: 'gio_bat_dau',
+        end: 'gio_ket_thuc',
+        capacity: 'suc_chua',
+        status: 'trang_thai',
+        desc: 'mo_ta'
+    };
 
-    function getField(form, name) {
-        return form.querySelector('[data-field="' + name + '"]');
+    var validStatuses = ['dang_mo', 'da_dong', 'da_huy'];
+
+    // Gán giá trị cho một field.
+    function setField(form, key, value) {
+        var input = form.elements[fieldNames[key]];
+        if (input) input.value = value;
     }
 
-    function setField(form, name, value) {
-        var input = getField(form, name);
-        if (input) {
-            input.value = value;
-        }
-    }
-
-    // Giá trị mặc định khi thêm lớp mới.
+    // Giá trị mặc định của form.
     function formDefaults() {
         return {
             status: 'dang_mo',
@@ -76,46 +213,43 @@
         };
     }
 
-    // Xóa trắng form (dùng khi thêm mới).
+    // Reset form thêm mới.
     function resetClassForm(form) {
         var defaults = formDefaults();
 
         form.reset();
         form.dataset.id = '';
 
-        document.getElementById('cf-status').value = defaults.status;
-        setField(form, 'day', defaults.day);
-        setField(form, 'start', defaults.start);
-        setField(form, 'end', defaults.end);
-        setField(form, 'capacity', defaults.capacity);
-        setField(form, 'level', defaults.level);
-        setField(form, 'package', defaults.package);
+        Object.keys(defaults).forEach(function (key) {
+            setField(form, key, defaults[key]);
+        });
     }
 
-    // Đổ dữ liệu của lớp vào form (dùng khi sửa).
+    // Đổ dữ liệu lớp vào form khi sửa.
     function fillClassForm(form, button) {
         var defaults = formDefaults();
         form.dataset.id = button.dataset.classId || '';
 
-        // Lớp cũ có thể ở trạng thái đề xuất (đã bỏ luồng đó); đưa về đang mở.
-        var status = button.dataset.classStatus || defaults.status;
-        if (['dang_mo', 'da_dong', 'da_huy'].indexOf(status) === -1) {
-            status = 'dang_mo';
-        }
-        document.getElementById('cf-status').value = status;
+        var values = {
+            name: button.dataset.className,
+            room: button.dataset.classRoom,
+            day: button.dataset.classDay,
+            start: button.dataset.classStart,
+            end: button.dataset.classEnd,
+            capacity: button.dataset.classCapacity,
+            level: button.dataset.classLevel,
+            package: button.dataset.classPackage,
+            desc: button.dataset.classDesc,
+            instructor: button.dataset.classInstructor,
+            status: button.dataset.classStatus
+        };
 
-        setField(form, 'name', button.dataset.className || '');
-        setField(form, 'room', button.dataset.classRoom || '');
-        setField(form, 'day', button.dataset.classDay || defaults.day);
-        setField(form, 'start', button.dataset.classStart || defaults.start);
-        setField(form, 'end', button.dataset.classEnd || defaults.end);
-        setField(form, 'capacity', button.dataset.classCapacity || defaults.capacity);
-        setField(form, 'level', button.dataset.classLevel || defaults.level);
-        setField(form, 'package', button.dataset.classPackage || defaults.package);
-        setField(form, 'desc', button.dataset.classDesc || '');
-        setField(form, 'instructor', button.dataset.classInstructor || '');
+        Object.keys(values).forEach(function (key) {
+            setField(form, key, values[key] || defaults[key] || '');
+        });
     }
 
+    // Gắn sự kiện cho modal thêm/sửa.
     function setupClassForm() {
         var modal = document.getElementById('classFormModal');
         var form = document.getElementById('class-form');
@@ -123,7 +257,6 @@
 
         if (!modal || !form || !title) return;
 
-        // Khi mở modal: nếu bấm nút "Sửa" thì đổ dữ liệu, ngược lại reset form.
         modal.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget;
             var isEdit = button && button.dataset.formMode === 'edit';
@@ -137,20 +270,16 @@
             }
         });
 
-        // Lưu lớp học (thêm mới hoặc cập nhật).
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
 
             var id = form.dataset.id || '0';
-
-            // Nếu đang sửa thì tìm dòng cũ để thay thế.
-            var oldRow = null;
-            if (id !== '0') {
-                oldRow = document.querySelector('#classes-body [data-class-row="' + id + '"]');
-            }
+            var oldRow = id === '0'
+                ? null
+                : document.querySelector('#classes-body [data-class-row="' + id + '"]');
 
             try {
-                var result = await callApi(pageUrl + '?action=save&id=' + id, {
+                var result = await callApi(location.pathname + '?action=save&id=' + id, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json' },
                     body: new FormData(form),
@@ -162,9 +291,9 @@
                 }
 
                 if (id === '0') {
-                    appendClassRow(tpl.row(result.data, pageUrl));
+                    appendClassRow(row(result.data));
                 } else {
-                    replaceClassRow(oldRow, tpl.row(result.data, pageUrl));
+                    replaceClassRow(oldRow, row(result.data));
                 }
 
                 bootstrap.Modal.getOrCreateInstance(modal).hide();
@@ -175,8 +304,7 @@
         });
     }
 
-    // Xóa lớp học
-
+    // Gắn sự kiện xóa lớp.
     function setupClassDeletion() {
         document.addEventListener('click', async function (event) {
             var button = event.target.closest('[data-delete-id]');
@@ -191,7 +319,7 @@
                 var formData = new FormData();
                 formData.append('id', button.dataset.deleteId);
 
-                var result = await callApi(pageUrl + '?action=delete&id=' + button.dataset.deleteId, {
+                var result = await callApi(location.pathname + '?action=delete&id=' + button.dataset.deleteId, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json' },
                     body: formData,
@@ -206,22 +334,21 @@
         });
     }
 
-    // Modal xem chi tiết lớp học
-
+    // Hiển thị chi tiết lớp.
     function renderClassDetails(elements, data) {
         var classInfo = data.class || {};
         var members = Array.isArray(data.members) ? data.members : [];
 
         elements.subtitle.textContent =
-            'Mã lớp #' + classInfo.id + ' · ' +
-            (classInfo.instructor || 'Chưa phân công');
+            'Mã lớp #' + classInfo.id + ' · ' + (classInfo.instructor || 'Chưa phân công');
 
-        elements.info.innerHTML = tpl.detail(classInfo);
-        elements.memberCount.textContent = tpl.memberCount(members.length);
-        elements.memberBody.innerHTML = tpl.memberRows(members);
+        elements.info.innerHTML = detail(classInfo);
+        elements.memberCount.textContent = members.length + ' học viên';
+        elements.memberBody.innerHTML = memberRows(members);
         elements.body.classList.remove('d-none');
     }
 
+    // Gắn sự kiện cho modal chi tiết.
     function setupClassDetails() {
         var modal = document.getElementById('classDetailModal');
         if (!modal) return;
@@ -250,7 +377,7 @@
 
             try {
                 var result = await callApi(
-                    pageUrl + '?action=members&id=' + encodeURIComponent(classId),
+                    location.pathname + '?action=members&id=' + encodeURIComponent(classId),
                     {
                         headers: { 'Accept': 'application/json' },
                         credentials: 'same-origin'
@@ -267,13 +394,12 @@
         });
     }
 
+    // Render bảng ban đầu từ JSON của PHP.
     var initial = document.getElementById('class-init');
     if (initial && classesBody) {
         var rows = JSON.parse(initial.textContent || '[]');
 
-        classesBody.innerHTML = rows.map(function (row) {
-            return tpl.row(row, pageUrl);
-        }).join('');
+        classesBody.innerHTML = rows.map(row).join('');
 
         if (!rows.length) {
             showEmptyRow();

@@ -14,29 +14,6 @@ if (!function_exists('icon')) {
     }
 }
 
-if (!function_exists('role_name')) {
-    function role_name(string $role): string
-    {
-        return match ($role) {
-            'admin' => 'Quản trị viên',
-            'instructor' => 'Giáo viên',
-            'customer' => 'Hội viên',
-            default => 'Khách',
-        };
-    }
-}
-
-if (!function_exists('role_icon')) {
-    function role_icon(string $role): string
-    {
-        return match ($role) {
-            'admin' => 'shield-lock',
-            'instructor' => 'person-badge',
-            default => 'person',
-        };
-    }
-}
-
 if (!function_exists('initials')) {
     function initials(string $name): string
     {
@@ -84,19 +61,11 @@ if (!function_exists('status_badge')) {
             'da_dong' => ['Đã đóng', 'muted'],
             'dang_ban' => ['Đang bán', 'success'],
             'ngung_ban' => ['Ngừng bán', 'muted'],
-            'cho_duyet' => ['Chờ duyệt', 'warning'],
-            'da_duyet' => ['Đã duyệt', 'success'],
-            'tu_choi' => ['Từ chối', 'danger'],
             'da_huy' => ['Đã hủy', 'danger'],
             'da_thanh_toan' => ['Đã thanh toán', 'success'],
             'chua_thanh_toan' => ['Chưa thanh toán', 'warning'],
             'dang_ky' => ['Đã đăng ký', 'primary'],
-            'co_mat' => ['Có mặt', 'success'],
-            'vang' => ['Vắng', 'danger'],
-            'phep' => ['Có phép', 'warning'],
-            'cho_xac_nhan' => ['Chờ xác nhận', 'warning'],
             'bi_khoa' => ['Đã khóa', 'danger'],
-            'hoan_thanh' => ['Hoàn thành', 'success'],
         ];
         [$label, $variant] = $map[$status] ?? [$status, 'muted'];
         return badge($label, $variant);
@@ -156,15 +125,5 @@ if (!function_exists('progress_bar')) {
         $classes = trim('app-progress' . ($variant !== '' ? ' ' . $variant : '') . ($thick ? ' thick' : ''));
         return '<div class="' . e($classes) . '" role="progressbar" aria-valuenow="' . $percent . '" aria-valuemin="0" aria-valuemax="100">'
             . '<span style="width:' . $percent . '%"></span></div>';
-    }
-}
-
-if (!function_exists('truncate')) {
-    function truncate(string $text, int $limit = 80): string
-    {
-        if (mb_strlen($text, 'UTF-8') <= $limit) {
-            return $text;
-        }
-        return mb_substr($text, 0, $limit, 'UTF-8') . '…';
     }
 }

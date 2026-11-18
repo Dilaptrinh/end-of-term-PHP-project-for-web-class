@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Dữ liệu riêng khu vực giáo viên.
  */
 
-function data_students_for_class(int $classId = 1, ?string $date = null): array
+function data_students_for_class(int $classId): array
 {
     $conn = view_db();
     $sql = "

@@ -34,7 +34,6 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         $changed = admin_class_delete($id);
 
-        // mode=remove: classes.js biết phải xóa dòng khỏi bảng.
         json_response([
             'success' => $changed,
             'message' => $changed ? 'Đã xóa lớp học.' : 'Không tìm thấy lớp học.',
@@ -286,11 +285,11 @@ require $partials . '/head.php';
                     <div class="row g-3">
                         <div class="col-md-8">
                             <label class="form-label" for="cf-name">Tên lớp <span class="req">*</span></label>
-                            <input class="form-control" id="cf-name" name="ten_lop" type="text" required placeholder="VD: Yoga cơ bản" data-field="name">
+                            <input class="form-control" id="cf-name" name="ten_lop" type="text" required placeholder="VD: Yoga cơ bản">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="cf-level">Trình độ</label>
-                            <select class="form-select" id="cf-level" name="trinh_do" data-field="level">
+                            <select class="form-select" id="cf-level" name="trinh_do">
                                 <option>Cơ bản</option>
                                 <option>Trung cấp</option>
                                 <option>Nâng cao</option>
@@ -299,7 +298,7 @@ require $partials . '/head.php';
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="cf-package">Gói tối thiểu</label>
-                            <select class="form-select" id="cf-package" name="goi_tap_toi_thieu" data-field="package">
+                            <select class="form-select" id="cf-package" name="goi_tap_toi_thieu">
                                 <option value="basic">Basic</option>
                                 <option value="standard">Standard</option>
                                 <option value="premium">Premium</option>
@@ -307,7 +306,7 @@ require $partials . '/head.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="cf-teacher">Giáo viên <span class="req">*</span></label>
-                            <select class="form-select" id="cf-teacher" name="giao_vien_id" required data-field="instructor">
+                            <select class="form-select" id="cf-teacher" name="giao_vien_id" required>
                             <?php foreach ($instructors as $instructor): ?>
                                 <option value="<?= (int) $instructor['id'] ?>"><?= e($instructor['name']) ?></option>
                             <?php endforeach; ?>
@@ -315,45 +314,45 @@ require $partials . '/head.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="cf-room">Phòng học</label>
-                            <input class="form-control" id="cf-room" name="phong_hoc" type="text" placeholder="VD: P.101" data-field="room">
+                            <input class="form-control" id="cf-room" name="phong_hoc" type="text" placeholder="VD: P.101">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="cf-day">Thứ trong tuần <span class="req">*</span></label>
-                            <select class="form-select" id="cf-day" name="thu_trong_tuan" required data-field="day">
+                            <select class="form-select" id="cf-day" name="thu_trong_tuan" required>
                                 <?php for ($d = 1; $d <= 7; $d++): ?><option value="<?= $d ?>"><?= e(weekday($d)) ?></option><?php endfor; ?>
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="cf-start">Giờ bắt đầu <span class="req">*</span></label>
-                            <input class="form-control" id="cf-start" name="gio_bat_dau" type="time" required value="18:00" data-field="start">
+                            <input class="form-control" id="cf-start" name="gio_bat_dau" type="time" required value="18:00">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="cf-end">Giờ kết thúc <span class="req">*</span></label>
-                            <input class="form-control" id="cf-end" name="gio_ket_thuc" type="time" required value="19:00" data-field="end">
+                            <input class="form-control" id="cf-end" name="gio_ket_thuc" type="time" required value="19:00">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="cf-capacity">Sức chứa <span class="req">*</span></label>
-                            <input class="form-control" id="cf-capacity" name="suc_chua" type="number" min="1" required value="20" data-field="capacity">
+                            <input class="form-control" id="cf-capacity" name="suc_chua" type="number" min="1" required value="20">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="cf-status">Trạng thái</label>
-                            <select class="form-select" id="cf-status" name="trang_thai" data-field="status">
+                            <select class="form-select" id="cf-status" name="trang_thai">
                                 <option value="dang_mo">Đang mở</option>
                                 <option value="da_dong">Đã đóng</option>
                                 <option value="da_huy">Đã hủy</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label" for="cf-from">Ngày bắt đầu</label>
-                            <input class="form-control" id="cf-from" name="ngay_bat_dau" type="date" value="2026-10-26">
+                            <label class="form-label" for="cf-from">Ngày bắt đầu <span class="req">*</span></label>
+                            <input class="form-control" id="cf-from" name="ngay_bat_dau" type="date" required value="<?= date('Y-m-d') ?>">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label" for="cf-to">Ngày kết thúc</label>
-                            <input class="form-control" id="cf-to" name="ngay_ket_thuc" type="date" value="2026-12-31">
+                            <label class="form-label" for="cf-to">Ngày kết thúc <span class="req">*</span></label>
+                            <input class="form-control" id="cf-to" name="ngay_ket_thuc" type="date" required value="<?= date('Y-m-d', strtotime('+3 months')) ?>">
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="cf-desc">Mô tả</label>
-                            <textarea class="form-control" id="cf-desc" name="mo_ta" rows="3" placeholder="Mô tả nội dung lớp học…" data-field="desc"></textarea>
+                            <textarea class="form-control" id="cf-desc" name="mo_ta" rows="3" placeholder="Mô tả nội dung lớp học…"></textarea>
                         </div>
                     </div>
                 </div>
@@ -423,7 +422,6 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<?php // classes.js xử lý AJAX; classes-templates.js chứa HTML template. ?>
-<script src="<?= e(url('/common/assets/js/admin/classes-templates.js')) ?>?v=1"></script>
-<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=13"></script>
+<?php // classes.js xử lý cả render bảng lẫn các thao tác AJAX. ?>
+<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=16"></script>
 <?php require $partials . '/foot.php'; ?>

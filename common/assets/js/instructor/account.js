@@ -50,7 +50,7 @@
             ho_ten: document.getElementById('ins-name').value.trim(),
             sdt: document.getElementById('ins-phone').value.trim(),
             email: document.getElementById('ins-email').value.trim(),
-            chuyen_mon_ids: selectedSpecialties().map(function (input) {
+            'chuyen_mon_ids[]': selectedSpecialties().map(function (input) {
                 return input.value;
             })
         };
