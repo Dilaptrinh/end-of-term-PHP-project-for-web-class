@@ -236,5 +236,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=12"></script>
+<script src="<?= e(url('/common/assets/js/admin/packages.js')) ?>?v=13"></script>
 <?php require $partials . '/foot.php'; ?>

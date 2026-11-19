@@ -135,7 +135,6 @@ require $partials . '/head.php';
                 <h2 class="mt-3 mb-1" id="account-name" style="font-size:1.05rem;"><?= e($instructor['name'] ?? '') ?></h2>
                 <p class="text-muted-2 text-small mb-2">Giáo viên · Mã <?= e($instructorCode) ?></p>
                 <div class="d-flex justify-content-center gap-2 mb-3">
-                    <?= badge(($instructor['status'] ?? '') === 'dang_lam' ? 'Đang hoạt động' : 'Ngừng hoạt động', ($instructor['status'] ?? '') === 'dang_lam' ? 'success' : 'secondary') ?>
                     <span id="account-specialty-badge"><?= badge($instructor['specialty'] ?? '—', 'primary') ?></span>
                 </div>
 

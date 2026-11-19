@@ -190,5 +190,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/instructor/instructor-classes.js')) ?>?v=10"></script>
+<script src="<?= e(url('/common/assets/js/instructor/instructor-classes.js')) ?>?v=11"></script>
 <?php require $partials . '/foot.php'; ?>

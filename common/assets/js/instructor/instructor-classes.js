@@ -8,19 +8,7 @@
 
     if (!modal || !list) return;
 
-    function escapeHtml(value) {
-        var characters = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-
-        return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
-            return characters[character];
-        });
-    }
+    var escapeHtml = AppUI.escapeHtml;
 
     // Tạo mã học viên HV-0001.
     function memberCode(id) {

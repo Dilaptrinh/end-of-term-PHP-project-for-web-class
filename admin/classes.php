@@ -11,6 +11,220 @@ function class_find(int $id): ?array
     }
     return null;
 }
+
+function class_date_value(?string $formatted): string
+{
+    if ($formatted === null || $formatted === '') {
+        return '';
+    }
+    $date = DateTimeImmutable::createFromFormat('!d/m/Y', (string) $formatted);
+    return $date ? $date->format('Y-m-d') : '';
+}
+
+function class_row_html(array $class): string
+{
+    return '<tr data-row data-class-row="' . (int) $class['id'] . '">' .
+        '<td class="cell-strong">' . e($class['name']) .
+            '<div class="cell-sub">Mã lớp: ' . (int) $class['id'] . ' · ' . e($class['level']) . '</div></td>' .
+        '<td>' . e($class['instructor']) . '</td>' .
+        '<td>' . e(weekday((int) $class['weekday'])) .
+            '<div class="cell-sub">' . e($class['start'] . ' – ' . $class['end']) . '</div></td>' .
+        '<td>' . e($class['room']) . '</td>' .
+        '<td>' . (int) $class['enrolled'] . '/' . (int) $class['capacity'] . '</td>' .
+        '<td class="text-muted-2 text-tiny">' . e($class['from']) . '<br>' . e($class['to']) . '</td>' .
+        '<td>' . status_badge((string) $class['status']) . '</td>' .
+        '<td class="cell-actions">' .
+            '<button class="btn btn-ghost btn-sm" type="button" data-class-detail="' . (int) $class['id'] . '" title="Chi tiết" aria-label="Chi tiết"><i class="bi bi-info-circle"></i></button>' .
+        '</td>' .
+    '</tr>';
+}
+
+function class_info_card(string $label, string $value): string
+{
+    return '<div class="col-sm-6 col-lg-3"><div class="border rounded-3 p-3 h-100">' .
+        '<div class="text-tiny text-muted-2 mb-1">' . $label . '</div>' .
+        '<div class="fw-semibold">' . $value . '</div></div></div>';
+}
+
+function class_member_rows(array $members): string
+{
+    if (!$members) {
+        return '<tr><td colspan="6" class="text-center text-muted-2 py-4">Chưa có học viên đăng ký lớp này.</td></tr>';
+    }
+
+    $genders = ['nam' => 'Nam', 'nu' => 'Nữ', 'khac' => 'Khác'];
+    $html = '';
+    foreach ($members as $index => $member) {
+        $html .= '<tr>' .
+            '<td>' . ($index + 1) . '</td>' .
+            '<td class="cell-strong">' . e($member['name']) .
+                '<div class="cell-sub">' . e($genders[$member['gender']] ?? '—') . '</div></td>' .
+            '<td>' . e($member['phone'] ?: '—') . '</td>' .
+            '<td>' . e($member['email'] ?: '—') . '</td>' .
+            '<td>' . e($member['registered'] ?: '—') . '</td>' .
+            '<td>' . status_badge((string) $member['status']) . '</td>' .
+        '</tr>';
+    }
+    return $html;
+}
+
+function class_detail_html(?array $class, array $members, array $instructors): string
+{
+    $isEdit = $class !== null;
+    $id = $isEdit ? (int) $class['id'] : 0;
+
+    $values = [
+        'name' => $isEdit ? (string) $class['name'] : '',
+        'level' => $isEdit ? (string) $class['level'] : 'Cơ bản',
+        'package' => $isEdit ? (string) $class['required_package'] : 'basic',
+        'instructor' => $isEdit ? (int) $class['giao_vien_id'] : (int) ($instructors[0]['id'] ?? 0),
+        'room' => $isEdit ? (string) ($class['room'] ?? '') : '',
+        'weekday' => $isEdit ? (int) $class['weekday'] : 1,
+        'start' => $isEdit ? (string) $class['start'] : '18:00',
+        'end' => $isEdit ? (string) $class['end'] : '19:00',
+        'capacity' => $isEdit ? (int) $class['capacity'] : 20,
+        'status' => $isEdit ? (string) $class['status'] : 'dang_mo',
+        'desc' => $isEdit ? (string) ($class['desc'] ?? '') : '',
+        'from' => $isEdit ? class_date_value($class['from']) : date('Y-m-d'),
+        'to' => $isEdit ? class_date_value($class['to']) : date('Y-m-d', strtotime('+3 months')),
+    ];
+
+    $levels = ['Cơ bản', 'Trung cấp', 'Nâng cao', 'Mọi trình độ'];
+    $packages = ['basic' => 'Basic', 'standard' => 'Standard', 'premium' => 'Premium'];
+    $statuses = ['dang_mo' => 'Đang mở', 'da_dong' => 'Đã đóng', 'da_huy' => 'Đã hủy'];
+
+    ob_start();
+    ?>
+    <?php if ($isEdit): ?>
+        <div class="row g-3">
+            <?= class_info_card('Giáo viên', e($class['instructor'] ?: '—')) ?>
+            <?= class_info_card('Lịch học', e(weekday((int) $class['weekday']) . ' · ' . $class['start'] . ' – ' . $class['end'])) ?>
+            <?= class_info_card('Phòng học', e($class['room'] ?: 'Chưa xếp')) ?>
+            <?= class_info_card('Sĩ số', (int) $class['enrolled'] . '/' . (int) $class['capacity']) ?>
+            <?= class_info_card('Trình độ', e($class['level'] ?: '—')) ?>
+            <?= class_info_card('Gói tối thiểu', e(strtoupper((string) ($class['required_package'] ?: 'basic')))) ?>
+            <?= class_info_card('Thời gian', e($class['from'] . ' – ' . $class['to'])) ?>
+            <?= class_info_card('Trạng thái', status_badge((string) $class['status'])) ?>
+            <div class="col-12">
+                <div class="border rounded-3 p-3">
+                    <div class="text-tiny text-muted-2 mb-1">Mô tả lớp học</div>
+                    <div><?= e($class['desc'] ?: 'Chưa có mô tả.') ?></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-card mt-3">
+            <div class="app-card-header">
+                <div>
+                    <h3 class="mb-0">Danh sách học viên</h3>
+                    <p class="sub mb-0">Học viên đã đăng ký lớp này</p>
+                </div>
+                <span class="badge-soft ms-auto"><?= count($members) ?> học viên</span>
+            </div>
+            <div class="app-table-wrap">
+                <table class="app-table">
+                    <thead>
+                        <tr>
+                            <th style="width:5%">#</th>
+                            <th>Học viên</th>
+                            <th>Điện thoại</th>
+                            <th>Email</th>
+                            <th>Ngày đăng ký</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody><?= class_member_rows($members) ?></tbody>
+                </table>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <form id="class-form" class="mt-3" data-class-id="<?= $id ?>">
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label" for="cf-name">Tên lớp <span class="req">*</span></label>
+                <input class="form-control" id="cf-name" name="ten_lop" type="text" required placeholder="VD: Yoga cơ bản" value="<?= e($values['name']) ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-level">Trình độ</label>
+                <select class="form-select" id="cf-level" name="trinh_do">
+                    <?php foreach ($levels as $level): ?>
+                        <option<?= $level === $values['level'] ? ' selected' : '' ?>><?= e($level) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-package">Gói tối thiểu</label>
+                <select class="form-select" id="cf-package" name="goi_tap_toi_thieu">
+                    <?php foreach ($packages as $value => $label): ?>
+                        <option value="<?= e($value) ?>"<?= $value === $values['package'] ? ' selected' : '' ?>><?= e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="cf-teacher">Giáo viên <span class="req">*</span></label>
+                <select class="form-select" id="cf-teacher" name="giao_vien_id" required>
+                    <?php foreach ($instructors as $instructor): ?>
+                        <option value="<?= (int) $instructor['id'] ?>"<?= (int) $instructor['id'] === $values['instructor'] ? ' selected' : '' ?>><?= e($instructor['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="cf-room">Phòng học</label>
+                <input class="form-control" id="cf-room" name="phong_hoc" type="text" placeholder="VD: P.101" value="<?= e($values['room']) ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-day">Thứ trong tuần <span class="req">*</span></label>
+                <select class="form-select" id="cf-day" name="thu_trong_tuan" required>
+                    <?php for ($d = 1; $d <= 7; $d++): ?>
+                        <option value="<?= $d ?>"<?= $d === $values['weekday'] ? ' selected' : '' ?>><?= e(weekday($d)) ?></option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-start">Giờ bắt đầu <span class="req">*</span></label>
+                <input class="form-control" id="cf-start" name="gio_bat_dau" type="time" required value="<?= e($values['start']) ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-end">Giờ kết thúc <span class="req">*</span></label>
+                <input class="form-control" id="cf-end" name="gio_ket_thuc" type="time" required value="<?= e($values['end']) ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-capacity">Sức chứa <span class="req">*</span></label>
+                <input class="form-control" id="cf-capacity" name="suc_chua" type="number" min="1" required value="<?= (int) $values['capacity'] ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-status">Trạng thái</label>
+                <select class="form-select" id="cf-status" name="trang_thai">
+                    <?php foreach ($statuses as $value => $label): ?>
+                        <option value="<?= e($value) ?>"<?= $value === $values['status'] ? ' selected' : '' ?>><?= e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-from">Ngày bắt đầu <span class="req">*</span></label>
+                <input class="form-control" id="cf-from" name="ngay_bat_dau" type="date" required value="<?= e($values['from']) ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="cf-to">Ngày kết thúc <span class="req">*</span></label>
+                <input class="form-control" id="cf-to" name="ngay_ket_thuc" type="date" required value="<?= e($values['to']) ?>">
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="cf-desc">Mô tả</label>
+                <textarea class="form-control" id="cf-desc" name="mo_ta" rows="3" placeholder="Mô tả nội dung lớp học…"><?= e($values['desc']) ?></textarea>
+            </div>
+        </div>
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Hủy</button>
+            <?php if ($isEdit): ?>
+                <button type="button" class="btn btn-danger-soft" data-class-delete="<?= $id ?>" data-class-name="<?= e($values['name']) ?>">Xóa lớp</button>
+            <?php endif; ?>
+            <button type="submit" class="btn btn-primary"><?= icon('save') ?> <?= $isEdit ? 'Cập nhật' : 'Thêm lớp' ?></button>
+        </div>
+    </form>
+    <?php
+    return (string) ob_get_clean();
+}
 /*
  * - ?action=save&id=0   -> thêm lớp mới
  * - ?action=save&id=... -> sửa lớp
@@ -128,56 +342,41 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     // id = 0 là thêm mới, id > 0 là cập nhật.
     $savedId = admin_class_save($values, $id);
 
-    // Trường hợp THÊM MỚI.
-    if ($id === 0) {
-        $class = class_find($savedId);
-
-        json_response([
-            'success' => true,
-            'message' => 'Đã tạo lớp học.',
-            'data' => $class,
-        ], 201);
-    }
-
-    // Trường hợp CẬP NHẬT nhưng không tìm thấy lớp.
-    if ($savedId === 0) {
+    $class = $savedId > 0 ? class_find($savedId) : null;
+    if (!$class) {
         json_response(['success' => false, 'message' => 'Không tìm thấy lớp học.'], 404);
     }
 
-    // Trường hợp CẬP NHẬT thành công.
-    $class = class_find($savedId);
-
     json_response([
         'success' => true,
-        'message' => 'Đã cập nhật lớp học.',
-        'data' => $class,
-    ]);
+        'message' => $id === 0 ? 'Đã tạo lớp học.' : 'Đã cập nhật lớp học.',
+        'created' => $id === 0,
+        'id' => $savedId,
+        'html' => class_row_html($class),
+    ], $id === 0 ? 201 : 200);
 }
 
 /*
- * API GET: trả JSON chi tiết một lớp + danh sách học viên.
- * classes.js dùng dữ liệu này để đổ vào modal "Xem chi tiết".
+ * Api get: trả HTML fragment
+ * id = 0 là form thêm mới; id > 0 là chi tiết + form cập nhật + học viên.
  */
 $requestAction = (string) ($_GET['action'] ?? '');
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'members') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $requestAction === 'detail') {
     $user = common_user();
     if (!$user || $user['vai_tro'] !== 'admin') {
         json_response(['success' => false, 'message' => 'Bạn không có quyền thực hiện.'], 403);
     }
 
-    // Lấy thông tin lớp.
-    $detail = admin_class_detail((int) ($_GET['id'] ?? 0));
-    if (!$detail) {
+    $detailId = (int) ($_GET['id'] ?? 0);
+    $detail = $detailId > 0 ? admin_class_detail($detailId) : null;
+    if ($detailId > 0 && !$detail) {
         json_response(['success' => false, 'message' => 'Không tìm thấy lớp học.'], 404);
     }
 
-    // Trả về cả thông tin lớp và danh sách học viên đã đăng ký.
     json_response([
         'success' => true,
-        'data' => [
-            'class' => $detail,
-            'members' => admin_class_members((int) $detail['id']),
-        ],
+        'title' => $detail ? 'Chi tiết lớp học' : 'Thêm lớp học',
+        'html' => class_detail_html($detail, $detail ? admin_class_members((int) $detail['id']) : [], data_instructors()),
     ]);
 }
 
@@ -205,9 +404,6 @@ if ($classId !== '' && ctype_digit($classId)) {
     }));
 }
 
-// Danh sách giáo viên để đổ vào select trong form thêm/sửa.
-$instructors = data_instructors();
-
 $partials = __DIR__ . '/../common/partials';
 
 require $partials . '/head.php';
@@ -227,7 +423,7 @@ require $partials . '/head.php';
         <p>Danh sách toàn bộ lớp học trong hệ thống.</p>
     </div>
     <div class="page-head-actions">
-        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#classFormModal" data-form-mode="create"><?= icon('plus-lg') ?> Thêm lớp học</button>
+        <button class="btn btn-primary" type="button" data-class-detail="0"><?= icon('plus-lg') ?> Thêm lớp học</button>
     </div>
 </div>
 
@@ -262,157 +458,32 @@ require $partials . '/head.php';
                     <th class="cell-actions">Thao tác</th>
                 </tr>
             </thead>
-            <tbody id="classes-body"></tbody>
+            <tbody id="classes-body">
+                <?php if (!$classes): ?>
+                    <tr data-empty-row><td colspan="8" class="text-center text-muted-2 py-4">Chưa có lớp học nào.</td></tr>
+                <?php endif; ?>
+                <?php foreach ($classes as $class): ?>
+                    <?= class_row_html($class) ?>
+                <?php endforeach; ?>
+            </tbody>
         </table>
     </div>
     <?= pagination(count($classes), 1, 10, 'lớp học') ?>
 </div>
-<script type="application/json" id="class-init"><?= json_encode($classes, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
 
-<?php // Modal dùng chung cho cả THÊM và SỬA lớp. classes.js đổ dữ liệu khi bấm Sửa. ?>
-<div class="modal fade" id="classFormModal" tabindex="-1" aria-labelledby="classFormTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form id="class-form">
-                <div class="modal-header">
-                    <div>
-                        <h2 class="modal-title" id="classFormTitle">Thêm lớp học</h2>
-                        <p class="text-tiny text-muted-2 mb-0">Điền thông tin lớp, lịch học và giáo viên phụ trách.</p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label" for="cf-name">Tên lớp <span class="req">*</span></label>
-                            <input class="form-control" id="cf-name" name="ten_lop" type="text" required placeholder="VD: Yoga cơ bản">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-level">Trình độ</label>
-                            <select class="form-select" id="cf-level" name="trinh_do">
-                                <option>Cơ bản</option>
-                                <option>Trung cấp</option>
-                                <option>Nâng cao</option>
-                                <option>Mọi trình độ</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-package">Gói tối thiểu</label>
-                            <select class="form-select" id="cf-package" name="goi_tap_toi_thieu">
-                                <option value="basic">Basic</option>
-                                <option value="standard">Standard</option>
-                                <option value="premium">Premium</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="cf-teacher">Giáo viên <span class="req">*</span></label>
-                            <select class="form-select" id="cf-teacher" name="giao_vien_id" required>
-                            <?php foreach ($instructors as $instructor): ?>
-                                <option value="<?= (int) $instructor['id'] ?>"><?= e($instructor['name']) ?></option>
-                            <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="cf-room">Phòng học</label>
-                            <input class="form-control" id="cf-room" name="phong_hoc" type="text" placeholder="VD: P.101">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-day">Thứ trong tuần <span class="req">*</span></label>
-                            <select class="form-select" id="cf-day" name="thu_trong_tuan" required>
-                                <?php for ($d = 1; $d <= 7; $d++): ?><option value="<?= $d ?>"><?= e(weekday($d)) ?></option><?php endfor; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-start">Giờ bắt đầu <span class="req">*</span></label>
-                            <input class="form-control" id="cf-start" name="gio_bat_dau" type="time" required value="18:00">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-end">Giờ kết thúc <span class="req">*</span></label>
-                            <input class="form-control" id="cf-end" name="gio_ket_thuc" type="time" required value="19:00">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-capacity">Sức chứa <span class="req">*</span></label>
-                            <input class="form-control" id="cf-capacity" name="suc_chua" type="number" min="1" required value="20">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-status">Trạng thái</label>
-                            <select class="form-select" id="cf-status" name="trang_thai">
-                                <option value="dang_mo">Đang mở</option>
-                                <option value="da_dong">Đã đóng</option>
-                                <option value="da_huy">Đã hủy</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-from">Ngày bắt đầu <span class="req">*</span></label>
-                            <input class="form-control" id="cf-from" name="ngay_bat_dau" type="date" required value="<?= date('Y-m-d') ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="cf-to">Ngày kết thúc <span class="req">*</span></label>
-                            <input class="form-control" id="cf-to" name="ngay_ket_thuc" type="date" required value="<?= date('Y-m-d', strtotime('+3 months')) ?>">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" for="cf-desc">Mô tả</label>
-                            <textarea class="form-control" id="cf-desc" name="mo_ta" rows="3" placeholder="Mô tả nội dung lớp học…"></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary"><?= icon('save') ?> Lưu lớp học</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<?php // Modal xem chi tiết. classes.js gọi ?action=members rồi đổ JSON vào đây. ?>
+<?php // Một modal dùng chung: PHP trả HTML fragment cho cả thêm mới và chi tiết/cập nhật. ?>
 <div class="modal fade" id="classDetailModal" tabindex="-1" aria-labelledby="classDetailTitle" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <div>
                     <h2 class="modal-title" id="classDetailTitle">Chi tiết lớp học</h2>
-                    <p class="text-tiny text-muted-2 mb-0" id="classDetailSubtitle">Thông tin lớp và danh sách học viên đã đăng ký.</p>
+                    <p class="text-tiny text-muted-2 mb-0">Thông tin lớp, học viên và cập nhật lớp.</p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <div class="modal-body">
-                <div id="classDetailLoading" class="text-center text-muted-2 py-4">
-                    <?= icon('arrow-repeat') ?> Đang tải thông tin lớp học...
-                </div>
-                <div id="classDetailError" class="alert alert-danger d-none" role="alert"></div>
-                <div id="classDetailBody" class="d-none">
-                    <div class="row g-3" id="classDetailInfo"></div>
-                    <div class="app-card mt-3">
-                        <div class="app-card-header">
-                            <div>
-                                <h3 class="mb-0">Danh sách học viên</h3>
-                                <p class="sub mb-0">Học viên đã đăng ký lớp này</p>
-                            </div>
-                            <span class="badge-soft ms-auto" id="classMemberCount">0 học viên</span>
-                        </div>
-                        <div class="app-table-wrap">
-                            <table class="app-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:5%">#</th>
-                                        <th>Học viên</th>
-                                        <th>Điện thoại</th>
-                                        <th>Email</th>
-                                        <th>Ngày đăng ký</th>
-                                        <th>Trạng thái</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="classDetailMembers">
-                                    <tr><td colspan="6" class="text-center text-muted-2 py-4">Chưa có học viên.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Đóng</button>
+            <div class="modal-body" id="classDetailBody">
+                <div class="text-center text-muted-2 py-4"><?= icon('arrow-repeat') ?> Đang tải...</div>
             </div>
         </div>
     </div>
@@ -422,6 +493,6 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<?php // classes.js xử lý cả render bảng lẫn các thao tác AJAX. ?>
-<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=16"></script>
+<?php // classes.js chỉ tải HTML fragment và gắn kết quả vào bảng. ?>
+<script src="<?= e(url('/common/assets/js/admin/classes.js')) ?>?v=17"></script>
 <?php require $partials . '/foot.php'; ?>

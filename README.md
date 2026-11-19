@@ -101,7 +101,7 @@ require $partials . '/foot.php';
 - **Dữ liệu** lấy qua các hàm `data_*()` trong `common/data/`, chạy SQL qua `view_db()` → `common_db()`.
 - **Giao diện** ghép từ các partial dùng chung (`head`, `sidebar`, `topbar`, `flash`, `foot`).
 - **Menu** khai báo một nơi duy nhất trong `common/menus/{role}.php`.
-- Các thao tác quản trị dùng `fetch` tới chính trang hiện tại kèm `?action=...`; một số form như tạo tài khoản, tạo/xác nhận/hủy đăng ký gói dùng POST server-side + flash message.
+- Các thao tác quản trị dùng `fetch` tới chính trang hiện tại kèm `?action=...`; riêng form tạo tài khoản và khóa/mở khóa tài khoản dùng POST server-side + flash message.
 
 ## Endpoint chính
 
@@ -111,8 +111,8 @@ Các trang vừa render HTML vừa xử lý AJAX qua tham số `?action=...`:
 | --- | --- | --- |
 | `admin/accounts.php` | `detail`, `create`, `update`, `status` | Admin |
 | `admin/packages.php` | `save`, `delete`; lọc `package_id`, `status` | Admin |
-| `admin/classes.php` | `save`, `delete`, `members`; lọc `class_id` | Admin |
-| `admin/registrations.php` | `create-package`, `confirm-package`, `cancel-package`; lọc `package_id`, `payment` | Admin |
+| `admin/classes.php` | `save`, `delete`, `detail`; lọc `class_id` | Admin |
+| `admin/registrations.php` | `confirm-package`, `cancel-package`; lọc `package_id`, `payment` | Admin |
 | `instructor/classes.php` | `members`; lọc `status=current\|completed` | Giáo viên |
 | `customer/package-registration.php` | Đăng ký gói bằng POST `goi_tap_id` | Hội viên |
 | `customer/class-registration.php` | `register`; lọc `q`, `weekday`, `package` | Hội viên |

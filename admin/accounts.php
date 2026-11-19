@@ -281,5 +281,5 @@ require $partials . '/head.php';
     </div>
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
-<script src="<?= e(url('/common/assets/js/admin/accounts.js')) ?>?v=6"></script>
+<script src="<?= e(url('/common/assets/js/admin/accounts.js')) ?>?v=7"></script>
 <?php require $partials . '/foot.php'; ?>

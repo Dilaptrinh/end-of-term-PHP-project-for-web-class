@@ -16,7 +16,6 @@ function data_instructors(): array
                   FROM dang_ky_lop dkl
                   JOIN lop_hoc lh2 ON lh2.id = dkl.lop_hoc_id
                  WHERE lh2.giao_vien_id = gv.id AND dkl.trang_thai = 'dang_ky') AS students,
-               CASE gv.trang_thai WHEN 'dang_lam' THEN 'hoat_dong' ELSE 'ngung_hoat_dong' END AS status,
                COALESCE(tk.ten_dang_nhap, '—') AS account
         FROM giao_vien gv
         LEFT JOIN tai_khoan tk ON tk.id = gv.tai_khoan_id

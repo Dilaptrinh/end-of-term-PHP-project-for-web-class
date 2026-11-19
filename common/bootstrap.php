@@ -47,21 +47,6 @@ function common_user(): ?array
         unset($_SESSION['tai_khoan_id']);
         return null;
     }
-    if ($user['vai_tro'] === 'instructor') {
-        $stmt = common_db()->prepare(
-            'SELECT id FROM giao_vien
-              WHERE tai_khoan_id = ? AND trang_thai = "dang_lam" AND deleted_at IS NULL
-              LIMIT 1'
-        );
-        $stmt->bind_param('i', $id);
-        $stmt->execute();
-        $instructor = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        if (!$instructor) {
-            unset($_SESSION['tai_khoan_id']);
-            return null;
-        }
-    }
     return $user;
 }
 

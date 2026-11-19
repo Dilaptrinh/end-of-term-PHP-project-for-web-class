@@ -6,39 +6,10 @@
     var form = document.getElementById('package-form');
     var tbody = document.getElementById('packages-body');
 
-    var statusLabels = {
-        dang_ban: ['Đang bán', 'success'],
-        ngung_ban: ['Ngừng bán', 'muted']
-    };
-
-    function escapeHtml(value) {
-        var characters = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-
-        return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
-            return characters[character];
-        });
-    }
-
-    function money(amount) {
-        return Number(amount || 0).toLocaleString('vi-VN') + 'đ';
-    }
-
-    function truncateText(value, limit) {
-        var text = String(value == null ? '' : value);
-        return text.length > limit ? text.slice(0, limit) + '…' : text;
-    }
-
-    function statusBadge(status) {
-        var item = statusLabels[status] || [status || '—', 'muted'];
-
-        return '<span class="badge-status ' + item[1] + '">' + escapeHtml(item[0]) + '</span>';
-    }
+    var escapeHtml = AppUI.escapeHtml;
+    var money = AppUI.money;
+    var truncateText = AppUI.truncateText;
+    var statusBadge = AppUI.statusBadge;
 
     function renderRow(item) {
         return '<tr data-row data-package-id="' + Number(item.id) + '" data-package-status="' + escapeHtml(item.status) + '">' +

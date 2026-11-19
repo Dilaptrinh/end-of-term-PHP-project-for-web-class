@@ -244,7 +244,7 @@
     <tr><td class="center">5</td><td>Quản lý gói tập</td><td>CRUD gói, thời hạn, giá, cấp độ, trạng thái bán; xóa mềm; thống kê lượt bán và doanh thu ước tính.</td><td>Quản trị viên</td></tr>
     <tr><td class="center">6</td><td>Quản lý lớp học</td><td>CRUD lớp, giáo viên, thứ, giờ, khoảng ngày, phòng, sức chứa, trình độ, gói tối thiểu, trạng thái; xóa mềm.</td><td>Quản trị viên</td></tr>
     <tr><td class="center">7</td><td>Xem chi tiết lớp</td><td>Xem thông tin lớp và danh sách học viên đang đăng ký kèm điện thoại, email, ngày đăng ký, trạng thái.</td><td>Quản trị viên, giáo viên</td></tr>
-    <tr><td class="center">8</td><td>Quản lý đăng ký gói</td><td>Tạo đăng ký thay hội viên, xác nhận thanh toán, hủy đăng ký; lọc theo mã đăng ký; thống kê chờ thu/đã thu.</td><td>Quản trị viên</td></tr>
+    <tr><td class="center">8</td><td>Quản lý đăng ký gói</td><td>Xác nhận thanh toán, hủy đăng ký; lọc theo mã đăng ký; thống kê chờ thu/đã thu.</td><td>Quản trị viên</td></tr>
     <tr><td class="center">9</td><td>Đăng ký gói</td><td>Hội viên gửi yêu cầu mua gói; hệ thống tính ngày bắt đầu/kết thúc theo thời hạn gói; chặn gửi trùng khi còn chờ thanh toán.</td><td>Hội viên</td></tr>
     <tr><td class="center">10</td><td>Đăng ký lớp</td><td>Kiểm tra hồ sơ hoạt động, gói còn hạn, cấp độ gói, sức chứa, trùng lớp, trùng khung giờ; tạo đăng ký.</td><td>Hội viên</td></tr>
     <tr><td class="center">11</td><td>Hủy đăng ký lớp</td><td>Hội viên chỉ được hủy đăng ký của chính mình và chỉ khi còn trạng thái <code>dang_ky</code>.</td><td>Hội viên</td></tr>
@@ -277,7 +277,7 @@
   <thead><tr><th style="width:6%">STT</th><th style="width:27%">Quy tắc</th><th>Diễn giải</th></tr></thead>
   <tbody>
     <tr><td class="center">1</td><td>Một tài khoản - một hồ sơ</td><td>Mỗi tài khoản hội viên hoặc giáo viên liên kết tối đa một hồ sơ tương ứng. Giáo viên có ràng buộc UNIQUE trên <code>tai_khoan_id</code>; hội viên được kiểm soát bằng truy vấn.</td></tr>
-    <tr><td class="center">2</td><td>Tài khoản hoạt động</td><td>Chỉ tài khoản <code>trang_thai = 1</code> mới đăng nhập được; giáo viên còn phải có hồ sơ <code>dang_lam</code> và chưa xóa mềm.</td></tr>
+    <tr><td class="center">2</td><td>Tài khoản hoạt động</td><td>Chỉ tài khoản <code>trang_thai = 1</code> mới đăng nhập được.</td></tr>
     <tr><td class="center">3</td><td>Gói còn hạn</td><td>Hội viên chỉ được đăng ký lớp khi có đăng ký gói <code>da_thanh_toan</code> và ngày hiện tại nằm trong khoảng bắt đầu - kết thúc.</td></tr>
     <tr><td class="center">4</td><td>Cấp độ gói tối thiểu</td><td>Lớp yêu cầu basic/standard/premium; cấp độ gói của hội viên phải bằng hoặc cao hơn.</td></tr>
     <tr><td class="center">5</td><td>Sức chứa lớp</td><td>Không cho đăng ký khi số đăng ký <code>dang_ky</code> đã đạt <code>suc_chua</code>.</td></tr>
@@ -427,7 +427,7 @@ doanh_thu (tháng, năm, số tiền) ── bảng tổng hợp độc lập   
   <li>Hệ thống truy vấn tài khoản theo tên đăng nhập bằng prepared statement.</li>
   <li>Kiểm tra trạng thái hoạt động và so khớp mật khẩu bằng <code>password_verify()</code>; kiểm tra vai trò thuộc admin/instructor/customer.</li>
   <li>Nếu hợp lệ, tái tạo session ID, lưu <code>tai_khoan_id</code> và chuyển hướng theo vai trò.</li>
-  <li><code>common_user()</code> kiểm tra lại tài khoản mỗi request; giáo viên phải còn hồ sơ <code>dang_lam</code> chưa xóa.</li>
+  <li><code>common_user()</code> kiểm tra lại tài khoản mỗi request.</li>
   <li>Nếu sai, hiển thị thông báo chung, không tiết lộ tài khoản có tồn tại hay không. Đăng xuất qua <code>common/logout.php</code> hủy session.</li>
 </ol>
 
@@ -455,7 +455,7 @@ doanh_thu (tháng, năm, số tiền) ── bảng tổng hợp độc lập   
   <li>Admin xem danh sách lớp kèm giáo viên, lịch, phòng, sĩ số, thời gian hiệu lực và trạng thái.</li>
   <li>Khi thêm/sửa, hệ thống kiểm tra các trường bắt buộc, giáo viên tồn tại, sức chứa ≥ 1, thứ 1–7, giờ kết thúc sau giờ bắt đầu, ngày kết thúc không trước ngày bắt đầu, gói tối thiểu và trạng thái hợp lệ.</li>
   <li><code>admin_class_save()</code> chèn mới hoặc cập nhật lớp; xóa là xóa mềm qua <code>deleted_at</code>.</li>
-  <li><strong>Xem chi tiết:</strong> AJAX <code>?action=members&amp;id=...</code> trả JSON gồm thông tin lớp và danh sách học viên đang <code>dang_ky</code>.</li>
+  <li><strong>Xem chi tiết:</strong> AJAX <code>?action=detail&amp;id=...</code> trả HTML fragment gồm thông tin lớp, danh sách học viên đang <code>dang_ky</code> và form cập nhật đã điền sẵn.</li>
   <li>Danh sách học viên hiển thị họ tên, điện thoại, email, ngày đăng ký, trạng thái; sĩ số được tính động từ <code>dang_ky_lop</code>.</li>
 </ol>
 
@@ -466,7 +466,7 @@ doanh_thu (tháng, năm, số tiền) ── bảng tổng hợp độc lập   
   <li>Chặn nếu hội viên đã có yêu cầu <code>chua_thanh_toan</code> cho cùng gói.</li>
   <li>Tính ngày bắt đầu là hôm nay, ngày kết thúc = hôm nay + (thời hạn - 1) ngày; lưu giá tại thời điểm đăng ký.</li>
   <li>Tạo bản ghi <code>dang_ky_goi</code> trạng thái <code>chua_thanh_toan</code>, trả JSON thành công và chuyển sang lịch sử.</li>
-  <li>Admin có thể tạo đăng ký thay hội viên trong <code>admin/registrations.php</code>, xác nhận thanh toán (chuyển <code>da_thanh_toan</code>, ghi phương thức <code>tien_mat</code> và thời điểm) hoặc hủy (chuyển <code>da_huy</code>).</li>
+  <li>Admin xác nhận thanh toán (chuyển <code>da_thanh_toan</code>, ghi phương thức <code>tien_mat</code> và thời điểm) hoặc hủy (chuyển <code>da_huy</code>) trong <code>admin/registrations.php</code>.</li>
 </ol>
 
 <h3>4.5.8. Đăng ký lớp học của hội viên</h3>
@@ -580,7 +580,7 @@ fitness/
   <thead><tr><th style="width:20%">Bảng</th><th style="width:32%">Mục đích</th><th>Khóa / quan hệ chính</th></tr></thead>
   <tbody>
     <tr><td><code>tai_khoan</code></td><td>Tài khoản đăng nhập và vai trò.</td><td>PK <code>id</code>; UNIQUE <code>ten_dang_nhap</code>.</td></tr>
-    <tr><td><code>giao_vien</code></td><td>Hồ sơ giáo viên, liên hệ, giới thiệu, trạng thái làm việc.</td><td>FK <code>tai_khoan_id</code> (UNIQUE); UNIQUE <code>email</code>; xóa mềm.</td></tr>
+    <tr><td><code>giao_vien</code></td><td>Hồ sơ giáo viên, liên hệ, giới thiệu.</td><td>FK <code>tai_khoan_id</code> (UNIQUE); UNIQUE <code>email</code>; xóa mềm.</td></tr>
     <tr><td><code>chuyen_mon</code></td><td>Danh mục chuyên môn (Yoga, Pilates, HIIT, Boxing, ...).</td><td>UNIQUE <code>ten_chuyen_mon</code>.</td></tr>
     <tr><td><code>giao_vien_chuyen_mon</code></td><td>Quan hệ nhiều-nhiều giáo viên - chuyên môn.</td><td>PK ghép; FK đến hai bảng, ON DELETE CASCADE.</td></tr>
     <tr><td><code>hoi_vien</code></td><td>Hồ sơ hội viên, chỉ số cơ thể, mục tiêu, ghi chú.</td><td>FK <code>tai_khoan_id</code>; UNIQUE <code>email</code>; xóa mềm.</td></tr>
@@ -618,7 +618,6 @@ fitness/
     <tr><td><code>sdt</code></td><td>VARCHAR(15)</td><td>NOT NULL.</td></tr>
     <tr><td><code>email</code></td><td>VARCHAR(100)</td><td>NOT NULL, UNIQUE.</td></tr>
     <tr><td><code>gioi_thieu</code></td><td>TEXT</td><td>NULL, mô tả kinh nghiệm.</td></tr>
-    <tr><td><code>trang_thai</code></td><td>VARCHAR(20)</td><td>NOT NULL, mặc định <code>dang_lam</code>; dùng <code>dang_lam</code> / <code>nghi</code>.</td></tr>
     <tr><td><code>deleted_at</code></td><td>DATETIME</td><td>NULL, xóa mềm.</td></tr>
     <tr><td><code>created_at</code></td><td>DATETIME</td><td>NOT NULL, mặc định thời điểm tạo.</td></tr>
     <tr><td><code>updated_at</code></td><td>DATETIME</td><td>NOT NULL, tự cập nhật khi sửa.</td></tr>
@@ -782,8 +781,7 @@ fitness/
     <tr><td><code>admin/packages.php?action=delete&amp;id=</code></td><td>POST</td><td>Admin</td><td>Xóa mềm gói tập.</td></tr>
     <tr><td><code>admin/classes.php?action=save&amp;id=</code></td><td>POST</td><td>Admin</td><td>Thêm/sửa lớp học.</td></tr>
     <tr><td><code>admin/classes.php?action=delete&amp;id=</code></td><td>POST</td><td>Admin</td><td>Xóa mềm lớp học.</td></tr>
-    <tr><td><code>admin/classes.php?action=members&amp;id=</code></td><td>GET</td><td>Admin</td><td>Trả JSON chi tiết lớp và danh sách học viên.</td></tr>
-    <tr><td><code>admin/registrations.php?action=create-package</code></td><td>POST</td><td>Admin</td><td>Tạo đăng ký gói thay hội viên.</td></tr>
+    <tr><td><code>admin/classes.php?action=detail&amp;id=</code></td><td>GET</td><td>Admin</td><td>Trả HTML fragment chi tiết lớp, danh sách học viên và form cập nhật (id=0 là form thêm mới).</td></tr>
     <tr><td><code>admin/registrations.php?action=confirm-package&amp;id=</code></td><td>POST</td><td>Admin</td><td>Xác nhận đã thanh toán.</td></tr>
     <tr><td><code>admin/registrations.php?action=cancel-package&amp;id=</code></td><td>POST</td><td>Admin</td><td>Hủy đăng ký gói.</td></tr>
     <tr><td><code>admin/availability.php?action=approve&amp;id=</code></td><td>POST</td><td>Admin</td><td>Duyệt đề xuất lớp, bắt buộc phòng và gói tối thiểu.</td></tr>
@@ -819,7 +817,6 @@ fitness/
   <thead><tr><th style="width:24%">Đối tượng</th><th style="width:30%">Trạng thái</th><th>Ý nghĩa / chuyển trạng thái</th></tr></thead>
   <tbody>
     <tr><td><code>tai_khoan</code></td><td>1 / 0</td><td>1 hoạt động, 0 bị khóa. Admin không khóa được tài khoản admin qua endpoint trạng thái.</td></tr>
-    <tr><td><code>giao_vien</code></td><td><code>dang_lam</code> / <code>nghi</code></td><td>Chỉ giáo viên <code>dang_lam</code>, chưa xóa mềm mới đăng nhập và nhận lớp.</td></tr>
     <tr><td><code>hoi_vien</code></td><td><code>hoat_dong</code> / <code>ngung_hoat_dong</code></td><td>Chỉ hội viên <code>hoat_dong</code> mới đăng ký gói/lớp và cập nhật hồ sơ.</td></tr>
     <tr><td><code>goi_tap</code></td><td><code>dang_ban</code> / <code>ngung_ban</code></td><td>Gói ngừng bán không hiển thị cho hội viên; xóa mềm ẩn hoàn toàn khỏi danh sách.</td></tr>
     <tr><td><code>lop_hoc</code></td><td><code>cho_duyet</code> → <code>dang_mo</code> / <code>tu_choi</code>; <code>da_dong</code></td><td>Đề xuất giáo viên bắt đầu <code>cho_duyet</code>; admin duyệt chuyển <code>dang_mo</code>, từ chối chuyển <code>tu_choi</code>; admin có thể đặt <code>da_dong</code>. Giao diện tự gắn nhãn <code>sap_mo</code> nếu ngày bắt đầu lớn hơn hôm nay.</td></tr>
@@ -863,7 +860,7 @@ fitness/
 </table>
 
 <h2>6.3. Đoạn mã tiêu biểu</h2>
-<h3>6.3.1. Session, phân quyền và kiểm tra hồ sơ giáo viên</h3>
+<h3>6.3.1. Session và phân quyền</h3>
 <pre class="code">&lt;?php
 session_set_cookie_params([
     'lifetime' =&gt; 0,
@@ -887,7 +884,7 @@ function require_role(string $role): array
     }
     return $user;
 }</pre>
-<p><code>common_user()</code> không chỉ đọc session mà còn truy vấn lại <code>tai_khoan</code>, kiểm tra <code>trang_thai</code>; với giáo viên còn kiểm tra hồ sơ <code>dang_lam</code> và <code>deleted_at IS NULL</code>. Nhờ vậy, tài khoản bị khóa hoặc hồ sơ giáo viên bị ngừng sẽ không tiếp tục sử dụng phiên cũ.</p>
+<p><code>common_user()</code> không chỉ đọc session mà còn truy vấn lại <code>tai_khoan</code>, kiểm tra <code>trang_thai</code>. Nhờ vậy, tài khoản bị khóa sẽ không tiếp tục sử dụng phiên cũ.</p>
 
 <h3>6.3.2. Đăng nhập bằng prepared statement</h3>
 <pre class="code">$stmt = common_db()-&gt;prepare(
@@ -938,8 +935,8 @@ try {
 
     if ($role === 'instructor') {
         $stmt = $db-&gt;prepare(
-            'INSERT INTO giao_vien (tai_khoan_id, ho_ten, sdt, email, trang_thai)
-             VALUES (?, ?, ?, ?, "dang_lam")'
+            'INSERT INTO giao_vien (tai_khoan_id, ho_ten, sdt, email)
+             VALUES (?, ?, ?, ?)'
         );
         $stmt-&gt;bind_param('isss', $accountId, $name, $phone, $email);
         $stmt-&gt;execute();
@@ -1156,7 +1153,6 @@ json_response(['success' =&gt; false, 'message' =&gt; 'Dữ liệu không hợp 
   <thead><tr><th style="width:24%">Bảng</th><th style="width:28%">Giá trị lưu CSDL</th><th>Nhãn hiển thị</th></tr></thead>
   <tbody>
     <tr><td><code>tai_khoan.trang_thai</code></td><td>1 / 0</td><td>Đang hoạt động / Bị khóa</td></tr>
-    <tr><td><code>giao_vien.trang_thai</code></td><td><code>dang_lam</code> / <code>nghi</code></td><td>Đang làm / Nghỉ</td></tr>
     <tr><td><code>hoi_vien.trang_thai</code></td><td><code>hoat_dong</code> / <code>ngung_hoat_dong</code></td><td>Đang hoạt động / Ngừng hoạt động</td></tr>
     <tr><td><code>goi_tap.trang_thai</code></td><td><code>dang_ban</code> / <code>ngung_ban</code></td><td>Đang bán / Ngừng bán</td></tr>
     <tr><td><code>lop_hoc.trang_thai</code></td><td><code>cho_duyet</code> / <code>dang_mo</code> / <code>tu_choi</code> / <code>da_dong</code></td><td>Chờ duyệt / Đang mở / Từ chối / Đã đóng</td></tr>

@@ -14,5 +14,6 @@ $pageTitle = $pageTitle ?? 'FitZone';
     <link rel="stylesheet" href="<?= e(url('/common/assets/css/tokens.css')) ?>">
     <link rel="stylesheet" href="<?= e(url('/common/assets/css/app.css')) ?>?v=4">
     <link rel="stylesheet" href="<?= e(url('/common/assets/css/pages.css')) ?>">
+    <script src="<?= e(url('/common/assets/js/helpers.js')) ?>?v=1"></script>
 </head>
 <body>

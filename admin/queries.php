@@ -212,7 +212,6 @@ function admin_account_detail(int $id): ?array
                 COALESCE(GROUP_CONCAT(DISTINCT cm.ten_chuyen_mon ORDER BY cm.ten_chuyen_mon SEPARATOR " · "), "") AS specialty,
                 COALESCE(GROUP_CONCAT(DISTINCT cm.id ORDER BY cm.id), "") AS specialty_ids,
                 gv.gioi_thieu,
-                gv.trang_thai AS instructor_status,
                 hv.gioi_tinh, hv.ngay_sinh, hv.dia_chi, hv.muc_tieu,
                 hv.chieu_cao, hv.can_nang
            FROM tai_khoan tk
@@ -284,12 +283,11 @@ function admin_account_create(string $username, string $password, string $name, 
         $stmt->close();
 
         if ($role === 'instructor') {
-            $status = 'dang_lam';
             $stmt = $db->prepare(
-                'INSERT INTO giao_vien (tai_khoan_id, ho_ten, sdt, email, trang_thai)
-                 VALUES (?, ?, ?, ?, ?)'
+                'INSERT INTO giao_vien (tai_khoan_id, ho_ten, sdt, email)
+                 VALUES (?, ?, ?, ?)'
             );
-            $stmt->bind_param('issss', $accountId, $name, $phone, $email, $status);
+            $stmt->bind_param('isss', $accountId, $name, $phone, $email);
             $stmt->execute();
             $stmt->close();
         } elseif ($role === 'customer') {
@@ -321,27 +319,34 @@ function admin_account_status(int $id, int $active): bool
     return $changed > 0;
 }
 
-function admin_package_registration_create(int $memberId, int $packageId, string $from, string $to, ?string $method): int
+function admin_package_registration_detail(int $id): ?array
 {
-    $db = common_db();
-
-    $stmt = $db->prepare('SELECT gia FROM goi_tap WHERE id = ? AND deleted_at IS NULL LIMIT 1');
-    $stmt->bind_param('i', $packageId);
+    $stmt = common_db()->prepare(
+        'SELECT d.id, hv.ho_ten AS member, gt.ten_goi AS package,
+                DATE_FORMAT(d.ngay_bat_dau, "%d/%m/%Y") AS `from`,
+                DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS `to`,
+                d.gia_tai_thoi_diem AS price, d.trang_thai AS payment,
+                COALESCE(d.phuong_thuc, "—") AS method,
+                COALESCE(DATE_FORMAT(d.ngay_thanh_toan, "%d/%m/%Y %H:%i"), "—") AS paid_at,
+                COALESCE(tk.ten_dang_nhap, "—") AS staff
+           FROM dang_ky_goi d
+           JOIN hoi_vien hv ON hv.id = d.hoi_vien_id
+           JOIN goi_tap gt ON gt.id = d.goi_tap_id
+           LEFT JOIN tai_khoan tk ON tk.id = d.nhan_vien_id
+          WHERE d.id = ?
+          LIMIT 1'
+    );
+    $stmt->bind_param('i', $id);
     $stmt->execute();
-    $package = $stmt->get_result()->fetch_assoc();
+    $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if (!$package) {
-        return 0;
+    if (!$row) {
+        return null;
     }
 
-    $price = (int) $package['gia'];
-    $stmt = $db->prepare('INSERT INTO dang_ky_goi (hoi_vien_id, goi_tap_id, ngay_bat_dau, ngay_ket_thuc, gia_tai_thoi_diem, phuong_thuc, trang_thai) VALUES (?, ?, ?, ?, ?, ?, "chua_thanh_toan")');
-    $stmt->bind_param('iissis', $memberId, $packageId, $from, $to, $price, $method);
-    $stmt->execute();
-    $newId = $stmt->insert_id;
-    $stmt->close();
-
-    return $newId;
+    $row['id'] = (int) $row['id'];
+    $row['price'] = (int) $row['price'];
+    return $row;
 }
 
 function admin_package_registration_confirm(int $id): bool

@@ -73,7 +73,6 @@ function data_current_instructor(): array
         'email'     => $row['email'],
         'specialty' => $specialtyNames ? implode(' · ', $specialtyNames) : '—',
         'specialty_ids' => $specialtyIds,
-        'status'    => $row['trang_thai'],
         'classes'   => $classes,
         'students'  => $students,
     ];
