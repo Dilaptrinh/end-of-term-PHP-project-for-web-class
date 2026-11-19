@@ -154,12 +154,8 @@ require $partials . '/head.php';
             <option value="ngung_ban" <?= $statusFilter === 'ngung_ban' ? 'selected' : '' ?>>Ngừng bán</option>
         </select>
     </div>
-    <div class="filter-field" style="min-width:auto;">
-        <label class="form-label">&nbsp;</label>
+    <div class="filter-actions">
         <button class="btn btn-primary" type="submit"><?= icon('search') ?> Tìm</button>
-    </div>
-    <div class="filter-field ms-auto" style="min-width:auto;">
-        <label class="form-label">&nbsp;</label>
         <a class="btn btn-ghost" href="<?= e(url('/admin/packages')) ?>"><?= icon('arrow-counterclockwise') ?> Đặt lại</a>
     </div>
 </form>

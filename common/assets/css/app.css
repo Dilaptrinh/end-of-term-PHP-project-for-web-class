@@ -618,19 +618,69 @@ input, select, textarea { cursor: text; }
 
 .filter-bar {
   display: flex;
-  gap: .6rem;
+  gap: .75rem;
   align-items: flex-end;
   flex-wrap: wrap;
   padding: 1rem 1.15rem;
-  background: var(--surface);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBFCFE 100%);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 12px 28px -24px rgba(15, 23, 42, .45);
   margin-bottom: 1rem;
 }
-.filter-bar .filter-field { min-width: 150px; flex: 0 1 auto; }
-.filter-bar .filter-search { flex: 1 1 240px; min-width: 200px; }
-.filter-bar .filter-actions { margin-left: auto; display: flex; gap: .5rem; }
+.filter-bar .filter-field {
+  min-width: 160px;
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+.filter-bar .filter-field .form-label {
+  margin: 0;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.filter-bar .filter-search { flex: 1 1 320px; min-width: 240px; }
+.filter-bar .filter-search .form-control {
+  padding-left: 2.4rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: .8rem center;
+  background-size: 1rem;
+}
+.filter-bar .form-control,
+.filter-bar .form-select { height: 42px; }
+.filter-bar .form-control:focus,
+.filter-bar .form-select:focus {
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 .2rem rgba(100, 116, 139, .14);
+}
+.filter-bar .btn {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding-inline: 1rem;
+  white-space: nowrap;
+}
+.filter-bar .filter-actions {
+  margin-left: auto;
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  align-self: flex-end;
+}
+@media (max-width: 767.98px) {
+  .filter-bar { padding: .9rem; }
+  .filter-bar .filter-field,
+  .filter-bar .filter-search { flex: 1 1 100%; min-width: 0; }
+  .filter-bar .filter-actions { width: 100%; margin-left: 0; }
+  .filter-bar .filter-actions .btn { flex: 1; }
+}
 
 .segmented {
   display: inline-flex;

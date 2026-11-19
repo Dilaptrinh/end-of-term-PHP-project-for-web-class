@@ -184,35 +184,33 @@ require $partials . '/head.php';
                 </div>
             </div>
 
-            <div class="app-card mb-3">
-                <div class="app-card-body">
-                    <form class="row g-2 align-items-end" method="get">
-                        <div class="col-md-5">
-                            <label class="form-label" for="account-q">Tìm kiếm</label>
-                            <input class="form-control" id="account-q" name="q" value="<?= e($keyword) ?>" placeholder="Họ tên hoặc tên đăng nhập">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label" for="account-role">Vai trò</label>
-                            <select class="form-select" id="account-role" name="role">
-                                <option value="">Tất cả vai trò</option>
-                                <option value="admin" <?= $roleFilter === 'admin' ? 'selected' : '' ?>>Admin</option>
-                                <option value="instructor" <?= $roleFilter === 'instructor' ? 'selected' : '' ?>>Instructor</option>
-                                <option value="customer" <?= $roleFilter === 'customer' ? 'selected' : '' ?>>Customer</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label" for="account-status">Trạng thái</label>
-                            <select class="form-select" id="account-status" name="status">
-                                <option value="">Tất cả trạng thái</option>
-                                <option value="hoat_dong" <?= $statusFilter === 'hoat_dong' ? 'selected' : '' ?>>Đang hoạt động</option>
-                                <option value="bi_khoa" <?= $statusFilter === 'bi_khoa' ? 'selected' : '' ?>>Bị khóa</option>
-                            </select>
-                        </div>
-                        <div class="col-md-1"><button class="btn btn-outline-primary w-100" type="submit" title="Tìm"><?= icon('search') ?></button></div>
-                        <div class="col-md-1"><a class="btn btn-ghost w-100" href="<?= e(url('/admin/accounts')) ?>" title="Đặt lại"><?= icon('arrow-counterclockwise') ?></a></div>
-                    </form>
+            <form class="filter-bar" method="get" action="<?= e(url('/admin/accounts')) ?>">
+                <div class="filter-field filter-search">
+                    <label class="form-label" for="account-q">Tìm kiếm</label>
+                    <input class="form-control" id="account-q" name="q" type="search" value="<?= e($keyword) ?>" placeholder="Họ tên hoặc tên đăng nhập...">
                 </div>
-            </div>
+                <div class="filter-field">
+                    <label class="form-label" for="account-role">Vai trò</label>
+                    <select class="form-select" id="account-role" name="role">
+                        <option value="">Tất cả vai trò</option>
+                        <option value="admin" <?= $roleFilter === 'admin' ? 'selected' : '' ?>>Admin</option>
+                        <option value="instructor" <?= $roleFilter === 'instructor' ? 'selected' : '' ?>>Instructor</option>
+                        <option value="customer" <?= $roleFilter === 'customer' ? 'selected' : '' ?>>Customer</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label class="form-label" for="account-status">Trạng thái</label>
+                    <select class="form-select" id="account-status" name="status">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="hoat_dong" <?= $statusFilter === 'hoat_dong' ? 'selected' : '' ?>>Đang hoạt động</option>
+                        <option value="bi_khoa" <?= $statusFilter === 'bi_khoa' ? 'selected' : '' ?>>Bị khóa</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary" type="submit"><?= icon('search') ?> Tìm</button>
+                    <a class="btn btn-ghost" href="<?= e(url('/admin/accounts')) ?>"><?= icon('arrow-counterclockwise') ?> Đặt lại</a>
+                </div>
+            </form>
 
             <div class="app-card mb-4">
                 <div class="table-responsive">

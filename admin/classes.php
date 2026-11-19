@@ -433,12 +433,9 @@ require $partials . '/head.php';
         <label class="form-label" for="cl-id">Tìm theo mã lớp</label>
         <input class="form-control" id="cl-id" name="class_id" type="search" inputmode="numeric" value="<?= e($classId) ?>" placeholder="Nhập mã lớp...">
     </div>
-    <div class="filter-field" style="min-width:auto;">
-        <label class="form-label">&nbsp;</label>
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary" type="submit"><?= icon('search') ?> Tìm</button>
-            <a class="btn btn-ghost" href="<?= e(url('/admin/classes')) ?>">Xóa lọc</a>
-        </div>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit"><?= icon('search') ?> Tìm</button>
+        <a class="btn btn-ghost" href="<?= e(url('/admin/classes')) ?>"><?= icon('arrow-counterclockwise') ?> Xóa lọc</a>
     </div>
 </form>
 
