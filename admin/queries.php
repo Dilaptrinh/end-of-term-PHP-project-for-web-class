@@ -326,6 +326,7 @@ function admin_package_registration_detail(int $id): ?array
                 DATE_FORMAT(d.ngay_bat_dau, "%d/%m/%Y") AS `from`,
                 DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS `to`,
                 d.gia_tai_thoi_diem AS price, d.trang_thai AS payment,
+                d.loai_giao_dich, d.so_tien_giam,
                 COALESCE(d.phuong_thuc, "—") AS method,
                 COALESCE(DATE_FORMAT(d.ngay_thanh_toan, "%d/%m/%Y %H:%i"), "—") AS paid_at,
                 COALESCE(tk.ten_dang_nhap, "—") AS staff
@@ -346,22 +347,72 @@ function admin_package_registration_detail(int $id): ?array
 
     $row['id'] = (int) $row['id'];
     $row['price'] = (int) $row['price'];
+    $row['so_tien_giam'] = (int) $row['so_tien_giam'];
     return $row;
 }
 
 function admin_package_registration_confirm(int $id): bool
 {
-    $stmt = common_db()->prepare('UPDATE dang_ky_goi SET trang_thai = "da_thanh_toan", phuong_thuc = "tien_mat", ngay_thanh_toan = NOW() WHERE id = ?');
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $changed = $stmt->affected_rows;
-    $stmt->close();
-    return $changed > 0;
+    $db = common_db();
+    $db->begin_transaction();
+
+    try {
+        $stmt = $db->prepare(
+            'SELECT id, trang_thai, loai_giao_dich, dang_ky_goc_id
+               FROM dang_ky_goi WHERE id = ? FOR UPDATE'
+        );
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $registration = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$registration || $registration['trang_thai'] !== 'chua_thanh_toan') {
+            $db->rollback();
+            return false;
+        }
+
+        $sourceId = (int) ($registration['dang_ky_goc_id'] ?? 0);
+        if ($registration['loai_giao_dich'] === 'nang_cap' && $sourceId > 0) {
+            $stmt = $db->prepare(
+                'SELECT id, trang_thai, ngay_ket_thuc FROM dang_ky_goi WHERE id = ? FOR UPDATE'
+            );
+            $stmt->bind_param('i', $sourceId);
+            $stmt->execute();
+            $source = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$source || $source['trang_thai'] !== 'da_thanh_toan' || $source['ngay_ket_thuc'] < date('Y-m-d')) {
+                $db->rollback();
+                return false;
+            }
+        }
+
+        $stmt = $db->prepare(
+            'UPDATE dang_ky_goi
+                SET trang_thai = "da_thanh_toan", phuong_thuc = "tien_mat", ngay_thanh_toan = NOW()
+              WHERE id = ? AND trang_thai = "chua_thanh_toan"'
+        );
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $changed = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($changed < 1) {
+            $db->rollback();
+            return false;
+        }
+
+        $db->commit();
+        return true;
+    } catch (Throwable $error) {
+        $db->rollback();
+        throw $error;
+    }
 }
 
 function admin_package_registration_cancel(int $id): bool
 {
-    $stmt = common_db()->prepare('UPDATE dang_ky_goi SET trang_thai = "da_huy" WHERE id = ?');
+    $stmt = common_db()->prepare('UPDATE dang_ky_goi SET trang_thai = "da_huy" WHERE id = ? AND trang_thai = "chua_thanh_toan"');
     $stmt->bind_param('i', $id);
     $stmt->execute();
     $changed = $stmt->affected_rows;

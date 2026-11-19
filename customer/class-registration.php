@@ -211,6 +211,12 @@ $open = array_values(array_filter($open, static function (array $class) use ($ke
     return true;
 }));
 
+$perPage = 12;
+$totalOpen = count($open);
+$totalOpenPages = max(1, (int) ceil($totalOpen / $perPage));
+$currentPage = max(1, min((int) ($_GET['page'] ?? 1), $totalOpenPages));
+$open = array_slice($open, ($currentPage - 1) * $perPage, $perPage);
+
 $partials = __DIR__ . '/../common/partials';
 
 require $partials . '/head.php';
@@ -274,7 +280,7 @@ require $partials . '/head.php';
 </form>
 
 <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
-    <div class="text-small text-muted-2">Tìm thấy <strong class="text-brand"><?= count($open) ?></strong> lớp đã được duyệt</div>
+    <div class="text-small text-muted-2">Tìm thấy <strong class="text-brand"><?= $totalOpen ?></strong> lớp đã được duyệt</div>
     <div class="ms-auto d-flex align-items-center gap-2">
         <label class="form-check form-switch mb-0 d-flex align-items-center gap-2">
             <input class="form-check-input" type="checkbox" id="only-available" checked>
@@ -362,7 +368,19 @@ require $partials . '/head.php';
 <?php endif; ?>
 
 <div class="app-card mt-3">
-    <?= pagination(count($open), 1, 12, 'lớp học') ?>
+    <?= pagination($totalOpen, $currentPage, $perPage, 'lớp học', static function (int $page) use ($keyword, $weekdayFilter, $packageFilter): string {
+        $query = ['page' => $page];
+        if ($keyword !== '') {
+            $query['q'] = $keyword;
+        }
+        if ($weekdayFilter > 0) {
+            $query['weekday'] = $weekdayFilter;
+        }
+        if ($packageFilter !== '') {
+            $query['package'] = $packageFilter;
+        }
+        return url('/customer/class-registration') . '?' . http_build_query($query);
+    }) ?>
 </div>
 
 <div class="modal fade" id="registerClassModal" tabindex="-1" aria-labelledby="registerClassTitle" aria-hidden="true">

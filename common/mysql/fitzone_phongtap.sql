@@ -63,7 +63,11 @@ CREATE TABLE `dang_ky_goi` (
   `ngay_bat_dau` date NOT NULL,
   `ngay_ket_thuc` date NOT NULL,
   `gia_tai_thoi_diem` bigint(20) NOT NULL,
+  `gia_niem_yet` bigint(20) DEFAULT NULL,
+  `so_tien_giam` bigint(20) NOT NULL DEFAULT 0,
   `trang_thai` varchar(30) NOT NULL DEFAULT 'chua_thanh_toan',
+  `loai_giao_dich` varchar(20) NOT NULL DEFAULT 'mua_moi',
+  `dang_ky_goc_id` int(10) unsigned DEFAULT NULL,
   `phuong_thuc` varchar(30) DEFAULT NULL,
   `ngay_thanh_toan` datetime DEFAULT NULL,
   `nhan_vien_id` int(10) unsigned DEFAULT NULL,
@@ -73,10 +77,12 @@ CREATE TABLE `dang_ky_goi` (
   KEY `fk_dang_ky_goi_hoi_vien` (`hoi_vien_id`),
   KEY `fk_dang_ky_goi_goi_tap` (`goi_tap_id`),
   KEY `fk_dang_ky_goi_nhan_vien` (`nhan_vien_id`),
+  KEY `fk_dang_ky_goi_goc` (`dang_ky_goc_id`),
+  CONSTRAINT `fk_dang_ky_goi_goc` FOREIGN KEY (`dang_ky_goc_id`) REFERENCES `dang_ky_goi` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_dang_ky_goi_goi_tap` FOREIGN KEY (`goi_tap_id`) REFERENCES `goi_tap` (`id`),
   CONSTRAINT `fk_dang_ky_goi_hoi_vien` FOREIGN KEY (`hoi_vien_id`) REFERENCES `hoi_vien` (`id`),
   CONSTRAINT `fk_dang_ky_goi_nhan_vien` FOREIGN KEY (`nhan_vien_id`) REFERENCES `tai_khoan` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -85,7 +91,7 @@ CREATE TABLE `dang_ky_goi` (
 
 LOCK TABLES `dang_ky_goi` WRITE;
 /*!40000 ALTER TABLE `dang_ky_goi` DISABLE KEYS */;
-INSERT INTO `dang_ky_goi` VALUES (1,1,3,'2026-08-12','2027-02-12',2100000,'da_thanh_toan','Chuyển khoản','2026-08-12 09:14:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(2,2,2,'2026-09-20','2026-12-20',1200000,'da_thanh_toan','tien_mat','2026-11-17 17:54:50',NULL,'2026-11-15 09:32:11','2026-11-17 17:54:50'),(3,3,3,'2026-07-05','2027-01-05',2100000,'da_thanh_toan','Tiền mặt','2026-07-05 16:40:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(4,4,1,'2026-10-01','2026-11-01',500000,'da_thanh_toan','tien_mat','2026-11-17 17:54:56',NULL,'2026-11-15 09:32:11','2026-11-17 17:54:56'),(5,7,3,'2026-09-22','2027-03-22',2100000,'da_thanh_toan','Thẻ','2026-09-22 10:05:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(6,8,3,'2026-10-02','2026-11-02',2100000,'da_thanh_toan','Chuyển khoản','2026-10-02 14:22:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(7,6,1,'2026-06-10','2026-07-10',500000,'da_huy',NULL,NULL,NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(8,9,1,'2026-10-15','2026-11-14',500000,'da_thanh_toan','Tiền mặt','2026-10-15 08:30:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(9,10,2,'2026-10-20','2027-01-18',1200000,'da_thanh_toan','Chuyển khoản','2026-10-20 11:10:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(10,11,3,'2026-11-01','2026-12-30',2100000,'da_thanh_toan','Tiền mặt','2026-11-01 09:00:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(11,12,1,'2026-11-10','2026-11-16',500000,'chua_thanh_toan',NULL,NULL,NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(12,13,2,'2026-08-01','2026-10-30',1200000,'da_huy',NULL,NULL,NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(13,14,3,'2026-11-05','2026-12-04',2100000,'da_thanh_toan','tien_mat','2026-11-19 13:11:35',NULL,'2026-11-15 09:32:11','2026-11-19 13:11:35'),(14,1,1,'2026-11-17','2026-12-16',500000,'chua_thanh_toan',NULL,NULL,NULL,'2026-11-17 14:51:24','2026-11-17 14:51:24'),(15,1,2,'2026-11-17','2027-02-14',1200000,'chua_thanh_toan',NULL,NULL,NULL,'2026-11-17 15:09:51','2026-11-17 15:09:51');
+INSERT INTO `dang_ky_goi` VALUES (2,2,2,'2026-09-20','2026-12-20',1200000,NULL,0,'da_thanh_toan','mua_moi',NULL,'tien_mat','2026-11-17 17:54:50',NULL,'2026-11-15 09:32:11','2026-11-19 21:37:19'),(3,3,3,'2026-07-05','2027-01-05',2100000,NULL,0,'da_thanh_toan','mua_moi',NULL,'Tiền mặt','2026-07-05 16:40:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(4,4,1,'2026-10-01','2026-11-01',500000,NULL,0,'da_thanh_toan','mua_moi',NULL,'tien_mat','2026-11-17 17:54:56',NULL,'2026-11-15 09:32:11','2026-11-17 17:54:56'),(5,7,3,'2026-09-22','2027-03-22',2100000,NULL,0,'da_thanh_toan','mua_moi',NULL,'Thẻ','2026-09-22 10:05:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(6,8,3,'2026-10-02','2026-11-02',2100000,NULL,0,'da_thanh_toan','mua_moi',NULL,'Chuyển khoản','2026-10-02 14:22:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(7,6,1,'2026-06-10','2026-07-10',500000,NULL,0,'da_huy','mua_moi',NULL,NULL,NULL,NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(8,9,1,'2026-10-15','2026-11-14',500000,NULL,0,'da_thanh_toan','mua_moi',NULL,'Tiền mặt','2026-10-15 08:30:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(9,10,2,'2026-10-20','2027-01-18',1200000,NULL,0,'da_thanh_toan','mua_moi',NULL,'Chuyển khoản','2026-10-20 11:10:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(10,11,3,'2026-11-01','2026-12-30',2100000,NULL,0,'da_thanh_toan','mua_moi',NULL,'Tiền mặt','2026-11-01 09:00:00',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(11,12,1,'2026-11-10','2026-11-16',500000,NULL,0,'chua_thanh_toan','mua_moi',NULL,NULL,NULL,NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(12,13,2,'2026-08-01','2026-10-30',1200000,NULL,0,'da_huy','mua_moi',NULL,NULL,NULL,NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(13,14,3,'2026-11-05','2026-12-04',2100000,NULL,0,'da_thanh_toan','mua_moi',NULL,'tien_mat','2026-11-19 13:11:35',NULL,'2026-11-15 09:32:11','2026-11-19 13:11:35'),(31,1,2,'2026-11-19','2026-12-18',900000,900000,0,'da_thanh_toan','mua_moi',NULL,'tien_mat','2026-11-19 21:49:15',NULL,'2026-11-19 21:49:15','2026-11-19 21:50:37');
 /*!40000 ALTER TABLE `dang_ky_goi` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -109,7 +115,7 @@ CREATE TABLE `dang_ky_lop` (
   KEY `fk_dang_ky_lop_lop_hoc` (`lop_hoc_id`),
   CONSTRAINT `fk_dang_ky_lop_hoi_vien` FOREIGN KEY (`hoi_vien_id`) REFERENCES `hoi_vien` (`id`),
   CONSTRAINT `fk_dang_ky_lop_lop_hoc` FOREIGN KEY (`lop_hoc_id`) REFERENCES `lop_hoc` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -238,7 +244,7 @@ CREATE TABLE `goi_tap` (
 
 LOCK TABLES `goi_tap` WRITE;
 /*!40000 ALTER TABLE `goi_tap` DISABLE KEYS */;
-INSERT INTO `goi_tap` VALUES (1,'Basic 1 tháng',30,500000,'Truy cập phòng gym, tủ đồ, phòng tắm trong 30 ngày.','basic','dang_ban',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(2,'Standard 3 tháng',90,1200000,'Toàn bộ quyền lợi Basic + tham gia lớp cơ bản và trung cấp.','standard','dang_ban',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(3,'Premium 6 tháng',180,2100000,'Bao gồm Standard và được tham gia mọi lớp.','premium','dang_ban',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11');
+INSERT INTO `goi_tap` VALUES (1,'Basic 1 tháng',30,500000,'Truy cập phòng gym, tủ đồ, phòng tắm trong 30 ngày.','basic','dang_ban',NULL,'2026-11-15 09:32:11','2026-11-15 09:32:11'),(2,'Standard 1 tháng',30,900000,'Toàn bộ quyền lợi Basic + tham gia lớp cơ bản và trung cấp.','standard','dang_ban',NULL,'2026-11-15 09:32:11','2026-11-19 21:50:51'),(3,'Premium 1 tháng',30,1200000,'Bao gồm Standard và được tham gia mọi lớp.','premium','dang_ban',NULL,'2026-11-15 09:32:11','2026-11-19 21:50:51');
 /*!40000 ALTER TABLE `goi_tap` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -363,4 +369,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-19 13:47:09
+-- Dump completed on 2026-11-19 22:11:12

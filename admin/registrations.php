@@ -63,6 +63,12 @@ if ($paymentFilter !== '' && in_array($paymentFilter, $paymentOptions, true)) {
     $paymentFilter = '';
 }
 
+$perPage = 10;
+$totalRegs = count($packageRegs);
+$totalPages = max(1, (int) ceil($totalRegs / $perPage));
+$currentPage = max(1, min((int) ($_GET['page'] ?? 1), $totalPages));
+$packageRegs = array_slice($packageRegs, ($currentPage - 1) * $perPage, $perPage);
+
 $partials = __DIR__ . '/../common/partials';
 
 require $partials . '/head.php';
@@ -124,7 +130,7 @@ require $partials . '/head.php';
                             <tr data-row data-reg-row="<?= (int) $reg['id'] ?>">
                                 <td class="cell-strong">DK-<?= e((string) $reg['id']) ?></td>
                                 <td><?= e($reg['member']) ?></td>
-                                <td><?= e($reg['package']) ?></td>
+                                <td><?= e($reg['package']) ?><?php if (($reg['loai_giao_dich'] ?? '') === 'nang_cap'): ?><div class="cell-sub">Nâng cấp · khấu trừ <?= e(money((int) ($reg['so_tien_giam'] ?? 0))) ?></div><?php endif; ?></td>
                                 <td class="text-muted-2 text-tiny"><?= e($reg['from']) ?><br><?= e($reg['to']) ?></td>
                                 <td class="cell-strong"><?= e(money($reg['price'])) ?></td>
                                 <td><?= status_badge($reg['payment']) ?><div class="cell-sub"><?= e($reg['method']) ?></div></td>
@@ -142,7 +148,16 @@ require $partials . '/head.php';
                     </tbody>
                 </table>
             </div>
-            <?= pagination(count($packageRegs), 1, 10, 'đăng ký') ?>
+            <?= pagination($totalRegs, $currentPage, $perPage, 'đăng ký', static function (int $page) use ($packageId, $paymentFilter): string {
+                $query = ['page' => $page];
+                if ($packageId !== '') {
+                    $query['package_id'] = $packageId;
+                }
+                if ($paymentFilter !== '') {
+                    $query['payment'] = $paymentFilter;
+                }
+                return url('/admin/registrations') . '?' . http_build_query($query);
+            }) ?>
         </div>
 
     </div>
@@ -152,5 +167,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/admin/registrations.js')) ?>?v=2"></script>
+<script src="<?= e(url('/common/assets/js/admin/registrations.js')) ?>?v=3"></script>
 <?php require $partials . '/foot.php'; ?>

@@ -73,6 +73,7 @@ function data_customer_packages(): array
                 DATE_FORMAT(d.ngay_bat_dau, "%d/%m/%Y") AS `from`,
                 DATE_FORMAT(d.ngay_ket_thuc, "%d/%m/%Y") AS `to`,
                 d.gia_tai_thoi_diem AS price, d.trang_thai AS payment,
+                d.loai_giao_dich, d.so_tien_giam,
                 COALESCE(d.phuong_thuc, "—") AS method,
                 COALESCE(DATE_FORMAT(d.ngay_thanh_toan, "%d/%m/%Y %H:%i"), "—") AS paid_at
            FROM dang_ky_goi d JOIN goi_tap gt ON gt.id = d.goi_tap_id
@@ -83,7 +84,7 @@ function data_customer_packages(): array
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    return view_cast_ints($rows, ['id', 'price']);
+    return view_cast_ints($rows, ['id', 'price', 'so_tien_giam']);
 }
 
 function data_customer_class_history(): array

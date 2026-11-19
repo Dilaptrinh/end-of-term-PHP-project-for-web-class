@@ -18,11 +18,21 @@
     }
 
     document.addEventListener('click', async function (event) {
-        var button = event.target.closest('[data-package-register]');
+        var button = event.target.closest('[data-package-register], [data-package-upgrade]');
         if (!button) return;
 
-        var packageId = button.dataset.packageRegister;
-        if (!confirm('Đăng ký gói "' + button.dataset.packageName + '"?')) return;
+        var isUpgrade = button.hasAttribute('data-package-upgrade');
+        var packageId = button.dataset.packageRegister || button.dataset.packageUpgrade;
+        var message = isUpgrade
+            ? 'Nâng cấp lên "' + button.dataset.packageName + '"?\n'
+                + 'Giữ hạn đến ' + button.dataset.packageEnd + ', còn ' + button.dataset.packageRemaining + ' ngày.\n'
+                + 'Khấu trừ ' + Number(button.dataset.packageCredit || 0).toLocaleString('vi-VN') + 'đ, '
+                + 'phí nâng cấp ' + Number(button.dataset.packageFee || 0).toLocaleString('vi-VN') + 'đ.'
+            : 'Đăng ký gói "' + button.dataset.packageName + '"?';
+
+        if (!confirm(message)) return;
+
+        button.disabled = true;
 
         try {
             var formData = new FormData();
@@ -46,6 +56,8 @@
             alert(result.message);
         } catch (error) {
             alert(error.message);
+        } finally {
+            button.disabled = false;
         }
     });
 })();

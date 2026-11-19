@@ -220,27 +220,19 @@ require $partials . '/head.php';
                     </table>
                 </div>
                 <script type="application/json" id="account-init"><?= json_encode($accounts, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
-                <?php if ($totalPages > 1): ?>
-                    <div class="app-card-body border-top">
-                        <nav aria-label="Phân trang tài khoản">
-                            <ul class="pagination mb-0 justify-content-end">
-                                <?php for ($number = 1; $number <= $totalPages; $number++): ?>
-                                    <?php
-                                    $query = http_build_query([
-                                        'q' => $keyword,
-                                        'role' => $roleFilter,
-                                        'status' => $statusFilter,
-                                        'page' => $number,
-                                    ]);
-                                    ?>
-                                    <li class="page-item <?= $number === $page ? 'active' : '' ?>">
-                                        <a class="page-link" href="<?= e(url('/admin/accounts') . '?' . $query) ?>"><?= $number ?></a>
-                                    </li>
-                                <?php endfor; ?>
-                            </ul>
-                        </nav>
-                    </div>
-                <?php endif; ?>
+                <?= pagination($totalAccounts, $page, $perPage, 'tài khoản', static function (int $number) use ($keyword, $roleFilter, $statusFilter): string {
+                    $query = ['page' => $number];
+                    if ($keyword !== '') {
+                        $query['q'] = $keyword;
+                    }
+                    if ($roleFilter !== '') {
+                        $query['role'] = $roleFilter;
+                    }
+                    if ($statusFilter !== '') {
+                        $query['status'] = $statusFilter;
+                    }
+                    return url('/admin/accounts') . '?' . http_build_query($query);
+                }) ?>
             </div>
 
         </main>

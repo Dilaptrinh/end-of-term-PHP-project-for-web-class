@@ -26,7 +26,9 @@
         return '<tr data-row data-reg-row="' + Number(registration.id) + '">' +
             '<td class="cell-strong">DK-' + Number(registration.id) + '</td>' +
             '<td>' + escapeHtml(registration.member) + '</td>' +
-            '<td>' + escapeHtml(registration.package) + '</td>' +
+            '<td>' + escapeHtml(registration.package) + (registration.loai_giao_dich === 'nang_cap'
+                ? '<div class="cell-sub">Nâng cấp · khấu trừ ' + escapeHtml(money(registration.so_tien_giam || 0)) + '</div>'
+                : '') + '</td>' +
             '<td class="text-muted-2 text-tiny">' + escapeHtml(registration.from) + '<br>' + escapeHtml(registration.to) + '</td>' +
             '<td class="cell-strong">' + escapeHtml(money(registration.price)) + '</td>' +
             '<td>' + statusBadge(registration.payment) + '<div class="cell-sub">' + escapeHtml(registration.method) + '</div></td>' +

@@ -48,6 +48,7 @@ fitness/
     │   ├── data.php          # loader nạp toàn bộ data layer
     │   ├── common.php        # view_db(), helper
     │   ├── shared.php        # dữ liệu dùng chung (lớp, gói, giáo viên,...)
+    │   ├── packages.php      # nghiệp vụ gói: cấp độ, gói đang dùng, báo giá nâng cấp
     │   ├── admin.php         # dữ liệu admin
     │   ├── customer.php      # dữ liệu hội viên
     │   ├── instructor.php    # dữ liệu giáo viên
@@ -112,9 +113,9 @@ Các trang vừa render HTML vừa xử lý AJAX qua tham số `?action=...`:
 | `admin/accounts.php` | `detail`, `create`, `update`, `status` | Admin |
 | `admin/packages.php` | `save`, `delete`; lọc `package_id`, `status` | Admin |
 | `admin/classes.php` | `save`, `delete`, `detail`; lọc `class_id` | Admin |
-| `admin/registrations.php` | `confirm-package`, `cancel-package`; lọc `package_id`, `payment` | Admin |
+| `admin/registrations.php` | `confirm-package`, `cancel-package`; lọc `package_id`, `payment`, phân trang `page` | Admin |
 | `instructor/classes.php` | `members`; lọc `status=current\|completed` | Giáo viên |
-| `customer/package-registration.php` | Đăng ký gói bằng POST `goi_tap_id` | Hội viên |
+| `customer/package-registration.php` | Đăng ký mua mới hoặc nâng cấp gói bằng POST `goi_tap_id` | Hội viên |
 | `customer/class-registration.php` | `register`; lọc `q`, `weekday`, `package` | Hội viên |
 | `customer/history.php` | `cancel`, `cancel-package` | Hội viên |
 

@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 require_once __DIR__ . '/shared.php';
+require_once __DIR__ . '/packages.php';
 require_once __DIR__ . '/admin.php';
 require_once __DIR__ . '/customer.php';
 require_once __DIR__ . '/instructor.php';

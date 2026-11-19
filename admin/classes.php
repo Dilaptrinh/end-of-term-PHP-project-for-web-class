@@ -404,6 +404,12 @@ if ($classId !== '' && ctype_digit($classId)) {
     }));
 }
 
+$perPage = 10;
+$totalClasses = count($classes);
+$totalClassPages = max(1, (int) ceil($totalClasses / $perPage));
+$currentPage = max(1, min((int) ($_GET['page'] ?? 1), $totalClassPages));
+$classes = array_slice($classes, ($currentPage - 1) * $perPage, $perPage);
+
 $partials = __DIR__ . '/../common/partials';
 
 require $partials . '/head.php';
@@ -465,7 +471,13 @@ require $partials . '/head.php';
             </tbody>
         </table>
     </div>
-    <?= pagination(count($classes), 1, 10, 'lớp học') ?>
+    <?= pagination($totalClasses, $currentPage, $perPage, 'lớp học', static function (int $page) use ($classId): string {
+        $query = ['page' => $page];
+        if ($classId !== '') {
+            $query['class_id'] = $classId;
+        }
+        return url('/admin/classes') . '?' . http_build_query($query);
+    }) ?>
 </div>
 
 <?php // Một modal dùng chung: PHP trả HTML fragment cho cả thêm mới và chi tiết/cập nhật. ?>

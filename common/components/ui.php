@@ -1,10 +1,6 @@
 <?php
 declare(strict_types=1);
 
-/**
- * UI helpers — dùng chung cho mọi view.
- * Chỉ sinh HTML, không xử lý nghiệp vụ.
- */
 
 if (!function_exists('icon')) {
     function icon(string $name, string $class = ''): string
@@ -94,25 +90,32 @@ if (!function_exists('weekday_short')) {
 }
 
 if (!function_exists('pagination')) {
-    function pagination(int $total, int $page = 1, int $perPage = 10, string $label = 'bản ghi'): string
+    function pagination(int $total, int $page = 1, int $perPage = 10, string $label = 'bản ghi', ?callable $urlFor = null): string
     {
         $pages = max(1, (int) ceil($total / max(1, $perPage)));
         $page = max(1, min($page, $pages));
         $from = $total === 0 ? 0 : ($page - 1) * $perPage + 1;
         $to = min($total, $page * $perPage);
 
+        $href = static function (int $target) use ($urlFor, $page): string {
+            if ($urlFor === null || $target === $page) {
+                return '#';
+            }
+            return (string) $urlFor($target);
+        };
+
         $html = '<nav class="app-pagination" aria-label="Phân trang">';
         $html .= '<span class="page-info">Hiển thị ' . $from . '–' . $to . ' / ' . $total . ' ' . e($label) . '</span>';
-        $html .= '<a href="#" class="page-btn' . ($page === 1 ? ' disabled' : '') . '" aria-label="Trang trước">' . icon('chevron-left') . '</a>';
+        $html .= '<a href="' . e($page === 1 ? '#' : $href($page - 1)) . '" class="page-btn' . ($page === 1 ? ' disabled' : '') . '" aria-label="Trang trước">' . icon('chevron-left') . '</a>';
 
         $start = max(1, $page - 2);
         $end = min($pages, $start + 4);
         $start = max(1, $end - 4);
         for ($i = $start; $i <= $end; $i++) {
-            $html .= '<a href="#" class="page-btn' . ($i === $page ? ' active' : '') . '">' . $i . '</a>';
+            $html .= '<a href="' . e($href($i)) . '" class="page-btn' . ($i === $page ? ' active' : '') . '">' . $i . '</a>';
         }
 
-        $html .= '<a href="#" class="page-btn' . ($page === $pages ? ' disabled' : '') . '" aria-label="Trang sau">' . icon('chevron-right') . '</a>';
+        $html .= '<a href="' . e($page === $pages ? '#' : $href($page + 1)) . '" class="page-btn' . ($page === $pages ? ' disabled' : '') . '" aria-label="Trang sau">' . icon('chevron-right') . '</a>';
         $html .= '</nav>';
         return $html;
     }
