@@ -3,7 +3,19 @@
 
     var endpoint = window.location.pathname;
 
-    async function sendCancel(action, id) {
+    function markCancelled(row) {
+        var statusCell = row.querySelector('[data-status-cell]');
+        if (statusCell) {
+            statusCell.innerHTML = AppUI.statusBadge('da_huy');
+        }
+
+        var actionsCell = row.querySelector('td.cell-actions');
+        if (actionsCell) {
+            actionsCell.innerHTML = '<button class="btn btn-ghost btn-sm" type="button" disabled>—</button>';
+        }
+    }
+
+    async function sendCancel(action, id, button) {
         var formData = new FormData();
         formData.append('id', id);
 
@@ -19,8 +31,12 @@
         if (!res.ok || !json.success) {
             throw new Error(json.message || 'Có lỗi xảy ra.');
         }
+
+        var row = button.closest('tr');
+        if (row) {
+            markCancelled(row);
+        }
         alert(json.message);
-        location.reload();
     }
 
     document.addEventListener('click', async function (event) {
@@ -32,7 +48,7 @@
         }
 
         try {
-            await sendCancel('cancel', button.dataset.cancelId);
+            await sendCancel('cancel', button.dataset.cancelId, button);
         } catch (error) {
             alert(error.message);
         }
@@ -47,7 +63,7 @@
         }
 
         try {
-            await sendCancel('cancel-package', button.dataset.cancelPackageId);
+            await sendCancel('cancel-package', button.dataset.cancelPackageId, button);
         } catch (error) {
             alert(error.message);
         }

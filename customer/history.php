@@ -48,7 +48,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             json_response(['success' => false, 'message' => 'Đăng ký gói đã được xử lý hoặc không còn hiệu lực.'], 422);
         }
 
-        json_response(['success' => true, 'message' => 'Đã hủy đăng ký gói.']);
+        json_response([
+            'success' => true,
+            'message' => 'Đã hủy đăng ký gói.',
+            'data' => ['id' => $registrationId, 'status' => 'da_huy'],
+        ]);
     }
 
     if ($action !== 'cancel') {
@@ -78,7 +82,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         json_response(['success' => false, 'message' => 'Đăng ký đã được hủy hoặc không còn hiệu lực.'], 422);
     }
 
-    json_response(['success' => true, 'message' => 'Đã hủy đăng ký lớp.']);
+    json_response([
+        'success' => true,
+        'message' => 'Đã hủy đăng ký lớp.',
+        'data' => ['id' => $registrationId, 'status' => 'da_huy'],
+    ]);
 }
 
 require_role('customer');
@@ -149,7 +157,7 @@ require $partials . '/head.php';
                                 <td class="cell-strong"><?= e($row['name']) ?></td>
                                 <td><?= e($row['from']) ?> → <?= e($row['to']) ?></td>
                                 <td class="cell-strong"><?= e(money($row['price'])) ?></td>
-                                <td><?= status_badge($row['payment']) ?></td>
+                                <td data-status-cell><?= status_badge($row['payment']) ?></td>
                                 <td><?= e($row['method']) ?></td>
                                 <td class="text-muted-2"><?= e($row['paid_at']) ?></td>
                                 <td class="cell-actions">
@@ -189,7 +197,7 @@ require $partials . '/head.php';
                                 <td><?= e($row['teacher']) ?></td>
                                 <td class="text-muted-2"><?= e($row['schedule']) ?></td>
                                 <td class="text-muted-2"><?= e($row['registered']) ?></td>
-                                <td><?= status_badge($row['status']) ?></td>
+                                <td data-status-cell><?= status_badge($row['status']) ?></td>
                                 <td class="cell-actions">
                                     <?php if ($row['status'] === 'dang_ky'): ?>
                                         <button class="btn btn-danger-soft btn-sm" type="button"
@@ -214,5 +222,5 @@ require $partials . '/head.php';
 </div>
 <div class="app-backdrop" data-sidebar-close aria-hidden="true"></div>
 
-<script src="<?= e(url('/common/assets/js/customer/history.js')) ?>?v=2"></script>
+<script src="<?= e(url('/common/assets/js/customer/history.js')) ?>?v=3"></script>
 <?php require $partials . '/foot.php'; ?>
